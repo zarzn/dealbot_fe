@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* third-party libraries CSS */
+
+#supportCheckbox:checked ~ div span {
+  @apply opacity-100;
+}
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  html.sr {
+    @apply !py-0;
+  }
+
+  body {
+    @apply font-normal text-base text-dark-3 relative z-1 bg-dark;
+  }
+}
+
+@layer components {
+  .dropdown {
+    @apply flex-col gap-1 min-w-max lg:w-[208px] mt-2 lg:mt-0 bg-[#1C192C] shadow-lg ease-in duration-300 p-3 rounded-lg left-0 hidden
+    lg:translate-y-10 lg:opacity-0 lg:invisible lg:absolute lg:flex
+    lg:group-hover:translate-y-3 lg:group-hover:opacity-100 lg:group-hover:visible;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+} 

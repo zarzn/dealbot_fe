@@ -5,76 +5,80 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import Image from "next/image";
 import Loader from "@/components/Common/Loader";
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { authService } from '@/services/auth';
+import Link from "next/link";
 
-const ResetPassword = ({ token }: { token: string }) => {
-  const [data, setData] = useState({
-    newPassword: "",
-    ReNewPassword: "",
-  });
-  const [loader, setLoader] = useState(false);
+const resetPasswordSchema = z.object({
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
 
-  const [user, setUser] = useState({
-    email: "",
-  });
+type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
 
+interface ResetPasswordProps {
+  token: string;
+}
+
+const ResetPassword = ({ token }: ResetPasswordProps) => {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ResetPasswordData>({
+    resolver: zodResolver(resetPasswordSchema),
+  });
 
   useEffect(() => {
     const verifyToken = async () => {
       try {
-        const res = await axios.post(`/api/forgot-password/verify-token`, {
-          token,
-        });
-
-        if (res.status === 200) {
-          setUser({
-            email: res.data.email,
-          });
-        }
+        await authService.verifyMagicLink(token);
+        setIsVerifying(false);
       } catch (error: any) {
-        toast.error(error.response.data);
-        router.push("/auth/forgot-password");
+        console.error('Token verification error:', error);
+        toast.error(error.response?.data?.detail || 'Invalid or expired reset link');
+        router.push('/auth/forgot-password');
       }
     };
 
     verifyToken();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [token, router]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setData({
-      ...data,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoader(true);
-
-    if (data.newPassword === "") {
-      toast.error("Please enter your password.");
-      return;
-    }
-
+  const onSubmit = async (data: ResetPasswordData) => {
     try {
-      const res = await axios.post(`/api/forgot-password/update`, {
-        email: user?.email,
-        password: data.newPassword,
-      });
-
-      if (res.status === 200) {
-        toast.success(res.data);
-        setData({ newPassword: "", ReNewPassword: "" });
-        router.push("/auth/signin");
-      }
-
-      setLoader(false);
+      setIsLoading(true);
+      await authService.resetPassword(token, data.password);
+      toast.success('Password has been reset successfully');
+      router.push('/auth/signin');
     } catch (error: any) {
-      toast.error(error.response.data);
-      setLoader(false);
+      console.error('Password reset error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to reset password');
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  if (isVerifying) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader />
+      </div>
+    );
+  }
 
   return (
     <section className="pb-17.5 pt-17.5 lg:pb-22.5 xl:pb-27.5">
@@ -86,18 +90,25 @@ const ResetPassword = ({ token }: { token: string }) => {
                 <div className="absolute right-0 top-0 h-full w-[1px] bg-gradient-to-b from-white/0 via-white/20 to-white/0"></div>
 
                 <h2 className="mb-10 max-w-[292px] text-heading-4 font-bold text-white">
-                  Unlock the Power of Writing Tool
+                  Create New Password
                 </h2>
                 <div className="relative aspect-[61/50] w-full max-w-[427px]">
-                  <Image src="/images/signin/sigin.svg" alt="signin" fill />
+                  <Image src="/images/signin/sigin.svg" alt="reset password" fill />
                 </div>
               </div>
             </div>
 
             <div className="w-full lg:w-1/2">
-              <div className="flex h-full flex-col justify-center py-8 pl-8 pr-8 sm:py-20  sm:pl-21 sm:pr-20">
+              <div className="flex h-full flex-col justify-center py-8 pl-8 pr-8 sm:py-20 sm:pl-21 sm:pr-20">
                 <div>
-                  <form onSubmit={handleSubmit}>
+                  <h2 className="mb-9 text-2xl font-bold text-white">
+                    Reset Password
+                  </h2>
+                  <p className="mb-7.5 text-base text-white/60">
+                    Please create a new password for your account
+                  </p>
+
+                  <form onSubmit={handleSubmit(onSubmit)}>
                     <div className="relative mb-4">
                       <span className="absolute left-6 top-1/2 -translate-y-1/2">
                         <svg
@@ -114,14 +125,16 @@ const ResetPassword = ({ token }: { token: string }) => {
                         </svg>
                       </span>
                       <input
-                        type="text"
+                        type="password"
                         placeholder="Enter new password"
-                        value={data.newPassword}
-                        onChange={handleChange}
-                        name="newPassword"
                         className="w-full rounded-lg border border-white/[0.12] bg-transparent py-3.5 pl-14.5 pr-4 font-medium text-white outline-none focus:border-purple focus-visible:shadow-none"
+                        {...register('password')}
                       />
+                      {errors.password && (
+                        <span className="mt-1 text-sm text-red-500">{errors.password.message}</span>
+                      )}
                     </div>
+
                     <div className="relative mb-4">
                       <span className="absolute left-6 top-1/2 -translate-y-1/2">
                         <svg
@@ -138,21 +151,36 @@ const ResetPassword = ({ token }: { token: string }) => {
                         </svg>
                       </span>
                       <input
-                        type="text"
+                        type="password"
                         placeholder="Re-enter new password"
-                        value={data.ReNewPassword}
-                        name="ReNewPassword"
-                        onChange={handleChange}
                         className="w-full rounded-lg border border-white/[0.12] bg-transparent py-3.5 pl-14.5 pr-4 font-medium text-white outline-none focus:border-purple focus-visible:shadow-none"
+                        {...register('confirmPassword')}
                       />
+                      {errors.confirmPassword && (
+                        <span className="mt-1 text-sm text-red-500">{errors.confirmPassword.message}</span>
+                      )}
                     </div>
 
                     <button
                       type="submit"
                       className="hero-button-gradient flex w-full items-center justify-center rounded-lg px-7 py-3 font-medium text-white duration-300 ease-in hover:opacity-80"
+                      disabled={isLoading}
                     >
-                      Send Email {loader && <Loader />}
+                      {isLoading ? (
+                        <>
+                          Resetting Password <Loader />
+                        </>
+                      ) : (
+                        'Reset Password'
+                      )}
                     </button>
+
+                    <p className="mt-5 text-center font-medium text-white">
+                      Remember your password?{" "}
+                      <Link href="/auth/signin" className="text-purple">
+                        Sign in Here
+                      </Link>
+                    </p>
                   </form>
                 </div>
               </div>

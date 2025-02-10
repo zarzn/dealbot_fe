@@ -5,19 +5,22 @@ import Breadcrumb from "@/components/Breadcrumb";
 import ResetPassword from "@/components/Auth/ResetPassword";
 
 export const metadata: Metadata = {
-  title: "Reset Password | AI Tool - Next.js Template for AI Tools",
-  description: "This is Reset Password page for AI Tool",
+  title: "Reset Password | AI Deals System",
+  description: "Reset your password",
   // other metadata
 };
 
-const ResetPasswordPage = async (props: { params: Promise<{ token: string }> }) => {
-  const params = await props.params;
+interface ResetPasswordPageProps {
+  params: {
+    token: string;
+  };
+}
+
+export default function ResetPasswordPage({ params }: ResetPasswordPageProps) {
   return (
     <>
       <Breadcrumb pageTitle="Reset Password" />
-      <ResetPassword token={params.token!} />
+      <ResetPassword token={params.token} />
     </>
   );
-};
-
-export default ResetPasswordPage;
+}

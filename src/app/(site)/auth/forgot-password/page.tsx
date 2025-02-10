@@ -5,8 +5,8 @@ import ForgotPassword from "@/components/Auth/ForgotPassword";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Forgot Password | AI Tool - Next.js Template for AI Tools",
-  description: "This is Forgot Password page for AI Tool",
+  title: "Forgot Password | AI Deals System",
+  description: "Reset your password",
   // other metadata
 };
 

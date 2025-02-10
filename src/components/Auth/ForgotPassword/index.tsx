@@ -1,61 +1,44 @@
 "use client";
-import React, { useState } from "react";
-import Image from "next/image";
-import { toast } from "react-hot-toast";
-import { validateEmail } from "@/libs/validateEmail";
-import axios from "axios";
-import Loader from "@/components/Common/Loader";
-import { integrations, messages } from "../../../../integrations.config";
-import z from "zod";
 
-const ForgotPasswordSchema = z.object({
-  email: z.string().email("Please enter a valid email address."),
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'react-hot-toast';
+import { authService } from '@/services/auth';
+import Image from "next/image";
+import Link from "next/link";
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email('Please enter a valid email'),
 });
 
-const ForgotPassword = () => {
-  const [email, setEmail] = useState("");
-  const [loader, setLoader] = useState(false);
+type ForgotPasswordData = z.infer<typeof forgotPasswordSchema>;
 
-  const sendEmail = async (e: any) => {
-    e.preventDefault();
+export default function ForgotPassword() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
-    if (!integrations?.isAuthEnabled) {
-      toast.error(messages.auth);
-      return;
-    }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ForgotPasswordData>({
+    resolver: zodResolver(forgotPasswordSchema),
+  });
 
-    const result = ForgotPasswordSchema.safeParse({ email });
-    if (!result.success) {
-      toast.error(result.error.errors[0].message);
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      return toast.error("Please enter a valid email address.");
-    }
-
-    setLoader(true);
-
+  const onSubmit = async (data: ForgotPasswordData) => {
     try {
-      const res = await axios.post("/api/forgot-password/reset", {
-        email: email.toLowerCase(),
-      });
-
-      if (res.status === 404) {
-        toast.error("User not found.");
-        return;
-      }
-
-      if (res.status === 200) {
-        toast.success(res.data);
-        setEmail("");
-      }
-
-      setEmail("");
-      setLoader(false);
+      setIsLoading(true);
+      await authService.requestPasswordReset(data.email);
+      toast.success('Password reset instructions have been sent to your email');
+      router.push('/auth/signin');
     } catch (error: any) {
-      toast.error(error?.response.data);
-      setLoader(false);
+      console.error('Password reset request error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to request password reset');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -69,19 +52,26 @@ const ForgotPassword = () => {
                 <div className="absolute right-0 top-0 h-full w-[1px] bg-gradient-to-b from-white/0 via-white/20 to-white/0"></div>
 
                 <h2 className="mb-10 max-w-[292px] text-heading-4 font-bold text-white">
-                  Unlock the Power of Writing Tool
+                  Reset Your Password
                 </h2>
                 <div className="relative aspect-[61/50] w-full max-w-[427px]">
-                  <Image src="/images/signin/sigin.svg" alt="signin" fill />
+                  <Image src="/images/signin/sigin.svg" alt="forgot password" fill />
                 </div>
               </div>
             </div>
 
             <div className="w-full lg:w-1/2">
-              <div className="flex h-full flex-col justify-center py-8 pl-8 pr-8 sm:py-20  sm:pl-21 sm:pr-20">
+              <div className="py-8 pl-8 pr-8 sm:py-20 sm:pl-21 sm:pr-20">
                 <div>
-                  <form onSubmit={sendEmail}>
-                    <div className="relative mb-4">
+                  <h2 className="mb-9 text-2xl font-bold text-white">
+                    Forgot Password?
+                  </h2>
+                  <p className="mb-7.5 text-base text-white/60">
+                    Enter your email address and we&apos;ll send you instructions to reset your password.
+                  </p>
+
+                  <form onSubmit={handleSubmit(onSubmit)}>
+                    <div className="relative mb-6">
                       <span className="absolute left-6 top-1/2 -translate-y-1/2">
                         <svg
                           width="16"
@@ -99,18 +89,28 @@ const ForgotPassword = () => {
                       <input
                         type="email"
                         placeholder="Enter your email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
                         className="w-full rounded-lg border border-white/[0.12] bg-transparent py-3.5 pl-14.5 pr-4 font-medium text-white outline-none focus:border-purple focus-visible:shadow-none"
+                        {...register('email')}
                       />
+                      {errors.email && (
+                        <span className="mt-1 text-sm text-red-500">{errors.email.message}</span>
+                      )}
                     </div>
 
                     <button
                       type="submit"
                       className="hero-button-gradient flex w-full items-center justify-center rounded-lg px-7 py-3 font-medium text-white duration-300 ease-in hover:opacity-80"
+                      disabled={isLoading}
                     >
-                      Send Email {loader && <Loader />}
+                      {isLoading ? 'Sending...' : 'Send Reset Instructions'}
                     </button>
+
+                    <p className="mt-5 text-center font-medium text-white">
+                      Remember your password?{" "}
+                      <Link href="/auth/signin" className="text-purple">
+                        Sign in Here
+                      </Link>
+                    </p>
                   </form>
                 </div>
               </div>
@@ -120,6 +120,4 @@ const ForgotPassword = () => {
       </div>
     </section>
   );
-};
-
-export default ForgotPassword;
+}

@@ -25,7 +25,13 @@ import {
   Package,
   ThumbsUp,
   ArrowUpDown,
+  X,
+  AlertTriangle,
 } from "lucide-react";
+import { toast } from "react-hot-toast";
+import { dealsService } from '@/services/deals';
+import { goalsService } from '@/services/goals';
+import type { AIAnalysis } from '@/services/deals';
 
 interface DealRequest {
   id: string;
@@ -72,6 +78,7 @@ interface DealSuggestion {
   features: string[];
   inStock: boolean;
   stockCount?: number;
+  isTracked?: boolean;
 }
 
 // Dummy data for demonstration
@@ -152,6 +159,85 @@ const dummyDeals: DealSuggestion[] = [
 
 type SortOption = "relevance" | "price_asc" | "price_desc" | "rating" | "expiry";
 
+interface PriceAdjustmentModalProps {
+  deal: DealSuggestion;
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (targetPrice: number, notifyThreshold: number) => void;
+}
+
+function PriceAdjustmentModal({ deal, isOpen, onClose, onConfirm }: PriceAdjustmentModalProps) {
+  const [targetPrice, setTargetPrice] = useState(deal.price);
+  const [notifyThreshold, setNotifyThreshold] = useState(deal.price * 0.9); // Default 10% below current
+
+  const handleConfirm = () => {
+    onConfirm(targetPrice, notifyThreshold);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="w-full max-w-md rounded-xl bg-dark-7 p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-white">Customize Deal Tracking</h3>
+          <button onClick={onClose} className="text-dark-3 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="mb-6">
+          <div className="mb-4">
+            <label className="mb-2 block text-sm text-dark-3">Target Price</label>
+            <input
+              type="number"
+              value={targetPrice}
+              onChange={(e) => setTargetPrice(Number(e.target.value))}
+              className="w-full rounded-lg bg-dark-8 px-3 py-2 text-white"
+              min={0}
+              step={0.01}
+            />
+            <p className="mt-1 text-xs text-dark-3">
+              Current price: ${deal.price.toFixed(2)}
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm text-dark-3">Notify me when price drops below</label>
+            <input
+              type="number"
+              value={notifyThreshold}
+              onChange={(e) => setNotifyThreshold(Number(e.target.value))}
+              className="w-full rounded-lg bg-dark-8 px-3 py-2 text-white"
+              min={0}
+              step={0.01}
+            />
+            <p className="mt-1 text-xs text-dark-3">
+              Recommended: ${(deal.price * 0.9).toFixed(2)} (10% below current price)
+            </p>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="rounded-lg bg-dark-6 px-4 py-2 text-white hover:bg-dark-5"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            className="rounded-lg bg-purple px-4 py-2 text-white hover:bg-purple/90"
+          >
+            Start Tracking
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DealFinder() {
   const [requests, setRequests] = useState<DealRequest[]>([]);
   const [suggestions, setSuggestions] = useState<DealSuggestion[]>([]);
@@ -175,6 +261,10 @@ export default function DealFinder() {
   const [remainingTokens, setRemainingTokens] = useState(1000);
   const resultsStartRef = useRef<HTMLDivElement>(null);
   const [sortBy, setSortBy] = useState<SortOption>("relevance");
+  const [trackedDeals, setTrackedDeals] = useState<Set<string>>(new Set());
+  const [selectedDeal, setSelectedDeal] = useState<DealSuggestion | null>(null);
+  const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<Record<string, AIAnalysis>>({});
 
   const scrollToResults = () => {
     if (resultsStartRef.current) {
@@ -220,11 +310,30 @@ export default function DealFinder() {
     setError(null);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Real API call
+      const searchResults = await dealsService.searchDeals({
+        query: newRequest.query,
+        constraints: {
+          ...newRequest.constraints,
+          condition: filters.condition,
+          freeShippingOnly: filters.freeShippingOnly,
+          inStockOnly: filters.inStockOnly,
+          minRating: filters.minRating || undefined,
+          maxShippingDays: filters.maxShippingDays ? parseInt(filters.maxShippingDays) : undefined,
+          hasWarranty: filters.hasWarranty,
+        },
+      });
       
-      // Simulate token deduction
-      setRemainingTokens(prev => prev - 50);
+      // Get AI analysis for each deal
+      const analysisPromises = searchResults.map(deal => 
+        dealsService.getAIAnalysis(deal.id)
+          .then(analysis => [deal.id, analysis] as [string, AIAnalysis])
+      );
+      
+      const analysisResults = await Promise.all(analysisPromises);
+      const newAnalysis = Object.fromEntries(analysisResults);
+      
+      setAiAnalysis(prev => ({ ...prev, ...newAnalysis }));
       
       // Update request status
       setRequests(prev =>
@@ -235,8 +344,7 @@ export default function DealFinder() {
         )
       );
       
-      // Set random suggestions from dummy data
-      setSuggestions(dummyDeals);
+      setSuggestions(searchResults);
     } catch (err) {
       console.error("Failed to process request:", err);
       setError("Failed to process your request. Please try again.");
@@ -267,6 +375,117 @@ export default function DealFinder() {
     });
   };
 
+  const handleTrackDeal = (deal: DealSuggestion) => {
+    setSelectedDeal(deal);
+    setIsPriceModalOpen(true);
+  };
+
+  const handlePriceConfirm = async (targetPrice: number, notifyThreshold: number) => {
+    if (!selectedDeal) return;
+
+    try {
+      const goal = {
+        title: selectedDeal.title,
+        itemCategory: selectedDeal.category,
+        currentPrice: selectedDeal.price,
+        targetPrice: targetPrice,
+        priceHistory: [{
+          price: selectedDeal.price,
+          date: new Date().toISOString()
+        }],
+        source: selectedDeal.source,
+        url: selectedDeal.url,
+        imageUrl: selectedDeal.imageUrl,
+        constraints: {
+          maxPrice: targetPrice,
+          condition: selectedDeal.condition,
+          shippingInfo: selectedDeal.shippingInfo,
+          features: selectedDeal.features
+        },
+        notifications: {
+          email: true,
+          inApp: true,
+          priceThreshold: notifyThreshold
+        },
+        status: 'active' as const,
+        createdFrom: {
+          type: 'search' as const,
+          searchQuery: input,
+          dealId: selectedDeal.id
+        }
+      };
+
+      // Real API call
+      await goalsService.createGoal(goal);
+      
+      setTrackedDeals(prev => new Set(Array.from(prev).concat(selectedDeal.id)));
+      toast.success("Deal tracking started! We'll notify you about price changes.");
+    } catch (error) {
+      console.error("Failed to create goal:", error);
+      toast.error("Failed to track deal. Please try again later.");
+    }
+  };
+
+  // Add AI analysis display to deal card
+  const renderAIAnalysis = (deal: DealSuggestion) => {
+    const analysis = aiAnalysis[deal.id];
+    if (!analysis) return null;
+
+    return (
+      <div className="mt-4 border-t border-dark-6 pt-4">
+        <h4 className="mb-2 text-sm font-semibold text-white">AI Analysis</h4>
+        
+        {/* Price Analysis */}
+        <div className="mb-3">
+          <div className="flex items-center gap-2">
+            <TrendingUp className={`h-4 w-4 ${
+              analysis.priceAnalysis.isGoodDeal ? 'text-green-500' : 'text-yellow-500'
+            }`} />
+            <span className="text-sm font-medium text-white">
+              Price Analysis
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-dark-3">
+            {analysis.priceAnalysis.reasoning}
+          </p>
+        </div>
+
+        {/* Buying Advice */}
+        <div className="mb-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-purple" />
+            <span className="text-sm font-medium text-white">
+              Buying Advice
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-dark-3">
+            {analysis.buyingAdvice.recommendation}
+          </p>
+          <p className="mt-1 text-sm text-dark-3">
+            Best time to buy: {analysis.buyingAdvice.timing}
+          </p>
+        </div>
+
+        {/* Price Trend */}
+        {analysis.priceAnalysis.priceProjection.trend !== 'stable' && (
+          <div className="flex items-center gap-2 text-sm">
+            <ArrowUpDown className={`h-4 w-4 ${
+              analysis.priceAnalysis.priceProjection.trend === 'falling'
+                ? 'text-green-500'
+                : 'text-red-500'
+            }`} />
+            <span className="text-dark-3">
+              Price is {analysis.priceAnalysis.priceProjection.trend}
+              {analysis.priceAnalysis.priceProjection.nextWeekEstimate && 
+                ` (Est. next week: $${analysis.priceAnalysis.priceProjection.nextWeekEstimate.toFixed(2)})`
+              }
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <section className="relative z-10 overflow-hidden py-20 lg:py-25">
       <div className="container">
@@ -277,7 +496,7 @@ export default function DealFinder() {
                 Find Your Perfect Deal
               </h2>
               <p className="mt-2 text-sm text-dark-3">
-                Describe what you're looking for and let AI find the best deals
+                Describe what you&apos;re looking for and let AI find the best deals
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -674,6 +893,37 @@ export default function DealFinder() {
                           <ChevronRight className="h-4 w-4" />
                         </a>
                       </div>
+
+                      <div className="flex items-center justify-between mt-4">
+                        <div className="flex items-center space-x-4">
+                          {/* ... existing price and rating elements ... */}
+                        </div>
+                        <button
+                          onClick={() => handleTrackDeal(suggestion)}
+                          disabled={trackedDeals.has(suggestion.id)}
+                          className={`
+                            flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-300
+                            ${trackedDeals.has(suggestion.id)
+                              ? 'bg-purple/20 text-purple border border-purple cursor-not-allowed'
+                              : 'bg-purple hover:bg-purple/90 text-white border border-transparent'
+                            }
+                          `}
+                        >
+                          {trackedDeals.has(suggestion.id) ? (
+                            <>
+                              <Target className="w-4 h-4 mr-2" />
+                              Tracking
+                            </>
+                          ) : (
+                            <>
+                              <Target className="w-4 h-4 mr-2" />
+                              Track This Deal
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {renderAIAnalysis(suggestion)}
                     </div>
                   </div>
                 </motion.div>
@@ -689,6 +939,18 @@ export default function DealFinder() {
           </div>
         </div>
       </div>
+
+      {selectedDeal && (
+        <PriceAdjustmentModal
+          deal={selectedDeal}
+          isOpen={isPriceModalOpen}
+          onClose={() => {
+            setIsPriceModalOpen(false);
+            setSelectedDeal(null);
+          }}
+          onConfirm={handlePriceConfirm}
+        />
+      )}
     </section>
   );
 } 

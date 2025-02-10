@@ -18,58 +18,58 @@ export async function generateMetadata(props: Props) {
   const siteName = process.env.SITE_NAME;
   const authorName = process.env.AUTHOR_NAME;
 
-  if (post) {
-    return {
-      title: `${post.title || "Single Post Page"} | ${siteName}`,
-      description: `${post.metadata?.slice(0, 136)}...`,
-      author: authorName,
-
-      robots: {
-        index: true,
-        follow: true,
-        nocache: true,
-        googleBot: {
-          index: true,
-          follow: false,
-          "max-video-preview": -1,
-          "max-image-preview": "large",
-          "max-snippet": -1,
-        },
-      },
-
-      openGraph: {
-        title: `${post.title} | ${siteName}`,
-        description: post.metadata,
-        url: `${siteURL}/blog/${post?.slug?.current}`,
-        siteName: siteName,
-        images: [
-          {
-            url: imageBuilder(post.mainImage).url(),
-            width: 1800,
-            height: 1600,
-            alt: post.title,
-          },
-        ],
-        locale: "en_US",
-        type: "article",
-      },
-
-      twitter: {
-        card: "summary_large_image",
-        title: `${post.title} | ${siteName}`,
-        description: `${post.metadata?.slice(0, 136)}...`,
-        creator: `@${authorName}`,
-        site: `@${siteName}`,
-        images: [imageBuilder(post?.mainImage).url()],
-        url: `${siteURL}/blog/${post?.slug?.current}`,
-      },
-    };
-  } else {
+  if (!post) {
     return {
       title: "Not Found",
       description: "No blog article has been found",
     };
   }
+
+  return {
+    title: `${post.title || "Single Post Page"} | ${siteName || ""}`,
+    description: post.metadata ? `${post.metadata.slice(0, 136)}...` : "",
+    author: authorName || "",
+
+    robots: {
+      index: true,
+      follow: true,
+      nocache: true,
+      googleBot: {
+        index: true,
+        follow: false,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+    },
+
+    openGraph: {
+      title: `${post.title || ""} | ${siteName || ""}`,
+      description: post.metadata || "",
+      url: `${siteURL || ""}${post.slug?.current ? `/blog/${post.slug.current}` : ""}`,
+      siteName: siteName || "",
+      images: post.mainImage ? [
+        {
+          url: imageBuilder(post.mainImage).url(),
+          width: 1800,
+          height: 1600,
+          alt: post.title || "",
+        },
+      ] : [],
+      locale: "en_US",
+      type: "article",
+    },
+
+    twitter: {
+      card: "summary_large_image",
+      title: `${post.title || ""} | ${siteName || ""}`,
+      description: post.metadata ? `${post.metadata.slice(0, 136)}...` : "",
+      creator: `@${authorName || ""}`,
+      site: `@${siteName || ""}`,
+      images: post.mainImage ? [imageBuilder(post.mainImage).url()] : [],
+      url: `${siteURL || ""}${post.slug?.current ? `/blog/${post.slug.current}` : ""}`,
+    },
+  };
 }
 
 export default async function BlogDetails(props: Props) {
@@ -78,17 +78,27 @@ export default async function BlogDetails(props: Props) {
   const post = await getPost(slug);
   const posts = await getPosts();
 
+  if (!post) {
+    return (
+      <div className="text-center py-20">
+        <h1 className="text-3xl font-bold">Post not found</h1>
+      </div>
+    );
+  }
+
   return (
     <>
       <Breadcrumb pageTitle="Blog Details" />
 
       <section className="pb-17.5 pt-20 lg:pb-22.5 lg:pt-25 xl:pb-27.5">
         <div className="relative mx-auto mb-10 aspect-[97/44] w-full max-w-[1170px] overflow-hidden rounded-2xl px-4 sm:px-8 md:rounded-3xl xl:px-0">
-          <Image
-            src={imageBuilder(post?.mainImage).url()}
-            alt={post.title}
-            fill
-          />
+          {post.mainImage && (
+            <Image
+              src={imageBuilder(post.mainImage).url()}
+              alt={post.title || ""}
+              fill
+            />
+          )}
         </div>
 
         <div className="mx-auto w-full max-w-[1170px]">

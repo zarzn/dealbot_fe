@@ -12,6 +12,11 @@ export const api = axios.create({
 
 // Add request interceptor to add auth token
 api.interceptors.request.use(async (config) => {
+  // Don't add auth header for auth-related endpoints
+  if (config.url?.includes('/auth/')) {
+    return config;
+  }
+  
   const session = await getSession();
   if (session?.accessToken) {
     config.headers.Authorization = `Bearer ${session.accessToken}`;
@@ -25,10 +30,15 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    // Don't handle auth errors for auth-related endpoints
+    if (error.config?.url?.includes('/auth/')) {
+      return Promise.reject(error);
+    }
+    
     // Handle 401 errors (unauthorized)
     if (error.response?.status === 401) {
-      // Handle token refresh or redirect to login
-      window.location.href = '/auth/login';
+      // Just reject the error and let the middleware handle the redirect
+      return Promise.reject(error);
     }
     return Promise.reject(error);
   }

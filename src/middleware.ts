@@ -5,6 +5,7 @@ import type { NextRequest } from 'next/server';
 // This function will be called for protected routes only
 export default withAuth(
   function middleware(req: NextRequest) {
+    // Add custom middleware logic here if needed
     return NextResponse.next();
   },
   {
@@ -13,6 +14,9 @@ export default withAuth(
     },
     pages: {
       signIn: '/auth/signin',
+      error: '/auth/error',
+      verifyRequest: '/auth/verify-request',
+      newUser: '/auth/signup'
     },
   }
 );
@@ -26,5 +30,8 @@ export const config = {
     '/deals/:path*',
     '/profile/:path*',
     '/chat/:path*',
+    '/settings/:path*',
+    '/wallet/:path*',
+    '/notifications/:path*',
   ]
 }; 

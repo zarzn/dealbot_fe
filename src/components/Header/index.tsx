@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import logo from "../../../public/images/logo/logo.svg";
 import DropDown from "./DropDown";
 import menuData from "./menuData";
+import { NotificationBell } from "../Notifications/NotificationBell";
 
 const Header = () => {
   const [navigationOpen, setNavigationOpen] = useState(false);
@@ -122,6 +123,7 @@ const Header = () => {
             <div className="mt-7 flex items-center gap-6 lg:mt-0">
               {session ? (
                 <>
+                  <NotificationBell />
                   <p>{session?.user?.name}</p>
                   <button
                     aria-label="Sign Out button"

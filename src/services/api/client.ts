@@ -38,6 +38,11 @@ apiClient.interceptors.request.use(
       data: config.data ? { ...config.data, password: config.data.password ? '***' : undefined } : undefined,
     });
     
+    // Don't add auth header for auth-related endpoints
+    if (config.url?.includes('/auth/')) {
+      return config;
+    }
+    
     const session = await getSession() as CustomSession;
     if (session?.accessToken) {
       config.headers.Authorization = `Bearer ${session.accessToken}`;
@@ -69,9 +74,14 @@ apiClient.interceptors.response.use(
       message: error.message,
     });
 
+    // Don't handle auth errors for auth-related endpoints
+    if (error.config?.url?.includes('/auth/')) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401) {
-      // Handle token expiration
-      await signOut({ redirect: true, callbackUrl: '/auth/login' });
+      // Let the middleware handle the redirect
+      return Promise.reject(error);
     }
     
     const errorResponse = {

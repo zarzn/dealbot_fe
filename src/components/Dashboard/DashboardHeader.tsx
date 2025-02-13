@@ -56,12 +56,13 @@ const DashboardHeader = () => {
               >
                 <Bell className="w-5 h-5" />
               </button>
-              <button 
+              <Link 
+                href="/dashboard/settings"
                 className="w-10 h-10 rounded-full bg-white/[0.05] flex items-center justify-center hover:bg-white/[0.1] transition"
                 aria-label="Settings"
               >
                 <Settings className="w-5 h-5" />
-              </button>
+              </Link>
             </div>
           </div>
         </div>

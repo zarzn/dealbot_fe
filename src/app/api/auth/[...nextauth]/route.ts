@@ -3,7 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
 import TwitterProvider from "next-auth/providers/twitter";
 import CredentialsProvider from "next-auth/providers/credentials";
-import type { DefaultSession, JWT } from "next-auth";
+import type { DefaultSession, JWT, User } from "next-auth";
 
 declare module "next-auth" {
   interface Session extends DefaultSession {
@@ -16,6 +16,11 @@ declare module "next-auth" {
     accessToken?: string;
     provider?: string;
     error?: string;
+  }
+
+  interface User {
+    accessToken?: string;
+    provider?: string;
   }
 }
 
@@ -57,6 +62,7 @@ const handler = NextAuth({
     signOut: "/auth/signout",
     error: "/auth/error",
     verifyRequest: "/auth/verify-request",
+    newUser: "/auth/signup"
   },
   callbacks: {
     async jwt({ token, user, account }) {
@@ -76,6 +82,17 @@ const handler = NextAuth({
         provider: token.provider,
       };
     },
+    async redirect({ url, baseUrl }) {
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url
+      return baseUrl
+    },
+  },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 });
 

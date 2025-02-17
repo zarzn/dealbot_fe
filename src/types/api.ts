@@ -85,20 +85,35 @@ export interface Deal {
 export interface Notification {
   id: string;
   user_id: string;
+  goal_id?: string;
   deal_id?: string;
-  type: 'email' | 'in_app' | 'chat';
-  status: 'pending' | 'sent' | 'failed' | 'read';
-  content: NotificationContent;
-  error?: string;
-  created_at: string;
-  sent_at?: string;
-  read_at?: string;
-}
-
-export interface NotificationContent {
   title: string;
   message: string;
-  data?: Record<string, any>;
+  type: 'system' | 'deal' | 'goal' | 'price_alert' | 'token' | 'security' | 'market';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+  channels: string[];
+  action_url?: string;
+  created_at: string;
+  sent_at?: string;
+  delivered_at?: string;
+  read_at?: string;
+  error?: string;
+}
+
+export interface NotificationPreferences {
+  enabled_channels: string[];
+  notification_frequency: Record<string, string>;
+  time_windows: Record<string, {
+    start_time: string;
+    end_time: string;
+    timezone: string;
+  }>;
+  muted_until: string | null;
+  do_not_disturb: boolean;
+  email_digest: boolean;
+  push_enabled: boolean;
+  minimum_priority: string;
 }
 
 // Token Types

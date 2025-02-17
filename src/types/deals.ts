@@ -1,41 +1,69 @@
- export interface DealSuggestion {
+export interface Deal {
   id: string;
   title: string;
+  description?: string;
   price: number;
-  originalPrice: number;
-  source: string;
-  score: number;
-  url: string;
+  originalPrice?: number;
+  url?: string;
   imageUrl?: string;
-  expiresAt?: string;
-  status: string;
-  marketId: string;
-  sellerRating?: number;
-  matchScore: number;
-  relevanceExplanation: string;
-  category: string;
-  condition: string;
-  shippingInfo: {
-    price: number;
-    estimatedDays: number;
+  seller?: string;
+  shippingInfo?: {
+    cost: number;
     freeShipping: boolean;
   };
-  warranty?: string;
-  reviews: {
+  reviews?: {
     count: number;
     averageRating: number;
   };
-  features: string[];
-  inStock: boolean;
+  warranty?: string;
+  inStock?: boolean;
   stockCount?: number;
+  features?: string[];
   isTracked?: boolean;
 }
 
-export interface PriceHistory {
-  date: string;
+export interface DealSuggestion {
+  id: string;
+  title: string;
+  description?: string;
+  url: string;
+  imageUrl?: string;
   price: number;
+  originalPrice: number;
   source: string;
-  isLowestPrice: boolean;
+  category: string;
+  condition: string;
+  warranty?: string;
+  inStock: boolean;
+  stockCount?: number;
+  features: string[];
+  score: number;
+  expiresAt?: string;
+  shippingInfo: {
+    freeShipping: boolean;
+    price: number;
+    estimatedDays: number;
+  };
+  reviews: {
+    averageRating: number;
+    count: number;
+  };
+}
+
+export interface PriceHistory {
+  price: number;
+  date: string;
+  source: string;
+}
+
+export interface AIAnalysis {
+  priceAnalysis: {
+    trend: string;
+    prediction: string;
+    confidence: number;
+  };
+  buyingAdvice: string;
+  alternatives?: Deal[];
 }
 
 export interface DealTrend {
@@ -65,4 +93,15 @@ export interface SimilarDeal {
   priceDifference: number;
   advantages: string[];
   disadvantages: string[];
+}
+
+export interface SearchQuery {
+  query?: string;
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: 'price' | 'relevance' | 'date';
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
 }

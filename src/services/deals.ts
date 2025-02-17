@@ -1,116 +1,60 @@
-import axios from 'axios';
-import { DealSuggestion } from '@/types/deals';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+import { apiClient } from '@/lib/api-client';
+import { DealSuggestion, AIAnalysis, PriceHistory } from '@/types/deals';
 
 export interface SearchQuery {
-  query: string;
-  constraints?: {
-    maxPrice?: number;
-    minPrice?: number;
-    brands?: string[];
-    categories?: string[];
-    deadline?: string;
-    condition?: string[];
-    freeShippingOnly?: boolean;
-    inStockOnly?: boolean;
-    minRating?: number;
-    maxShippingDays?: number;
-    hasWarranty?: boolean;
-  };
+  query?: string;
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: string;
+  page?: number;
+  limit?: number;
 }
 
-export interface AIAnalysis {
-  relevanceScore: number;
-  priceAnalysis: {
-    isGoodDeal: boolean;
-    confidence: number;
-    reasoning: string;
-    historicalContext: string;
-    priceProjection: {
-      trend: 'rising' | 'falling' | 'stable';
-      confidence: number;
-      nextWeekEstimate?: number;
-    };
-  };
-  dealQuality: {
-    score: number;
-    factors: Array<{
-      factor: string;
-      impact: number;
-      explanation: string;
-    }>;
-  };
-  alternatives: Array<{
-    dealId: string;
-    reason: string;
-    priceDifference: number;
-  }>;
-  buyingAdvice: {
-    recommendation: string;
-    timing: string;
-    confidence: number;
-  };
+export interface SearchCost {
+  tokenCost: number;
+  features: string[];
 }
 
-export const dealsService = {
-  async searchDeals(searchQuery: SearchQuery) {
-    try {
-      const response = await axios.post(`${API_URL}/api/v1/deals/search`, searchQuery);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to search deals:', error);
-      throw error;
-    }
-  },
+export interface SearchResponse {
+  deals: DealSuggestion[];
+  total: number;
+  cost: SearchCost;
+}
+
+class DealsService {
+  async getSearchCost(query: SearchQuery): Promise<SearchCost> {
+    const response = await apiClient.get('/api/v1/deals/search/cost', { params: query });
+    return response.data;
+  }
+
+  async searchDeals(query: SearchQuery): Promise<SearchResponse> {
+    const response = await apiClient.post('/api/v1/deals/search', query);
+    return response.data;
+  }
+
+  async getDealDetails(dealId: string): Promise<DealSuggestion> {
+    const response = await apiClient.get(`/api/v1/deals/${dealId}`);
+    return response.data;
+  }
 
   async getAIAnalysis(dealId: string): Promise<AIAnalysis> {
-    try {
-      const response = await axios.get(`${API_URL}/api/v1/deals/${dealId}/analysis`);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to get AI analysis:', error);
-      throw error;
-    }
-  },
-
-  async getDealById(id: string): Promise<DealSuggestion> {
-    try {
-      const response = await axios.get(`${API_URL}/api/v1/deals/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch deal:', error);
-      throw error;
-    }
-  },
-
-  async getPriceHistory(id: string) {
-    try {
-      const response = await axios.get(`${API_URL}/api/v1/deals/${id}/price-history`);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch price history:', error);
-      throw error;
-    }
-  },
-
-  async getSimilarDeals(id: string) {
-    try {
-      const response = await axios.get(`${API_URL}/api/v1/deals/${id}/similar`);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch similar deals:', error);
-      throw error;
-    }
-  },
-
-  async analyzeDealTrends(category: string) {
-    try {
-      const response = await axios.get(`${API_URL}/api/v1/deals/trends/${category}`);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to analyze trends:', error);
-      throw error;
-    }
+    const response = await apiClient.get(`/api/v1/deals/${dealId}/analysis`);
+    return response.data;
   }
-}; 
+
+  async getPriceHistory(dealId: string): Promise<PriceHistory[]> {
+    const response = await apiClient.get(`/api/v1/deals/${dealId}/price-history`);
+    return response.data;
+  }
+
+  async trackDeal(dealId: string): Promise<void> {
+    await apiClient.post(`/api/v1/deals/${dealId}/track`);
+  }
+
+  async untrackDeal(dealId: string): Promise<void> {
+    await apiClient.delete(`/api/v1/deals/${dealId}/track`);
+  }
+}
+
+export const dealsService = new DealsService(); 

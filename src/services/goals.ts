@@ -1,6 +1,5 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+import { apiClient } from '@/lib/api-client';
+import type { CreateGoalInput, GoalConstraints } from '@/lib/validations/goal';
 
 export interface Goal {
   id?: string;
@@ -15,16 +14,7 @@ export interface Goal {
   source: string;
   url: string;
   imageUrl?: string;
-  constraints: {
-    maxPrice: number;
-    condition?: string;
-    shippingInfo?: {
-      price: number;
-      estimatedDays: number;
-      freeShipping: boolean;
-    };
-    features?: string[];
-  };
+  constraints: GoalConstraints;
   notifications: {
     email: boolean;
     inApp: boolean;
@@ -36,67 +26,154 @@ export interface Goal {
     searchQuery: string;
     dealId: string;
   };
+  isShared?: boolean;
+  shareUrl?: string;
+  sharedBy?: {
+    id: string;
+    name: string;
+  };
   createdAt?: string;
   updatedAt?: string;
+  deadline?: string;
+  matchesFound?: number;
+  successRate?: number;
+  tokensSpent?: number;
+  priority?: 'low' | 'medium' | 'high';
+  lastCheckedAt?: string;
+  dealsProcessed?: number;
+  rewardsEarned?: number;
+  bestMatchScore?: number;
+  averageMatchScore?: number;
+  activeDealsCount?: number;
 }
 
-export const goalsService = {
-  async createGoal(goal: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>) {
-    try {
-      const response = await axios.post(`${API_URL}/api/v1/goals`, goal);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to create goal:', error);
-      throw error;
-    }
-  },
+export interface GoalTemplate {
+  id: string;
+  title: string;
+  itemCategory: string;
+  constraints: GoalConstraints;
+  description: string;
+  tokenCost: number;
+}
 
-  async getGoals() {
-    try {
-      const response = await axios.get(`${API_URL}/api/v1/goals`);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch goals:', error);
-      throw error;
-    }
-  },
+export interface SharedGoalResponse {
+  shareUrl: string;
+  tokenCost: number;
+}
 
-  async updateGoal(id: string, updates: Partial<Goal>) {
-    try {
-      const response = await axios.patch(`${API_URL}/api/v1/goals/${id}`, updates);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to update goal:', error);
-      throw error;
-    }
-  },
+export interface GoalCost {
+  tokenCost: number;
+  features: string[];
+}
 
-  async deleteGoal(id: string) {
-    try {
-      await axios.delete(`${API_URL}/api/v1/goals/${id}`);
-    } catch (error) {
-      console.error('Failed to delete goal:', error);
-      throw error;
-    }
-  },
-
-  async getGoalById(id: string) {
-    try {
-      const response = await axios.get(`${API_URL}/api/v1/goals/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch goal:', error);
-      throw error;
-    }
-  },
-
-  async getPriceHistory(id: string) {
-    try {
-      const response = await axios.get(`${API_URL}/api/v1/goals/${id}/price-history`);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch price history:', error);
-      throw error;
-    }
+class GoalsService {
+  async getGoalCost(): Promise<GoalCost> {
+    const response = await apiClient.get('/api/v1/goals/cost');
+    return response.data;
   }
-}; 
+
+  async createGoal(goal: CreateGoalInput): Promise<Goal> {
+    // Transform the input to match API schema
+    const goalData = {
+      title: goal.title,
+      itemCategory: goal.itemCategory,
+      currentPrice: 0, // Will be set by backend
+      targetPrice: goal.constraints.minPrice,
+      priceHistory: [],
+      source: goal.marketplaces[0], // Primary marketplace
+      url: '', // Will be set by backend
+      constraints: {
+        maxPrice: goal.constraints.maxPrice,
+        minPrice: goal.constraints.minPrice,
+        brands: goal.constraints.brands,
+        conditions: goal.constraints.conditions,
+        keywords: goal.constraints.keywords,
+        features: goal.constraints.features,
+      },
+      notifications: {
+        email: goal.notifications.email,
+        inApp: goal.notifications.inApp,
+        priceThreshold: goal.notifications.priceThreshold,
+      },
+      status: 'active',
+      priority: goal.priority,
+      deadline: goal.deadline,
+      maxMatches: goal.maxMatches,
+      maxTokens: goal.maxTokens,
+    };
+
+    const response = await apiClient.post('/api/v1/goals', goalData);
+    return response.data;
+  }
+
+  async getGoals(): Promise<Goal[]> {
+    const response = await apiClient.get('/api/v1/goals');
+    return response.data;
+  }
+
+  async getGoalById(id: string): Promise<Goal> {
+    const response = await apiClient.get(`/api/v1/goals/${id}`);
+    return response.data;
+  }
+
+  async updateGoal(id: string, updates: Partial<Goal>): Promise<Goal> {
+    const response = await apiClient.patch(`/api/v1/goals/${id}`, updates);
+    return response.data;
+  }
+
+  async deleteGoal(id: string): Promise<void> {
+    await apiClient.delete(`/api/v1/goals/${id}`);
+  }
+
+  async updateGoalStatus(id: string, status: Goal['status']): Promise<Goal> {
+    const response = await apiClient.patch(`/api/v1/goals/${id}/status`, { status });
+    return response.data;
+  }
+
+  async getPriceHistory(id: string): Promise<Goal['priceHistory']> {
+    const response = await apiClient.get(`/api/v1/goals/${id}/price-history`);
+    return response.data;
+  }
+
+  async getGoalTemplates(): Promise<GoalTemplate[]> {
+    const response = await apiClient.get('/api/v1/goals/templates');
+    return response.data;
+  }
+
+  async createGoalFromTemplate(templateId: string): Promise<Goal> {
+    const response = await apiClient.post(`/api/v1/goals/templates/${templateId}`);
+    return response.data;
+  }
+
+  async getGoalAnalytics(id: string): Promise<{
+    matchedDeals: number;
+    averagePrice: number;
+    lowestPrice: number;
+    priceDrops: number;
+    tokensCost: number;
+  }> {
+    const response = await apiClient.get(`/api/v1/goals/${id}/analytics`);
+    return response.data;
+  }
+
+  async shareGoal(id: string): Promise<SharedGoalResponse> {
+    const response = await apiClient.post(`/api/v1/goals/${id}/share`);
+    return response.data;
+  }
+
+  async unshareGoal(id: string): Promise<void> {
+    await apiClient.delete(`/api/v1/goals/${id}/share`);
+  }
+
+  async getSharedGoal(shareId: string): Promise<Goal> {
+    const response = await apiClient.get(`/api/v1/goals/shared/${shareId}`);
+    return response.data;
+  }
+
+  async cloneSharedGoal(shareId: string): Promise<Goal> {
+    const response = await apiClient.post(`/api/v1/goals/shared/${shareId}/clone`);
+    return response.data;
+  }
+}
+
+export const goalsService = new GoalsService(); 

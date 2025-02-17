@@ -1,6 +1,7 @@
 import { api } from '@/lib/api';
 import { getSession } from 'next-auth/react';
 import axios from 'axios';
+import { Notification, NotificationPreferences } from '@/types/api';
 
 export interface Notification {
   id: string;
@@ -45,25 +46,13 @@ export class NotificationService {
   private notificationQueue: Set<string> = new Set(); // Queue for deduplication
 
   // Fetch notifications from the API with throttling
-  async getNotifications(): Promise<Notification[]> {
-    const now = Date.now();
-    if (now - this.lastNotificationTime < this.notificationThrottle) {
-      return []; // Return empty if within throttle period
-    }
-    
-    try {
-      const response = await api.get<Notification[]>('/notifications');
-      this.lastNotificationTime = now;
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      return [];
-    }
+  async getNotifications(): Promise<{ notifications: Notification[] }> {
+    const response = await api.get('/notifications');
+    return response.data;
   }
 
-  async markAsRead(notificationId: string) {
-    const response = await api.put<Notification>(`/notifications/${notificationId}/read`);
-    return response.data;
+  async markAsRead(notificationId: string): Promise<void> {
+    await api.put(`/notifications/${notificationId}/read`);
   }
 
   async markMultipleAsRead(notificationIds: string[]) {
@@ -71,14 +60,22 @@ export class NotificationService {
     return response.data;
   }
 
-  async getPreferences() {
-    const response = await api.get<NotificationPreferences>('/notifications/preferences');
+  async getPreferences(): Promise<NotificationPreferences> {
+    const response = await api.get('/notifications/preferences');
     return response.data;
   }
 
-  async updatePreferences(preferences: Partial<NotificationPreferences>) {
-    const response = await api.put<NotificationPreferences>('/notifications/preferences', preferences);
+  async updatePreferences(preferences: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
+    const response = await api.put('/notifications/preferences', preferences);
     return response.data;
+  }
+
+  async clearAll(): Promise<void> {
+    await api.delete('/notifications');
+  }
+
+  async markAllAsRead(): Promise<void> {
+    await api.put('/notifications/read-all');
   }
 
   // WebSocket connection for real-time notifications

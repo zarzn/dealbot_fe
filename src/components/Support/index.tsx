@@ -4,7 +4,7 @@ import SectionTitle from "../Common/SectionTitle";
 const Support = () => {
   return (
     <section id="support" className="scroll-mt-17">
-      <div className="mx-auto max-w-[1104px] px-4 sm:px-8 xl:px-0">
+      <div className="mx-auto max-w-[1170px] px-4 sm:px-8 xl:px-0">
         <div className="relative z-999 overflow-hidden rounded-[30px] bg-dark px-4 pt-25 sm:px-20 lg:px-27.5">
           {/* <!-- grid row --> */}
           <div className="absolute -top-[16%] left-1/2 -z-1 flex w-full max-w-[690px] -translate-x-1/2 justify-center gap-7.5 opacity-40">
@@ -50,22 +50,22 @@ const Support = () => {
           <SectionTitle
             subTitle="Need Any Help?"
             title="Contact With Us"
-            paragraph="Build SaaS AI applications using OpenAI and Next.js, this kit comes with pre-configured and pre-built examples, making it easier to quickly kickstart your AI startup."
+            paragraph="Have questions about our AI-powered deal finding system? We're here to help!"
           />
 
           {/* <!-- support form --> */}
-          <div className="form-box-gradient relative overflow-hidden rounded-[25px] bg-dark p-6 sm:p-8 xl:p-15">
+          <div className="form-box-gradient relative overflow-hidden rounded-[25px] p-8 sm:p-12 xl:p-20 mb-20">
             <form
               action="https://formbold.com/s/unique_form_id"
               method="POST"
-              className="relative z-10"
+              className="relative z-10 max-w-[820px] mx-auto"
             >
-              <div className="-mx-4 flex flex-wrap xl:-mx-10">
-                <div className="w-full px-4 md:w-1/2 xl:px-5">
-                  <div className="mb-9.5">
+              <div className="flex flex-wrap -mx-4">
+                <div className="w-full px-4 md:w-1/2">
+                  <div className="mb-8">
                     <label
                       htmlFor="name"
-                      className="mb-2.5 block font-medium text-white"
+                      className="mb-3 block font-medium text-white"
                     >
                       Name
                     </label>
@@ -75,15 +75,15 @@ const Support = () => {
                       name="name"
                       placeholder="Enter your Name"
                       required
-                      className="w-full rounded-lg border border-white/[0.12] bg-white/[0.05] px-6 py-3 text-white outline-none focus:border-purple"
+                      className="w-full rounded-lg border border-white/[0.12] bg-white/[0.05] px-6 py-4 text-white outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>
-                <div className="w-full px-4 md:w-1/2 xl:px-5">
-                  <div className="mb-9.5">
+                <div className="w-full px-4 md:w-1/2">
+                  <div className="mb-8">
                     <label
                       htmlFor="email"
-                      className="mb-2.5 block font-medium text-white"
+                      className="mb-3 block font-medium text-white"
                     >
                       Email
                     </label>
@@ -93,15 +93,15 @@ const Support = () => {
                       name="email"
                       placeholder="Enter your Email"
                       required
-                      className="w-full rounded-lg border border-white/[0.12] bg-white/[0.05] px-6 py-3 text-white outline-none focus:border-purple"
+                      className="w-full rounded-lg border border-white/[0.12] bg-white/[0.05] px-6 py-4 text-white outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>
-                <div className="w-full px-4 xl:px-5">
-                  <div className="mb-10">
+                <div className="w-full px-4">
+                  <div className="mb-8">
                     <label
                       htmlFor="message"
-                      className="mb-2.5 block font-medium text-white"
+                      className="mb-3 block font-medium text-white"
                     >
                       Message
                     </label>
@@ -111,15 +111,15 @@ const Support = () => {
                       placeholder="Type your message"
                       rows={6}
                       required
-                      className="w-full rounded-lg border border-white/[0.12] bg-white/[0.05] px-6 py-5 outline-none focus:border-purple"
+                      className="w-full rounded-lg border border-white/[0.12] bg-white/[0.05] px-6 py-4 text-white outline-none focus:border-blue-500 resize-none"
                     />
                   </div>
                 </div>
-                <div className="w-full px-4 xl:px-5">
+                <div className="w-full px-4">
                   <div className="text-center">
                     <button
                       type="submit"
-                      className="hero-button-gradient inline-flex rounded-lg px-7 py-3 font-medium text-white duration-300 ease-in hover:opacity-80"
+                      className="inline-flex rounded-lg bg-gradient-to-r from-blue-600 to-blue-400 px-8 py-4 text-base font-medium text-white transition duration-300 ease-in-out hover:opacity-80"
                     >
                       Send Message
                     </button>

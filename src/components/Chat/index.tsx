@@ -228,7 +228,7 @@ function PriceAdjustmentModal({ deal, isOpen, onClose, onConfirm }: PriceAdjustm
           </button>
           <button
             onClick={handleConfirm}
-            className="rounded-lg bg-purple px-4 py-2 text-white hover:bg-purple/90"
+            className="rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-500/90"
           >
             Start Tracking
           </button>
@@ -538,7 +538,7 @@ export default function DealFinder() {
                     exit={{ height: 0, opacity: 0 }}
                     className="mt-4 overflow-hidden rounded-xl bg-dark-7 p-4"
                   >
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-7.5 sm:grid-cols-2 lg:grid-cols-3">
                       <div>
                         <label className="mb-2 block text-sm text-dark-3">
                           Price Range
@@ -721,7 +721,7 @@ export default function DealFinder() {
             <button
               type="submit"
               disabled={isProcessing || !input.trim()}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple to-pink px-6 py-4 text-white transition-all duration-300 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-400 px-6 py-4 text-white transition-all duration-300 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isProcessing ? (
                 <>
@@ -887,7 +887,7 @@ export default function DealFinder() {
                           href={suggestion.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple to-pink px-4 py-2 text-white transition-all duration-300 hover:opacity-90"
+                          className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-400 px-4 py-2 text-white transition-all duration-300 hover:opacity-90"
                         >
                           View Deal
                           <ChevronRight className="h-4 w-4" />
@@ -904,8 +904,8 @@ export default function DealFinder() {
                           className={`
                             flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-300
                             ${trackedDeals.has(suggestion.id)
-                              ? 'bg-purple/20 text-purple border border-purple cursor-not-allowed'
-                              : 'bg-purple hover:bg-purple/90 text-white border border-transparent'
+                              ? 'bg-blue-500/20 text-blue-500 border border-blue-500 cursor-not-allowed'
+                              : 'bg-blue-500 hover:bg-blue-500/90 text-white border border-transparent'
                             }
                           `}
                         >

@@ -1,78 +1,102 @@
-import { Team } from "@/types/team";
+import { TeamMember } from "@/types/team";
 
-const teamData: Team[] = [
-  {
-    id: 76,
-    name: "Christian Cannon",
-    designation: "Product Designer",
-    image: "/images/team/team-01.png",
-    fbLink: "https://www.facebook.com/",
-    twitterLink: "https://twitter.com/",
-    instagramLink: "https://www.instagram.com/",
-  },
-  {
-    id: 51,
-    name: "Ricky Riley",
-    designation: "Frontend Developer",
-    image: "/images/team/team-02.png",
-    fbLink: "https://www.facebook.com/",
-    twitterLink: "https://twitter.com/",
-    instagramLink: "https://www.instagram.com/",
-  },
-  {
-    id: 86,
-    name: "Gilbert Graham",
-    designation: "Backend Developer",
-    image: "/images/team/team-03.png",
-    fbLink: "https://www.facebook.com/",
-    twitterLink: "https://twitter.com/",
-    instagramLink: "https://www.instagram.com/",
-  },
+const teamData: TeamMember[] = [
   {
     id: 1,
-    name: "Elijah Carroll",
-    designation: "Content Writer",
-    image: "/images/team/team-04.png",
-    fbLink: "https://www.facebook.com/",
-    twitterLink: "https://twitter.com/",
-    instagramLink: "https://www.instagram.com/",
+    name: "Sarah Johnson",
+    designation: "AI & Price Analytics Lead",
+    image: "/images/team/sarah-johnson.jpg",
+    bio: "10+ years in AI and price prediction algorithms",
+    links: {
+      twitter: "#",
+      github: "#",
+      linkedin: "#"
+    }
   },
   {
-    id: 64,
-    name: "Millie Buchanan",
-    designation: "SEO Expert",
-    image: "/images/team/team-05.png",
-    fbLink: "https://www.facebook.com/",
-    twitterLink: "https://twitter.com/",
-    instagramLink: "https://www.instagram.com/",
+    id: 2,
+    name: "Michael Chen",
+    designation: "Platform Architect",
+    image: "/images/team/michael-chen.jpg",
+    bio: "Expert in scalable e-commerce systems",
+    links: {
+      twitter: "#",
+      github: "#",
+      linkedin: "#"
+    }
   },
   {
-    id: 59,
-    name: "Jeffrey Alvarado",
-    designation: "DevOps",
-    image: "/images/team/team-06.png",
-    fbLink: "https://www.facebook.com/",
-    twitterLink: "https://twitter.com/",
-    instagramLink: "https://www.instagram.com/",
+    id: 3,
+    name: "Emily Rodriguez",
+    designation: "Market Research Director",
+    image: "/images/team/emily-rodriguez.jpg",
+    bio: "Specialist in consumer behavior and market trends",
+    links: {
+      twitter: "#",
+      github: "#",
+      linkedin: "#"
+    }
   },
   {
-    id: 39,
-    name: "Kathryn Klein",
-    designation: "Full-stack Developer",
-    image: "/images/team/team-07.png",
-    fbLink: "https://www.facebook.com/",
-    twitterLink: "https://twitter.com/",
-    instagramLink: "https://www.instagram.com/",
+    id: 4,
+    name: "David Kim",
+    designation: "Blockchain Lead",
+    image: "/images/team/david-kim.jpg",
+    bio: "Expert in token economics and smart contracts",
+    links: {
+      twitter: "#",
+      github: "#",
+      linkedin: "#"
+    }
   },
   {
-    id: 86,
-    name: "Minnie Jordan",
-    designation: "Testing Developer",
-    image: "/images/team/team-08.png",
-    fbLink: "https://www.facebook.com/",
-    twitterLink: "https://twitter.com/",
-    instagramLink: "https://www.instagram.com/",
+    id: 5,
+    name: "Lisa Zhang",
+    designation: "UX Research Lead",
+    image: "/images/team/lisa-zhang.jpg",
+    bio: "Focused on intuitive deal discovery experiences",
+    links: {
+      twitter: "#",
+      github: "#",
+      linkedin: "#"
+    }
   },
+  {
+    id: 6,
+    name: "James Wilson",
+    designation: "Community Manager",
+    image: "/images/team/james-wilson.jpg",
+    bio: "Building and nurturing our deal-finding community",
+    links: {
+      twitter: "#",
+      github: "#",
+      linkedin: "#"
+    }
+  },
+  {
+    id: 7,
+    name: "Maria Garcia",
+    designation: "Data Science Lead",
+    image: "/images/team/maria-garcia.jpg",
+    bio: "Expert in ML models for price forecasting",
+    links: {
+      twitter: "#",
+      github: "#",
+      linkedin: "#"
+    }
+  },
+  {
+    id: 8,
+    name: "Alex Foster",
+    designation: "Security Lead",
+    image: "/images/team/alex-foster.jpg",
+    bio: "Ensuring platform and transaction security",
+    links: {
+      twitter: "#",
+      github: "#",
+      linkedin: "#"
+    }
+  }
 ];
 
 export default teamData;

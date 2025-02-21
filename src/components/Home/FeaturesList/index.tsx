@@ -23,23 +23,20 @@ const FeaturesList = () => {
                         />
 
                         <span className="hero-subtitle-text">
-                          Kickstart your AI Startup
+                          Intelligent Deal Finding
                         </span>
                       </span>
                       <h3 className="mb-4.5 text-heading-4 font-bold text-white">
-                        Seamless OpenAI Integration
+                        AI-Powered Price Intelligence
                       </h3>
                       <p className="mb-10 font-medium">
-                        Build SaaS AI applications using OpenAI and Next.js,
-                        this kit comes with pre-configured and pre-built
-                        examples, making it easier to quickly kickstart your AI
-                        startup.
+                        Our advanced AI system continuously monitors prices across markets, analyzes trends, and predicts the best time to buy. Set your goals and let our intelligent system find the perfect deals for you, saving both time and money.
                       </p>
                       <Link
-                        href="/#"
+                        href="/dashboard/goals/create"
                         className="features-button-gradient relative inline-flex items-center gap-1.5 rounded-full px-6 py-3 text-sm text-white duration-300 ease-in hover:shadow-button"
                       >
-                        Learn more
+                        Start Finding Deals
                         <svg
                           width="14"
                           height="12"
@@ -58,7 +55,7 @@ const FeaturesList = () => {
                     <div className="relative hidden aspect-square w-full max-w-[428px] sm:block">
                       <Image
                         src="/images/features/big-icon.svg"
-                        alt="icon"
+                        alt="AI Deal Finding"
                         fill
                       />
                     </div>
@@ -135,12 +132,10 @@ const FeaturesList = () => {
                     </span>
 
                     <h3 className="mb-4.5 text-heading-6 font-semibold text-white">
-                      All Essential SaaS Pages
+                      Smart Goal Setting
                     </h3>
                     <p className="font-medium">
-                      Build SaaS AI applications using OpenAI and Next.js, this
-                      kit comes with pre-configured and pre-built examples,
-                      making it easier to quickly kickstart.
+                      Define your deal-finding goals with flexible constraints like price range, brand preferences, and condition requirements. Our AI system will handle the rest.
                     </p>
                   </div>
 
@@ -196,11 +191,10 @@ const FeaturesList = () => {
                     </span>
 
                     <h3 className="mb-4.5 text-heading-6 font-semibold text-white">
-                      Highly Customizable
+                      Real-time Notifications
                     </h3>
                     <p className="font-medium">
-                      Build SaaS AI applications using OpenAI and Next.js,
-                      quickly kickstart your AI startup.
+                      Get instant alerts when we find deals matching your goals or when prices drop to your target range. Never miss a great deal again.
                     </p>
                   </div>
 

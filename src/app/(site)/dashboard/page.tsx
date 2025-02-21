@@ -31,8 +31,95 @@ export default function DashboardPage() {
 
   const loadDashboardData = async () => {
     try {
-      const data = await analyticsService.getDashboardMetrics();
-      setMetrics(data);
+      // In production, this would fetch from the API
+      // const data = await analyticsService.getDashboardMetrics();
+      const mockData: DashboardMetrics = {
+        deals: {
+          total: 156,
+          active: 42,
+          completed: 98,
+          saved: 16,
+          successRate: 78.5,
+          averageDiscount: 32,
+          totalSavings: 4521.50
+        },
+        goals: {
+          total: 24,
+          active: 12,
+          completed: 8,
+          expired: 4,
+          averageSuccess: 85.2,
+          matchRate: 72.8
+        },
+        tokens: {
+          balance: 450.75,
+          spent: {
+            total: 325.50,
+            deals: 180.25,
+            goals: 95.25,
+            other: 50.00
+          },
+          earned: {
+            total: 776.25,
+            referrals: 300.00,
+            achievements: 376.25,
+            other: 100.00
+          },
+          history: [
+            { date: '2024-02-01', amount: 50, type: 'earned', category: 'referrals' },
+            { date: '2024-02-02', amount: -25, type: 'spent', category: 'deals' },
+            { date: '2024-02-03', amount: 100, type: 'earned', category: 'achievements' },
+            { date: '2024-02-04', amount: -35, type: 'spent', category: 'goals' },
+            { date: '2024-02-05', amount: 75, type: 'earned', category: 'referrals' },
+            { date: '2024-02-06', amount: -45, type: 'spent', category: 'deals' },
+            { date: '2024-02-07', amount: 150, type: 'earned', category: 'achievements' }
+          ]
+        },
+        activity: [
+          {
+            id: '1',
+            type: 'deal',
+            action: 'Deal Found',
+            details: {
+              dealTitle: 'LG 27" UltraGear Monitor',
+              discount: '25%',
+              price: 299.99
+            },
+            timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() // 30 minutes ago
+          },
+          {
+            id: '2',
+            type: 'goal',
+            action: 'Goal Completed',
+            details: {
+              goalTitle: 'Gaming Setup Upgrade',
+              savings: 450.25
+            },
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() // 2 hours ago
+          },
+          {
+            id: '3',
+            type: 'token',
+            action: 'Tokens Earned',
+            details: {
+              amount: 100,
+              source: 'Achievement Reward'
+            },
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString() // 5 hours ago
+          },
+          {
+            id: '4',
+            type: 'system',
+            action: 'Market Analysis',
+            details: {
+              category: 'Gaming Laptops',
+              insights: 3
+            },
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() // 1 day ago
+          }
+        ]
+      };
+      setMetrics(mockData);
     } catch (error) {
       toast.error('Failed to load dashboard data');
     } finally {

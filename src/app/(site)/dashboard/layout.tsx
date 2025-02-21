@@ -89,7 +89,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black">
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black flex">
       {/* Mobile sidebar */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div 
@@ -190,8 +190,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-72">
-        <main className="py-6 px-4 sm:px-6 lg:px-8 mt-[100px]">
+      <div className="flex flex-1 flex-col lg:pl-72">
+        <main className="flex-1 py-6 px-4 sm:px-6 lg:px-8 mt-[100px]">
           <Suspense fallback={<DashboardSkeleton />}>
             <PageTransition>
               {children}

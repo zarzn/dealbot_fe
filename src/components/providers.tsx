@@ -1,24 +1,13 @@
-'use client';
+"use client";
 
-import { ReactNode } from 'react';
-import { Toaster } from 'react-hot-toast';
-import { SessionProvider } from 'next-auth/react';
-import { AppProvider } from '@/providers/AppProvider';
-import NextTopLoader from 'nextjs-toploader';
+import { Toaster } from "react-hot-toast";
 
-interface ProvidersProps {
-  children: ReactNode;
-}
-
-export function Providers({ children }: ProvidersProps) {
+export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
-      <AppProvider>
-        <NextTopLoader />
-        <Toaster position="top-right" />
-        {children}
-      </AppProvider>
-    </SessionProvider>
+    <>
+      {children}
+      <Toaster position="bottom-right" />
+    </>
   );
 }
 

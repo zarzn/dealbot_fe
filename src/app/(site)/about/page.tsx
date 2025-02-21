@@ -10,24 +10,47 @@ import Newsletter from "@/components/Newsletter";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "About | AI Tool - Next.js Template for AI Tools",
-  description: "This is About page for AI Tool",
-  // other metadata
+  title: "About REBATON | AI-Powered Deal Finding Platform",
+  description: "Learn how REBATON's AI technology revolutionizes deal finding with price prediction, real-time monitoring, and intelligent goal tracking.",
 };
 
 const AboutPage = () => {
   return (
     <>
-      <Breadcrumb pageTitle="About Page" />
+      <Breadcrumb 
+        pageTitle="About REBATON" 
+        pagePath={[
+          { label: "Home", path: "/" },
+          { label: "About", path: "/about" }
+        ]}
+      />
+      
+      {/* Main About Section */}
       <AboutSection />
+
+      {/* Core Features */}
       <Features />
+
+      {/* Platform Demo */}
       <Video />
+
+      {/* Our Team */}
       <Team />
-      <section className="relative z-20 overflow-hidden pb-20">
+
+      {/* User Reviews */}
+      <section className="relative z-20 overflow-hidden pb-20 bg-white/[0.02]">
         <Reviews />
       </section>
-      <Clients />
+
+      {/* Integration Partners */}
+      <section className="py-20">
+        <Clients />
+      </section>
+
+      {/* Call to Action */}
       <CallToAction />
+
+      {/* Newsletter */}
       <Newsletter />
     </>
   );

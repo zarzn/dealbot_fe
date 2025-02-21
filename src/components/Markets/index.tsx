@@ -197,16 +197,16 @@ export default function Markets() {
             <h2 className="mb-5 text-3xl font-bold text-white md:text-4xl">
               Active Markets
             </h2>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-7.5 sm:grid-cols-2 lg:grid-cols-3">
               {markets.map((market) => (
                 <motion.div
                   key={market.id}
                   whileHover={{ scale: 1.02 }}
                   className={`cursor-pointer rounded-xl bg-gradient-to-br ${
                     selectedMarket === market.id
-                      ? "from-purple/20 to-pink/20 ring-2 ring-purple"
+                      ? "from-blue-500/20 to-blue-400/20 ring-2 ring-blue-500"
                       : "from-dark-6 to-dark-8"
-                  } p-6 transition-all duration-300 hover:shadow-lg`}
+                  } p-7.5 transition-all duration-300 hover:shadow-lg`}
                   onClick={() => setSelectedMarket(market.id === selectedMarket ? null : market.id)}
                 >
                   <div className="flex items-center justify-between">
@@ -219,22 +219,22 @@ export default function Markets() {
                       }`}
                     />
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-4">
-                    <div className="rounded-lg bg-dark-7 p-3">
+                  <div className="mt-6 grid grid-cols-2 gap-6">
+                    <div className="rounded-lg bg-dark-7 p-4">
                       <div className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-purple" />
+                        <TrendingUp className="h-4 w-4 text-blue-500" />
                         <span className="text-sm text-dark-3">Success Rate</span>
                       </div>
-                      <p className="mt-1 text-lg font-medium text-white">
+                      <p className="mt-2 text-lg font-medium text-white">
                         {market.successRate}%
                       </p>
                     </div>
-                    <div className="rounded-lg bg-dark-7 p-3">
+                    <div className="rounded-lg bg-dark-7 p-4">
                       <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-pink" />
+                        <Clock className="h-4 w-4 text-blue-500" />
                         <span className="text-sm text-dark-3">Response</span>
                       </div>
-                      <p className="mt-1 text-lg font-medium text-white">
+                      <p className="mt-2 text-lg font-medium text-white">
                         {market.avgResponseTime}ms
                       </p>
                     </div>
@@ -266,7 +266,7 @@ export default function Markets() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-7.5 md:grid-cols-2 lg:grid-cols-3">
               <AnimatePresence mode="popLayout">
                 {deals
                   .filter(
@@ -280,7 +280,7 @@ export default function Markets() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
                       layout
-                      className="group rounded-xl bg-dark-6 p-6 transition-all duration-300 hover:shadow-lg"
+                      className="group rounded-xl bg-dark-6 p-7.5 transition-all duration-300 hover:shadow-lg"
                     >
                       {deal.imageUrl && (
                         <div className="mb-4 aspect-video overflow-hidden rounded-lg">
@@ -291,41 +291,41 @@ export default function Markets() {
                           />
                         </div>
                       )}
-                      <div className="mb-4">
-                        <div className="flex items-center gap-2">
-                          <Tag className="h-4 w-4 text-purple" />
+                      <div className="mb-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Tag className="h-4 w-4 text-blue-500" />
                           <span className="text-sm text-dark-3">
                             {deal.source}
                           </span>
                         </div>
-                        <h3 className="mt-2 text-lg font-semibold text-white">
+                        <h3 className="text-lg font-semibold text-white">
                           {deal.title}
                         </h3>
                       </div>
 
-                      <div className="mb-4 flex items-center justify-between">
+                      <div className="mb-6 flex items-center justify-between">
                         <div>
                           <p className="text-2xl font-bold text-white">
                             ${deal.price.toFixed(2)}
                           </p>
-                          <p className="text-sm text-dark-3 line-through">
+                          <p className="text-sm text-dark-3 line-through mt-1">
                             ${deal.originalPrice.toFixed(2)}
                           </p>
                         </div>
-                        <div className="rounded-full bg-purple/10 px-3 py-1 text-purple">
+                        <div className="rounded-full bg-blue-500/10 px-4 py-2 text-blue-500">
                           {calculateDiscount(deal.originalPrice, deal.price)}% OFF
                         </div>
                       </div>
 
-                      <div className="mb-4 flex items-center gap-4">
-                        <div className="flex items-center gap-1">
+                      <div className="mb-6 flex items-center gap-4">
+                        <div className="flex items-center gap-2">
                           <Star className="h-4 w-4 text-yellow-500" />
                           <span className="text-sm text-white">
                             {deal.sellerRating}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <BarChart3 className="h-4 w-4 text-purple" />
+                        <div className="flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4 text-blue-500" />
                           <span className="text-sm text-white">
                             Score: {Math.round(deal.score * 100)}
                           </span>
@@ -333,7 +333,7 @@ export default function Markets() {
                       </div>
 
                       {deal.expiresAt && (
-                        <div className="mb-4 flex items-center gap-2 text-sm text-dark-3">
+                        <div className="mb-6 flex items-center gap-2 text-sm text-dark-3">
                           <Clock className="h-4 w-4" />
                           <span>Expires: {new Date(deal.expiresAt).toLocaleDateString()}</span>
                         </div>
@@ -343,7 +343,7 @@ export default function Markets() {
                         href={deal.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple to-pink px-4 py-2 text-white transition-all duration-300 hover:opacity-90"
+                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-400 px-4 py-2 text-white transition-all duration-300 hover:opacity-90"
                       >
                         View Deal
                         <ChevronRight className="h-4 w-4" />

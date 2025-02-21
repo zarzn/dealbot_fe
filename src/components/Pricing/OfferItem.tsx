@@ -13,11 +13,11 @@ const icon1 = (
         fillOpacity="0.08"
       />
       <g filter="url(#filter0_d_67_11301)">
-        <path d="M12.5 9L15.5 12L12.5 15L9.5 12L12.5 9Z" fill="#F3EEFF" />
+        <path d="M12.5 9L15.5 12L12.5 15L9.5 12L12.5 9Z" fill="#EFF6FF" />
       </g>
       <path
         d="M24 12C24 5.64873 18.8513 0.5 12.5 0.5C6.14873 0.5 1 5.64873 1 12C1 18.3513 6.14873 23.5 12.5 23.5C18.8513 23.5 24 18.3513 24 12Z"
-        stroke="#F3EEFF"
+        stroke="#EFF6FF"
         strokeOpacity="0.06"
       />
     </g>
@@ -43,7 +43,7 @@ const icon1 = (
         <feComposite in2="hardAlpha" operator="out" />
         <feColorMatrix
           type="matrix"
-          values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.55 0"
+          values="0 0 0 0 0.376471 0 0 0 0 0.647059 0 0 0 0 0.980392 0 0 0 0.55 0"
         />
         <feBlend
           mode="normal"
@@ -65,8 +65,8 @@ const icon1 = (
         y2="24"
         gradientUnits="userSpaceOnUse"
       >
-        <stop stopColor="#F3EEFF" stopOpacity="0" />
-        <stop offset="1" stopColor="#F3EEFF" />
+        <stop stopColor="#60A5FA" stopOpacity="0" />
+        <stop offset="1" stopColor="#60A5FA" />
       </linearGradient>
       <clipPath id="clip0_67_11301">
         <rect width="25" height="24" fill="white" />
@@ -79,7 +79,7 @@ const OfferItem = ({ text }: { text: string }) => {
   return (
     <li className="flex items-center gap-5">
       {icon1}
-      <span className="font-medium">{text}</span>
+      <span className="font-medium text-white/90">{text}</span>
     </li>
   );
 };

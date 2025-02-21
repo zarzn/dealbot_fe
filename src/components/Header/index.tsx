@@ -23,7 +23,7 @@ const Logo = () => {
       <div className="p-2 bg-purple/10 rounded-xl">
         <Sparkles className="w-6 h-6 text-purple" />
       </div>
-      <span className="text-xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-purple to-purple-400">
+      <span className="text-xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400">
         REBATON
       </span>
     </motion.div>

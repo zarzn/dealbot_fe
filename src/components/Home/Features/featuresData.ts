@@ -2,45 +2,45 @@ import { Feature } from "@/types/feature";
 
 const featuresData: Feature[] = [
   {
-    id: 11,
-    title: "OpenAI Integration",
+    id: 1,
+    title: "AI Price Prediction",
     description:
-      "Our AI writing tool analyzes your content, suggests improvements",
+      "Advanced machine learning algorithms predict price trends and identify the best time to buy",
     icon: "/images/features/icon-01.svg",
   },
   {
-    id: 27,
-    title: "Next.js 13, React 18, TS",
-    description: "Say goodbye to embarrassing typos and grammar mistakes",
+    id: 2,
+    title: "Smart Goal Setting",
+    description: "Define your deal-finding goals with flexible constraints and let AI do the work",
     icon: "/images/features/icon-02.svg",
   },
   {
-    id: 21,
-    title: "Auth, DB, Sanity Blog",
+    id: 3,
+    title: "Real-time Monitoring",
     description:
-      "Originality is key, and our AI writing tool helps you maintain it",
+      "Continuous price tracking across multiple markets with instant notifications",
     icon: "/images/features/icon-03.svg",
   },
   {
-    id: 3,
-    title: "Cutting-edge Technologies",
+    id: 4,
+    title: "Token Rewards",
     description:
-      "Transform your spoken words into written text easily & effortlessly",
+      "Earn tokens for successful deals and referrals, use them for advanced features",
     icon: "/images/features/icon-04.svg",
     rotate: true,
   },
   {
-    id: 48,
-    title: "Pre-made AI Examples",
+    id: 5,
+    title: "Market Analysis",
     description:
-      "Whether you need a professional, or positive tone it has everyone",
+      "Comprehensive market insights and deal scoring to ensure you get the best value",
     icon: "/images/features/icon-05.svg",
     rotate: true,
   },
   {
-    id: 3,
-    title: "Rich Documentation",
-    description: "Need inspiration or assistance with generating content?",
+    id: 6,
+    title: "Deal Community",
+    description: "Share and discover deals with other smart shoppers in our community",
     icon: "/images/features/icon-06.svg",
     rotate: true,
   },

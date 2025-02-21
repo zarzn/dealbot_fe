@@ -34,38 +34,42 @@ const Hero = () => {
               width={16}
               height={16}
             />
-
             <span className="hero-subtitle-text">
-              Launch Your AI Startup with
+              AI-Powered Deal Finding
             </span>
           </span>
           <h1 className="mb-6 text-3xl font-extrabold text-white sm:text-5xl xl:text-heading-1">
-            OpenAI + Next.js SaaS Boilerplate and Starter Kit
+            Never Miss the Best Deals with AI-Driven Price Intelligence
           </h1>
-          <p className="mx-auto mb-9 max-w-[500px] font-medium md:text-lg">
-            Ideal for developers looking to build SaaS applications using OpenAI
-            and Next.js, this starter kit comes with pre-configured and
-            pre-built examples, making it easier to quickly kickstart your AI
-            startup.
+          <p className="mx-auto mb-9 max-w-[600px] font-medium md:text-lg">
+            Set your deal-finding goals and let our AI system monitor prices across markets, predict price trends, and notify you of the perfect moment to buy. Save time and money with intelligent deal tracking.
           </p>
 
-          <Link
-            href="/ai-examples"
-            className="hero-button-gradient inline-flex rounded-lg px-7 py-3 font-medium text-white duration-300 ease-in hover:opacity-80"
-          >
-            Try AI Examples
-          </Link>
+          <div className="flex items-center justify-center gap-4">
+            <Link
+              href="/dashboard/goals/create"
+              className="hero-button-gradient inline-flex rounded-lg px-7 py-3 font-medium text-white duration-300 ease-in hover:opacity-80"
+            >
+              Create Your First Goal
+            </Link>
+            <Link
+              href="/dashboard/deals"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-7 py-3 font-medium text-white hover:bg-white/5"
+            >
+              View Active Deals
+            </Link>
+          </div>
         </div>
       </div>
 
       <div
-        className="relative mx-auto mt-17 aspect-[1170/411] w-full max-w-[1170px]"
+        className="relative mx-auto mt-24 aspect-[1170/411] w-full max-w-[1170px]"
         data-wow-delay="0.1s"
       >
         <Image
           className="mx-auto"
           src="./images/hero/hero.svg"
-          alt="hero"
+          alt="AI-powered deal monitoring dashboard"
           fill
         />
       </div>

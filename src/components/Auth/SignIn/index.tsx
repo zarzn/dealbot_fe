@@ -159,14 +159,6 @@ const SignIn: React.FC = () => {
                       </form>
                     )}
 
-                    <div className="relative my-7.5 flex items-center justify-center">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-white/[0.12]"></div>
-                      </div>
-                      <div className="relative z-10 bg-[#0F172A] px-4">
-                        <span className="text-sm font-medium text-white/70">or continue with social</span>
-                      </div>
-                    </div>
 
                     <SocialSignup mode="signin" />
 

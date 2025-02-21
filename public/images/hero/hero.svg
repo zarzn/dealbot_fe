@@ -81,14 +81,14 @@
 </filter>
 <linearGradient id="paint0_linear_20_12543" x1="596.25" y1="1.76087" x2="596.156" y2="9.22991" gradientUnits="userSpaceOnUse">
 <stop stop-color="#030014"/>
-<stop offset="0.286458" stop-color="#701EFC"/>
-<stop offset="0.515625" stop-color="#CBB3F3"/>
+<stop offset="0.286458" stop-color="#3B82F6"/>
+<stop offset="0.515625" stop-color="#93C5FD"/>
 <stop offset="0.786458" stop-color="#030014"/>
 </linearGradient>
 <linearGradient id="paint1_linear_20_12543" x1="596.25" y1="1.76087" x2="596.156" y2="9.22991" gradientUnits="userSpaceOnUse">
 <stop stop-color="#030014"/>
-<stop offset="0.286458" stop-color="#701EFC"/>
-<stop offset="0.515625" stop-color="#CBB3F3"/>
+<stop offset="0.286458" stop-color="#3B82F6"/>
+<stop offset="0.515625" stop-color="#93C5FD"/>
 <stop offset="0.786458" stop-color="#030014"/>
 </linearGradient>
 <linearGradient id="paint2_linear_20_12543" x1="585" y1="0" x2="585" y2="393" gradientUnits="userSpaceOnUse">

@@ -21,19 +21,32 @@ const timeframeOptions: TimeframeOption[] = [
 
 const COLORS = ['#8b5cf6', '#10b981', '#3b82f6', '#f59e0b'];
 
+// Mockup data
+const mockTokenUsage = {
+  usage: [
+    { date: '2024-02-07', amount: 25, category: 'Deal Search' },
+    { date: '2024-02-07', amount: 15, category: 'Goal Creation' },
+    { date: '2024-02-07', amount: 35, category: 'AI Analysis' },
+    { date: '2024-02-06', amount: 20, category: 'Deal Search' },
+    { date: '2024-02-06', amount: 30, category: 'Market Research' },
+    { date: '2024-02-05', amount: 40, category: 'AI Analysis' },
+    { date: '2024-02-05', amount: 15, category: 'Goal Creation' },
+    { date: '2024-02-04', amount: 25, category: 'Deal Search' }
+  ],
+  summary: {
+    total: 205,
+    byCategory: {
+      'Deal Search': 70,
+      'Goal Creation': 30,
+      'AI Analysis': 75,
+      'Market Research': 30
+    }
+  }
+};
+
 export function TokenUsageStats() {
-  const [timeframe, setTimeframe] = useState<TimeframeOption['value']>('month');
-  const [usageData, setUsageData] = useState<{
-    usage: Array<{
-      date: string;
-      amount: number;
-      category: string;
-    }>;
-    summary: {
-      total: number;
-      byCategory: Record<string, number>;
-    };
-  } | null>(null);
+  const [timeframe, setTimeframe] = useState<TimeframeOption['value']>('week');
+  const [usageData, setUsageData] = useState<typeof mockTokenUsage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -42,8 +55,9 @@ export function TokenUsageStats() {
 
   const loadUsageData = async () => {
     try {
-      const data = await analyticsService.getTokenUsage(timeframe);
-      setUsageData(data);
+      // In production, this would fetch from the API
+      // const data = await analyticsService.getTokenUsage(timeframe);
+      setUsageData(mockTokenUsage);
     } catch (error) {
       toast.error('Failed to load token usage data');
     } finally {

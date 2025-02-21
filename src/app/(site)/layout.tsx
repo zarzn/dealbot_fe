@@ -18,7 +18,7 @@ export default function SiteLayout({
   return (
     <>
       <NextTopLoader
-        color="#8646F4"
+        color="#3B82F6"
         crawlSpeed={300}
         showSpinner={false}
         shadow="none"

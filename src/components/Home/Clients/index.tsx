@@ -2,37 +2,116 @@
 import "swiper/css";
 import { Autoplay } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
-import SingleClient from "./SingleClient";
-import clientsData from "./clientsData";
+
+const marketLogos = [
+  {
+    id: 1,
+    name: "Amazon",
+    logo: (
+      <svg className="h-8 w-auto" viewBox="0 0 126 34" fill="currentColor">
+        <path d="M64.7 13.3C64.7 11.8 64.8 10.5 65.1 9.4C65.4 8.3 65.8 7.3 66.4 6.5C67 5.7 67.7 5 68.6 4.6C69.5 4.2 70.5 4 71.7 4C72.9 4 73.9 4.2 74.8 4.6C75.7 5 76.4 5.7 77 6.5C77.6 7.3 78 8.3 78.3 9.4C78.6 10.5 78.7 11.8 78.7 13.3V14.7C78.7 16.2 78.6 17.5 78.3 18.6C78 19.7 77.6 20.7 77 21.5C76.4 22.3 75.7 23 74.8 23.4C73.9 23.8 72.9 24 71.7 24C70.5 24 69.5 23.8 68.6 23.4C67.7 23 67 22.3 66.4 21.5C65.8 20.7 65.4 19.7 65.1 18.6C64.8 17.5 64.7 16.2 64.7 14.7V13.3ZM69.7 15.1C69.7 16.9 69.9 18.3 70.3 19.2C70.7 20.1 71.3 20.6 72.1 20.6C72.9 20.6 73.5 20.1 73.9 19.2C74.3 18.3 74.5 16.9 74.5 15.1V12.9C74.5 11.1 74.3 9.7 73.9 8.8C73.5 7.9 72.9 7.4 72.1 7.4C71.3 7.4 70.7 7.9 70.3 8.8C69.9 9.7 69.7 11.1 69.7 12.9V15.1Z"/>
+        <path d="M83.7 23.8H79.5V4.2H86.9C88.1 4.2 89.1 4.4 90 4.7C90.9 5 91.6 5.5 92.2 6.1C92.8 6.7 93.2 7.5 93.5 8.4C93.8 9.3 94 10.3 94 11.4C94 12.5 93.8 13.5 93.5 14.4C93.2 15.3 92.8 16.1 92.2 16.7C91.6 17.3 90.9 17.8 90 18.1C89.1 18.4 88.1 18.6 86.9 18.6H83.7V23.8ZM83.7 15.4H86.9C87.7 15.4 88.3 15.1 88.7 14.6C89.1 14.1 89.3 13.3 89.3 12.2V10.6C89.3 9.5 89.1 8.7 88.7 8.2C88.3 7.7 87.7 7.4 86.9 7.4H83.7V15.4Z"/>
+        <path d="M99 23.8H94.8V4.2H99V23.8Z"/>
+        <path d="M111.8 23.8H107.6L102.4 11.2V23.8H98.2V4.2H102.4L107.6 16.8V4.2H111.8V23.8Z"/>
+        <path d="M125.6 23.8H114V4.2H125.6V7.4H118.2V12.2H124.8V15.4H118.2V20.6H125.6V23.8Z"/>
+        <path d="M35.6 24.2C31.9 27.9 26.4 30 21.6 30C14.8 30 8.7 26.9 4.3 22C3.9 21.6 4.2 21 4.7 21.3C9.6 24.4 15.8 26.3 22.2 26.3C26.5 26.3 31.2 25.3 35.5 23.2C36.3 22.8 37 23.6 35.6 24.2Z"/>
+        <path d="M37.6 21.9C37 21.1 34.3 21.5 33 21.7C32.5 21.8 32.4 21.3 32.9 21C35.4 19.2 39.6 19.8 40.1 20.4C40.6 21 39.9 25.1 37.6 27.1C37.2 27.5 36.7 27.3 36.9 26.8C37.5 25.6 38.2 22.7 37.6 21.9Z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 2,
+    name: "Walmart",
+    logo: (
+      <svg className="h-8 w-auto" viewBox="0 0 136 34" fill="currentColor">
+        <path d="M35.4 10.3C32.9 10.3 31.8 12 31.8 14.6V23.8H27.6V4.2H31.8V7.1C32.8 5.2 34.4 4 36.8 4C37.2 4 37.6 4 37.9 4.1V10.2C37.1 10.2 36.2 10.3 35.4 10.3Z"/>
+        <path d="M67.8 14C67.8 19.6 63.5 24 57.9 24C52.3 24 48 19.6 48 14C48 8.4 52.3 4 57.9 4C63.5 4 67.8 8.4 67.8 14ZM52.2 14C52.2 17.3 54.7 19.8 57.9 19.8C61.1 19.8 63.6 17.3 63.6 14C63.6 10.7 61.1 8.2 57.9 8.2C54.7 8.2 52.2 10.7 52.2 14Z"/>
+        <path d="M87.7 23.8H83.5V21.5C82.3 23.1 80.3 24 77.9 24C73.7 24 70.4 20.7 70.4 16.5V4.2H74.6V15.9C74.6 18.5 76.2 20.1 78.8 20.1C81.4 20.1 83.5 18.5 83.5 15.9V4.2H87.7V23.8Z"/>
+        <path d="M108.8 23.8H104.6V21.5C103.4 23.1 101.4 24 99 24C94.8 24 91.5 20.7 91.5 16.5V4.2H95.7V15.9C95.7 18.5 97.3 20.1 99.9 20.1C102.5 20.1 104.6 18.5 104.6 15.9V4.2H108.8V23.8Z"/>
+        <path d="M135.6 12.9H121.2C121.7 16 124.1 18.1 127.3 18.1C129.4 18.1 131.2 17.2 132.4 15.6L135.2 18.4C133.3 21 130.5 22.4 127.1 22.4C121.3 22.4 117 18.1 117 12.5C117 6.9 121.3 2.6 127 2.6C132.7 2.6 135.9 6.9 135.9 11.8C135.9 12.2 135.8 12.5 135.6 12.9ZM121.2 9.7H131.7C131.2 7 129 5.2 126.4 5.2C123.8 5.2 121.7 7 121.2 9.7Z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 3,
+    name: "eBay",
+    logo: (
+      <svg className="h-8 w-auto" viewBox="0 0 80 34" fill="currentColor">
+        <path d="M38.7 4.2H43.6L49.4 16.8L55.2 4.2H60.1L50.8 23.8H48L38.7 4.2Z"/>
+        <path d="M63.1 4.2H67.3V23.8H63.1V4.2Z"/>
+        <path d="M72.3 23.8H68.1V4.2H72.3V11.4H79.7V4.2H83.9V23.8H79.7V14.6H72.3V23.8Z"/>
+        <path d="M0 16.6C0 7.4 7.4 0 16.6 0C25.8 0 33.2 7.4 33.2 16.6C33.2 25.8 25.8 33.2 16.6 33.2C7.4 33.2 0 25.8 0 16.6ZM6.6 16.6C6.6 22.1 11.1 26.6 16.6 26.6C22.1 26.6 26.6 22.1 26.6 16.6C26.6 11.1 22.1 6.6 16.6 6.6C11.1 6.6 6.6 11.1 6.6 16.6Z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 4,
+    name: "Target",
+    logo: (
+      <svg className="h-8 w-auto" viewBox="0 0 70 34" fill="currentColor">
+        <path d="M35 0C43.3 0 50 6.7 50 15C50 23.3 43.3 30 35 30C26.7 30 20 23.3 20 15C20 6.7 26.7 0 35 0ZM35 9C39.4 9 43 12.6 43 17C43 21.4 39.4 25 35 25C30.6 25 27 21.4 27 17C27 12.6 30.6 9 35 9Z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 5,
+    name: "Best Buy",
+    logo: (
+      <svg className="h-8 w-auto" viewBox="0 0 90 34" fill="currentColor">
+        <path d="M0 4.2H13.6C19.4 4.2 23.8 8.6 23.8 14.4C23.8 20.2 19.4 24.6 13.6 24.6H4.2V33H0V4.2ZM13.6 20.4C17.1 20.4 19.6 17.9 19.6 14.4C19.6 10.9 17.1 8.4 13.6 8.4H4.2V20.4H13.6Z"/>
+        <path d="M27.8 4.2H41.4C47.2 4.2 51.6 8.6 51.6 14.4C51.6 20.2 47.2 24.6 41.4 24.6H32V33H27.8V4.2ZM41.4 20.4C44.9 20.4 47.4 17.9 47.4 14.4C47.4 10.9 44.9 8.4 41.4 8.4H32V20.4H41.4Z"/>
+        <path d="M55.6 18.6C55.6 12.8 60 8.4 65.8 8.4H79.4V12.6H65.8C62.3 12.6 59.8 15.1 59.8 18.6C59.8 22.1 62.3 24.6 65.8 24.6H79.4V28.8H65.8C60 28.8 55.6 24.4 55.6 18.6Z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 6,
+    name: "Costco",
+    logo: (
+      <svg className="h-8 w-auto" viewBox="0 0 100 34" fill="currentColor">
+        <path d="M14.8 4.2H28.4C34.2 4.2 38.6 8.6 38.6 14.4C38.6 20.2 34.2 24.6 28.4 24.6H19V33H14.8V4.2ZM28.4 20.4C31.9 20.4 34.4 17.9 34.4 14.4C34.4 10.9 31.9 8.4 28.4 8.4H19V20.4H28.4Z"/>
+        <path d="M42.6 18.6C42.6 12.8 47 8.4 52.8 8.4H66.4V12.6H52.8C49.3 12.6 46.8 15.1 46.8 18.6C46.8 22.1 49.3 24.6 52.8 24.6H66.4V28.8H52.8C47 28.8 42.6 24.4 42.6 18.6Z"/>
+        <path d="M70.4 18.6C70.4 12.8 74.8 8.4 80.6 8.4H94.2V12.6H80.6C77.1 12.6 74.6 15.1 74.6 18.6C74.6 22.1 77.1 24.6 80.6 24.6H94.2V28.8H80.6C74.8 28.8 70.4 24.4 70.4 18.6Z"/>
+      </svg>
+    ),
+  },
+];
 
 const Clients = () => {
   return (
-    <section className="py-19">
-      <div className="mx-auto max-w-[1104px] px-4 sm:px-8 xl:px-0">
-        <div className="relative z-10 overflow-hidden">
-          <span className="pointer-events-none absolute inset-0 left-0 top-1/2 z-10 block h-[37px] w-full max-w-[128px] -translate-y-1/2 bg-gradient-to-l from-dark/0 to-dark/100"></span>
-          <span className="pointer-events-none absolute inset-0 left-auto top-1/2 z-10 block h-[37px] w-full max-w-[128px] -translate-y-1/2 bg-gradient-to-r from-dark/0 to-dark/100"></span>
-          <div className="clients-carousel">
-            <Swiper
-              modules={[Autoplay]}
-              slidesPerView="auto"
-              spaceBetween={64}
-              loop={true}
-              speed={5000}
-              noSwiping={true}
-              noSwipingClass="swiper-slide w-auto"
-              autoplay={{
-                delay: 0,
-                disableOnInteraction: true,
-              }}
-            >
-              {clientsData.map((client) => (
-                <SwiperSlide key={client.id}>
-                  <SingleClient client={client} />
-                </SwiperSlide>
-              ))}
-            </Swiper>
-          </div>
+    <section className="py-12">
+      <div className="mx-auto max-w-[1170px] px-4 sm:px-8 xl:px-0">
+        <div className="wow fadeInUp">
+          <Swiper
+            modules={[Autoplay]}
+            spaceBetween={50}
+            slidesPerView="auto"
+            loop={true}
+            autoplay={{
+              delay: 3000,
+              disableOnInteraction: false,
+            }}
+            breakpoints={{
+              640: {
+                slidesPerView: 3,
+              },
+              768: {
+                slidesPerView: 4,
+              },
+              1024: {
+                slidesPerView: 5,
+              },
+            }}
+            className="!w-full"
+          >
+            {marketLogos.map((market) => (
+              <SwiperSlide key={market.id} className="!w-auto">
+                <div className="flex h-20 w-auto items-center justify-center px-5 py-4 grayscale transition hover:grayscale-0">
+                  {market.logo}
+                </div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
         </div>
       </div>
     </section>

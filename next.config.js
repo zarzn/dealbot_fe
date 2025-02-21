@@ -4,7 +4,7 @@ const webpack = require('webpack');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ["localhost"],
+    domains: ["localhost", "images.unsplash.com"],
     remotePatterns: [
       {
         protocol: "https",

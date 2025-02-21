@@ -1,33 +1,12 @@
 import { apiClient } from '@/lib/api-client';
-import { DealSuggestion, AIAnalysis, PriceHistory } from '@/types/deals';
-
-export interface SearchQuery {
-  query?: string;
-  category?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  sortBy?: string;
-  page?: number;
-  limit?: number;
-}
-
-export interface SearchCost {
-  tokenCost: number;
-  features: string[];
-}
+import type { DealSuggestion, AIAnalysis, PriceHistory, SearchQuery } from '@/types/deals';
 
 export interface SearchResponse {
   deals: DealSuggestion[];
   total: number;
-  cost: SearchCost;
 }
 
-class DealsService {
-  async getSearchCost(query: SearchQuery): Promise<SearchCost> {
-    const response = await apiClient.get('/api/v1/deals/search/cost', { params: query });
-    return response.data;
-  }
-
+export class DealsService {
   async searchDeals(query: SearchQuery): Promise<SearchResponse> {
     const response = await apiClient.post('/api/v1/deals/search', query);
     return response.data;

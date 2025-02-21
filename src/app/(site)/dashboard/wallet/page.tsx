@@ -8,6 +8,7 @@ import type { TokenTransaction } from '@/types/wallet';
 import TokenUsageChart from '@/components/Wallet/TokenUsageChart';
 import ConnectWalletButton from '@/components/Wallet/ConnectWalletButton';
 import PurchaseTokensModal from '@/components/Wallet/PurchaseTokensModal';
+import Link from 'next/link';
 
 export default function WalletPage() {
   const [balance, setBalance] = useState<number>(0);
@@ -93,23 +94,26 @@ export default function WalletPage() {
               onClick={() => setIsPurchaseModalOpen(true)}
               className="p-4 bg-white/[0.05] rounded-xl hover:bg-white/[0.1] transition flex items-center gap-3"
             >
-              <div className="p-2 bg-purple/20 rounded-lg">
-                <Plus className="w-5 h-5 text-purple" />
+              <div className="p-2 bg-blue-500/20 rounded-lg">
+                <Plus className="w-5 h-5 text-blue" />
               </div>
               <div className="flex-1 text-left">
                 <div className="font-semibold">Add Tokens</div>
                 <div className="text-sm text-white/70">Purchase more tokens</div>
               </div>
             </button>
-            <button className="p-4 bg-white/[0.05] rounded-xl hover:bg-white/[0.1] transition flex items-center gap-3">
-              <div className="p-2 bg-purple/20 rounded-lg">
-                <History className="w-5 h-5 text-purple" />
+            <Link
+              href="/dashboard/wallet/transactions"
+              className="p-4 bg-white/[0.05] rounded-xl hover:bg-white/[0.1] transition flex items-center gap-3"
+            >
+              <div className="p-2 bg-blue-500/20 rounded-lg">
+                <History className="w-5 h-5 text-blue" />
               </div>
               <div className="flex-1 text-left">
                 <div className="font-semibold">Transaction History</div>
                 <div className="text-sm text-white/70">View all transactions</div>
               </div>
-            </button>
+            </Link>
           </div>
 
           {/* Token Usage Chart */}

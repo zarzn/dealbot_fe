@@ -34,13 +34,13 @@ const CheckEmail: React.FC = () => {
                         Check Your Email
                       </h3>
                       <p className="text-lg text-white/60">
-                        We've sent you an email with a link to verify your account or sign in.
+                        We&apos;ve sent you an email with a link to verify your account or sign in.
                       </p>
                     </div>
 
                     <div className="mb-10">
                       <p className="text-base text-white/60">
-                        If you don't see the email in your inbox, please check your spam folder.
+                        If you don&apos;t see the email in your inbox, please check your spam folder.
                       </p>
                     </div>
 

@@ -50,10 +50,10 @@ export async function generateMetadata(props: Props) {
       siteName: siteName || "",
       images: post.mainImage ? [
         {
-          url: imageBuilder(post.mainImage).url(),
+          url: post.mainImage ? imageBuilder(post.mainImage).url() : '',
           width: 1800,
           height: 1600,
-          alt: post.title || "",
+          alt: post.title,
         },
       ] : [],
       locale: "en_US",

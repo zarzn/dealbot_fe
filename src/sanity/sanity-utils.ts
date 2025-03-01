@@ -11,7 +11,10 @@ import {
 import { integrations } from "../../integrations.config";
 
 // Only create client if Sanity is enabled and config exists
-const client = integrations.isSanityEnabled && clientConfig ? createClient(clientConfig) : null;
+const client = integrations.isSanityEnabled && clientConfig && 
+  process.env.NEXT_PUBLIC_SANITY_PROJECT_ID && 
+  process.env.NEXT_PUBLIC_SANITY_PROJECT_ID !== "your-actual-project-id" ? 
+  createClient(clientConfig) : null;
 
 export async function sanityFetch<QueryResponse>({
   query,
@@ -23,6 +26,7 @@ export async function sanityFetch<QueryResponse>({
   tags: string[];
 }): Promise<QueryResponse> {
   if (!integrations.isSanityEnabled || !client || !clientConfig) {
+    console.log('Sanity is disabled or not configured. Skipping API call.');
     return [] as unknown as QueryResponse;
   }
 

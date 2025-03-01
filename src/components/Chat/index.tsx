@@ -27,11 +27,12 @@ import {
   ArrowUpDown,
   X,
   AlertTriangle,
+  BarChart2,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { dealsService } from '@/services/deals';
+import { dealsService, SearchResponse } from '@/services/deals';
 import { goalsService } from '@/services/goals';
-import type { AIAnalysis } from '@/services/deals';
+import type { AIAnalysis, DealSearch } from '@/types/deals';
 
 interface DealRequest {
   id: string;
@@ -46,6 +47,7 @@ interface DealRequest {
   status: "processing" | "completed" | "error";
   timestamp: Date;
   tokensUsed?: number;
+  metadata?: { scrapingAttempted?: boolean; usedRealTimeScraping?: boolean };
 }
 
 interface DealSuggestion {
@@ -79,83 +81,13 @@ interface DealSuggestion {
   inStock: boolean;
   stockCount?: number;
   isTracked?: boolean;
+  deal_metadata?: {
+    scraped_at?: string;
+    source?: string;
+    search_query?: string;
+    [key: string]: any;
+  };
 }
-
-// Dummy data for demonstration
-const dummyDeals: DealSuggestion[] = [
-  {
-    id: "1",
-    title: "Apple MacBook Pro M2 (2023)",
-    price: 1299.99,
-    originalPrice: 1499.99,
-    source: "Amazon",
-    score: 0.92,
-    url: "#",
-    imageUrl: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?ixlib=rb-4.0.3",
-    status: "active",
-    marketId: "1",
-    sellerRating: 4.8,
-    expiresAt: new Date(Date.now() + 86400000 * 3).toISOString(),
-    matchScore: 0.95,
-    relevanceExplanation: "Matches your budget and preferred brand. High seller rating and significant discount.",
-    category: "Laptops",
-    condition: "New",
-    shippingInfo: {
-      price: 0,
-      estimatedDays: 2,
-      freeShipping: true,
-    },
-    warranty: "1 Year Apple Warranty",
-    reviews: {
-      count: 1250,
-      averageRating: 4.8,
-    },
-    features: [
-      "M2 Pro Chip",
-      "16GB RAM",
-      "512GB SSD",
-      "14-inch Liquid Retina XDR Display",
-    ],
-    inStock: true,
-    stockCount: 45,
-  },
-  {
-    id: "2",
-    title: "Dell XPS 13 Plus",
-    price: 1199.99,
-    originalPrice: 1399.99,
-    source: "Best Buy",
-    score: 0.88,
-    url: "#",
-    imageUrl: "https://images.unsplash.com/photo-1593642632823-8f785ba67e45?ixlib=rb-4.0.3",
-    status: "active",
-    marketId: "3",
-    sellerRating: 4.6,
-    expiresAt: new Date(Date.now() + 86400000 * 2).toISOString(),
-    matchScore: 0.89,
-    relevanceExplanation: "Alternative option within your budget. Similar specifications with good reviews.",
-    category: "Laptops",
-    condition: "New",
-    shippingInfo: {
-      price: 0,
-      estimatedDays: 2,
-      freeShipping: true,
-    },
-    warranty: "1 Year Dell Warranty",
-    reviews: {
-      count: 1000,
-      averageRating: 4.5,
-    },
-    features: [
-      "13.4-inch FHD+ InfinityEdge Display",
-      "Intel 12th Gen Core i5-1240P",
-      "16GB RAM",
-      "512GB SSD",
-    ],
-    inStock: true,
-    stockCount: 30,
-  },
-];
 
 type SortOption = "relevance" | "price_asc" | "price_desc" | "rating" | "expiry";
 
@@ -265,6 +197,9 @@ export default function DealFinder() {
   const [selectedDeal, setSelectedDeal] = useState<DealSuggestion | null>(null);
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<Record<string, AIAnalysis>>({});
+  const [totalResults, setTotalResults] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
 
   const scrollToResults = () => {
     if (resultsStartRef.current) {
@@ -308,51 +243,260 @@ export default function DealFinder() {
     setInput("");
     setIsProcessing(true);
     setError(null);
+    setCurrentPage(1); // Reset to first page on new search
 
     try {
-      // Real API call
-      const searchResults = await dealsService.searchDeals({
+      // Prepare search parameters
+      const searchParams: DealSearch = {
         query: newRequest.query,
-        constraints: {
-          ...newRequest.constraints,
-          condition: filters.condition,
-          freeShippingOnly: filters.freeShippingOnly,
-          inStockOnly: filters.inStockOnly,
-          minRating: filters.minRating || undefined,
-          maxShippingDays: filters.maxShippingDays ? parseInt(filters.maxShippingDays) : undefined,
-          hasWarranty: filters.hasWarranty,
-        },
-      });
+        min_price: filters.minPrice ? parseFloat(filters.minPrice) : undefined,
+        max_price: filters.maxPrice ? parseFloat(filters.maxPrice) : undefined,
+        category: filters.categories.length > 0 ? filters.categories[0] : undefined,
+        sort_by: sortBy === "relevance" ? "relevance" : 
+                 sortBy === "price_asc" || sortBy === "price_desc" ? "price" : 
+                 sortBy === "rating" ? "rating" : "expiry",
+        sort_order: sortBy === "price_asc" ? "asc" : "desc",
+        limit: pageSize,
+        offset: 0
+      };
+      
+      // Call the API
+      const searchResults = await dealsService.searchDeals(searchParams);
+      
+      // Check if we got any results
+      if (!searchResults.deals || searchResults.deals.length === 0) {
+        // Check if the response contains metadata about scraping attempt
+        const scrapingAttempted = searchResults.metadata?.scraping_attempted;
+        
+        if (scrapingAttempted) {
+          setError("No deals found even after real-time search. Try different search terms or filters.");
+        } else {
+          setError("No deals found matching your criteria. Try adjusting your search or filters.");
+        }
+        
+        setRequests(prev =>
+          prev.map(req =>
+            req.id === requestId ? { 
+              ...req, 
+              status: "completed", 
+              tokensUsed: 10,
+              metadata: { scrapingAttempted }
+            } : req
+          )
+        );
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Update total results count
+      setTotalResults(searchResults.total || searchResults.deals.length);
       
       // Get AI analysis for each deal
-      const analysisPromises = searchResults.map(deal => 
-        dealsService.getAIAnalysis(deal.id)
-          .then(analysis => [deal.id, analysis] as [string, AIAnalysis])
-      );
+      try {
+        const analysisPromises = searchResults.deals.map(deal => 
+          dealsService.getAIAnalysis(deal.id)
+            .then(analysis => [deal.id, analysis] as [string, AIAnalysis])
+            .catch(() => [deal.id, {
+              deal_id: deal.id,
+              score: 0,
+              confidence: 0,
+              price_analysis: { price_trend: 'unknown', is_good_deal: false },
+              market_analysis: { availability: 'unknown' },
+              recommendations: ['Analysis not available'],
+              analysis_date: new Date().toISOString()
+            }] as [string, AIAnalysis])
+        );
+        
+        const analysisResults = await Promise.all(analysisPromises);
+        const newAnalysis = Object.fromEntries(analysisResults);
+        
+        setAiAnalysis(prev => ({ ...prev, ...newAnalysis }));
+      } catch (analysisError) {
+        console.error("Error fetching AI analysis:", analysisError);
+        // Continue with the search results even if analysis fails
+      }
       
-      const analysisResults = await Promise.all(analysisPromises);
-      const newAnalysis = Object.fromEntries(analysisResults);
+      // Check if deals were found through real-time scraping
+      const wasScraped = searchResults.metadata?.scraping_attempted === true;
       
-      setAiAnalysis(prev => ({ ...prev, ...newAnalysis }));
+      if (wasScraped && searchResults.deals.length > 0) {
+        // Update the request to indicate real-time scraping was used
+        setRequests(prev =>
+          prev.map(req =>
+            req.id === requestId ? { 
+              ...req, 
+              status: "completed", 
+              tokensUsed: 20,
+              metadata: { ...req.metadata, usedRealTimeScraping: true }
+            } : req
+          )
+        );
+      } else {
+        // Update request status (only if not already updated by wasScraped condition)
+        setRequests(prev =>
+          prev.map(req =>
+            req.id === requestId
+              ? { ...req, status: "completed", tokensUsed: 50 }
+              : req
+          )
+        );
+      }
       
-      // Update request status
-      setRequests(prev =>
-        prev.map(req =>
-          req.id === requestId
-            ? { ...req, status: "completed", tokensUsed: 50 }
-            : req
-        )
-      );
-      
-      setSuggestions(searchResults);
+      // Map API response to component state
+      setSuggestions(searchResults.deals.map(deal => {
+        // Extract properties with proper type handling
+        const dealData = deal as any; // Use any to handle backend response format
+        
+        return {
+          id: dealData.id,
+          title: dealData.title,
+          description: dealData.description || "",
+          price: dealData.price,
+          originalPrice: dealData.original_price || dealData.price * 1.2, // Fallback if original price not provided
+          source: dealData.source,
+          category: dealData.category || "Uncategorized",
+          score: dealData.ai_analysis?.score || 0.5,
+          url: dealData.url,
+          imageUrl: dealData.image_url || "",
+          expiresAt: dealData.expires_at || new Date(Date.now() + 86400000 * 7).toISOString(), // Default 7 days
+          status: dealData.status || "active",
+          marketId: dealData.id,
+          sellerRating: dealData.seller_info?.rating || 0,
+          matchScore: dealData.ai_analysis?.score || 0.5,
+          relevanceExplanation: dealData.ai_analysis?.recommendations?.[0] || "Relevant deal based on your search",
+          condition: dealData.seller_info?.condition || "New",
+          shippingInfo: {
+            price: dealData.shipping_info?.cost || 0,
+            estimatedDays: dealData.shipping_info?.estimated_days || 3,
+            freeShipping: dealData.shipping_info?.free_shipping || false
+          },
+          warranty: dealData.seller_info?.warranty || "",
+          reviews: {
+            count: dealData.seller_info?.review_count || 0,
+            averageRating: dealData.seller_info?.rating || 0
+          },
+          features: dealData.seller_info?.features || [],
+          inStock: dealData.seller_info?.in_stock !== false,
+          stockCount: dealData.seller_info?.stock_count,
+          isTracked: dealData.is_tracked || false,
+          deal_metadata: dealData.deal_metadata || {}
+        };
+      }));
     } catch (err) {
       console.error("Failed to process request:", err);
-      setError("Failed to process your request. Please try again.");
+      
+      // Provide more specific error messages
+      if (err.response?.status === 401) {
+        setError("Authentication required. Please sign in to search for deals.");
+      } else if (err.response?.status === 402) {
+        setError("Insufficient tokens. Please add more tokens to your account.");
+      } else if (err.response?.status === 429) {
+        setError("Too many requests. Please try again later.");
+      } else {
+        setError("Failed to process your request. Please try again.");
+      }
+      
       setRequests(prev =>
         prev.map(req =>
           req.id === requestId ? { ...req, status: "error" } : req
         )
       );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Add a function to load more results or change page
+  const handleLoadMore = async () => {
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
+    const nextPage = currentPage + 1;
+    
+    try {
+      const searchParams: DealSearch = {
+        query: requests[requests.length - 1]?.query || "",
+        min_price: filters.minPrice ? parseFloat(filters.minPrice) : undefined,
+        max_price: filters.maxPrice ? parseFloat(filters.maxPrice) : undefined,
+        category: filters.categories.length > 0 ? filters.categories[0] : undefined,
+        sort_by: sortBy === "relevance" ? "relevance" : 
+                 sortBy === "price_asc" || sortBy === "price_desc" ? "price" : 
+                 sortBy === "rating" ? "rating" : "expiry",
+        sort_order: sortBy === "price_asc" ? "asc" : "desc",
+        limit: pageSize,
+        offset: (nextPage - 1) * pageSize
+      };
+      
+      const searchResults = await dealsService.searchDeals(searchParams);
+      
+      if (searchResults.deals && searchResults.deals.length > 0) {
+        // Get AI analysis for each new deal
+        const analysisPromises = searchResults.deals.map(deal => 
+          dealsService.getAIAnalysis(deal.id)
+            .then(analysis => [deal.id, analysis] as [string, AIAnalysis])
+            .catch(() => [deal.id, {
+              deal_id: deal.id,
+              score: 0,
+              confidence: 0,
+              price_analysis: { price_trend: 'unknown', is_good_deal: false },
+              market_analysis: { availability: 'unknown' },
+              recommendations: ['Analysis not available'],
+              analysis_date: new Date().toISOString()
+            }] as [string, AIAnalysis])
+        );
+        
+        const analysisResults = await Promise.all(analysisPromises);
+        const newAnalysis = Object.fromEntries(analysisResults);
+        
+        setAiAnalysis(prev => ({ ...prev, ...newAnalysis }));
+        
+        // Map and append new deals
+        const newDeals = searchResults.deals.map(deal => {
+          // Extract properties with proper type handling
+          const dealData = deal as any; // Use any to handle backend response format
+          
+          return {
+            id: dealData.id,
+            title: dealData.title,
+            description: dealData.description || "",
+            price: dealData.price,
+            originalPrice: dealData.original_price || dealData.price * 1.2,
+            source: dealData.source,
+            category: dealData.category || "Uncategorized",
+            score: dealData.ai_analysis?.score || 0.5,
+            url: dealData.url,
+            imageUrl: dealData.image_url || "",
+            expiresAt: dealData.expires_at || new Date(Date.now() + 86400000 * 7).toISOString(),
+            status: dealData.status || "active",
+            marketId: dealData.id,
+            sellerRating: dealData.seller_info?.rating || 0,
+            matchScore: dealData.ai_analysis?.score || 0.5,
+            relevanceExplanation: dealData.ai_analysis?.recommendations?.[0] || "Relevant deal based on your search",
+            condition: dealData.seller_info?.condition || "New",
+            shippingInfo: {
+              price: dealData.shipping_info?.cost || 0,
+              estimatedDays: dealData.shipping_info?.estimated_days || 3,
+              freeShipping: dealData.shipping_info?.free_shipping || false
+            },
+            warranty: dealData.seller_info?.warranty || "",
+            reviews: {
+              count: dealData.seller_info?.review_count || 0,
+              averageRating: dealData.seller_info?.rating || 0
+            },
+            features: dealData.seller_info?.features || [],
+            inStock: dealData.seller_info?.in_stock !== false,
+            stockCount: dealData.seller_info?.stock_count,
+            isTracked: dealData.is_tracked || false,
+            deal_metadata: dealData.deal_metadata || {}
+          };
+        });
+        
+        setSuggestions(prev => [...prev, ...newDeals]);
+        setCurrentPage(nextPage);
+      }
+    } catch (err) {
+      console.error("Failed to load more results:", err);
+      toast.error("Failed to load more results. Please try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -375,7 +519,14 @@ export default function DealFinder() {
     });
   };
 
-  const handleTrackDeal = (deal: DealSuggestion) => {
+  const handleTrackDeal = async (deal: DealSuggestion) => {
+    // Check if user is logged in before showing the modal
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error("Please log in to track deals");
+      return;
+    }
+    
     setSelectedDeal(deal);
     setIsPriceModalOpen(true);
   };
@@ -384,22 +535,22 @@ export default function DealFinder() {
     if (!selectedDeal) return;
 
     try {
+      // Check if user is logged in
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error("Please log in to track deals");
+        return;
+      }
+      
       const goal = {
         title: selectedDeal.title,
         itemCategory: selectedDeal.category,
-        currentPrice: selectedDeal.price,
-        targetPrice: targetPrice,
-        priceHistory: [{
-          price: selectedDeal.price,
-          date: new Date().toISOString()
-        }],
-        source: selectedDeal.source,
-        url: selectedDeal.url,
-        imageUrl: selectedDeal.imageUrl,
+        marketplaces: [selectedDeal.source],
         constraints: {
           maxPrice: targetPrice,
-          condition: selectedDeal.condition,
-          shippingInfo: selectedDeal.shippingInfo,
+          minPrice: 0,
+          brands: [selectedDeal.source],
+          conditions: [selectedDeal.condition],
           features: selectedDeal.features
         },
         notifications: {
@@ -407,12 +558,10 @@ export default function DealFinder() {
           inApp: true,
           priceThreshold: notifyThreshold
         },
-        status: 'active' as const,
-        createdFrom: {
-          type: 'search' as const,
-          searchQuery: input,
-          dealId: selectedDeal.id
-        }
+        priority: "medium" as const,
+        deadline: undefined,
+        maxMatches: 10,
+        maxTokens: 1000
       };
 
       // Real API call
@@ -422,7 +571,15 @@ export default function DealFinder() {
       toast.success("Deal tracking started! We'll notify you about price changes.");
     } catch (error) {
       console.error("Failed to create goal:", error);
-      toast.error("Failed to track deal. Please try again later.");
+      
+      // Provide more specific error messages
+      if (error.response?.status === 401) {
+        toast.error("Please log in to track deals");
+      } else if (error.response?.status === 402) {
+        toast.error("Insufficient tokens. Please add more tokens to your account.");
+      } else {
+        toast.error("Failed to track deal. Please try again later.");
+      }
     }
   };
 
@@ -439,15 +596,20 @@ export default function DealFinder() {
         <div className="mb-3">
           <div className="flex items-center gap-2">
             <TrendingUp className={`h-4 w-4 ${
-              analysis.priceAnalysis.isGoodDeal ? 'text-green-500' : 'text-yellow-500'
+              analysis.score > 0.7 ? 'text-green-500' : 'text-yellow-500'
             }`} />
             <span className="text-sm font-medium text-white">
               Price Analysis
             </span>
           </div>
           <p className="mt-1 text-sm text-dark-3">
-            {analysis.priceAnalysis.reasoning}
+            Price trend: {analysis.price_analysis?.price_trend || 'unknown'}
           </p>
+          {analysis.price_analysis?.discount_percentage && (
+            <p className="mt-1 text-sm text-dark-3">
+              Discount: {analysis.price_analysis.discount_percentage.toFixed(1)}%
+            </p>
+          )}
         </div>
 
         {/* Buying Advice */}
@@ -459,27 +621,34 @@ export default function DealFinder() {
             </span>
           </div>
           <p className="mt-1 text-sm text-dark-3">
-            {analysis.buyingAdvice.recommendation}
+            {analysis.recommendations && analysis.recommendations.length > 0 
+              ? analysis.recommendations[0] 
+              : "No specific recommendations available."}
           </p>
           <p className="mt-1 text-sm text-dark-3">
-            Best time to buy: {analysis.buyingAdvice.timing}
+            Confidence: {Math.round(analysis.confidence * 100)}%
           </p>
         </div>
 
-        {/* Price Trend */}
-        {analysis.priceAnalysis.priceProjection.trend !== 'stable' && (
-          <div className="flex items-center gap-2 text-sm">
-            <ArrowUpDown className={`h-4 w-4 ${
-              analysis.priceAnalysis.priceProjection.trend === 'falling'
-                ? 'text-green-500'
-                : 'text-red-500'
-            }`} />
-            <span className="text-dark-3">
-              Price is {analysis.priceAnalysis.priceProjection.trend}
-              {analysis.priceAnalysis.priceProjection.nextWeekEstimate && 
-                ` (Est. next week: $${analysis.priceAnalysis.priceProjection.nextWeekEstimate.toFixed(2)})`
-              }
-            </span>
+        {/* Market Analysis */}
+        {analysis.market_analysis && Object.keys(analysis.market_analysis).length > 0 && (
+          <div>
+            <div className="flex items-center gap-2">
+              <BarChart2 className="h-4 w-4 text-blue-400" />
+              <span className="text-sm font-medium text-white">
+                Market Analysis
+              </span>
+            </div>
+            {analysis.market_analysis.competition && (
+              <p className="mt-1 text-sm text-dark-3">
+                Competition: {analysis.market_analysis.competition}
+              </p>
+            )}
+            {analysis.market_analysis.availability && (
+              <p className="mt-1 text-sm text-dark-3">
+                Availability: {analysis.market_analysis.availability}
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -826,7 +995,7 @@ export default function DealFinder() {
 
                       {/* Features */}
                       <div className="mb-2 flex flex-wrap gap-2">
-                        {suggestion.features.map((feature, index) => (
+                        {suggestion.features.map((feature: string, index: number) => (
                           <span
                             key={index}
                             className="rounded-full bg-dark-6 px-3 py-1 text-xs text-dark-3"
@@ -931,9 +1100,27 @@ export default function DealFinder() {
             </AnimatePresence>
 
             {error && (
-              <div className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-red-500/10 px-4 py-3 text-red-500">
-                <AlertCircle className="h-5 w-5" />
+              <div className="mt-8 rounded-xl bg-red-500/10 p-4 text-center">
                 <p>{error}</p>
+                {requests.length > 0 && requests[requests.length - 1].metadata?.scrapingAttempted && (
+                  <p className="mt-2 text-sm text-dark-3">
+                    We searched marketplaces in real-time but couldn&apos;t find any matching deals.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Add real-time scraping notification */}
+            {requests.length > 0 && 
+             requests[requests.length - 1].metadata?.usedRealTimeScraping && (
+              <div className="mt-4 rounded-xl bg-blue-500/10 p-4 text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <span className="text-blue-400 font-medium">Real-time Deal Search</span>
+                </div>
+                <p className="text-sm text-dark-3">
+                  No deals were found in our database, so we searched marketplaces in real-time to find the best matches for you.
+                  These deals have been saved for future searches.
+                </p>
               </div>
             )}
           </div>
@@ -950,6 +1137,29 @@ export default function DealFinder() {
           }}
           onConfirm={handlePriceConfirm}
         />
+      )}
+
+      {/* Add pagination/load more button if there are more results */}
+      {suggestions.length > 0 && suggestions.length < totalResults && (
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={handleLoadMore}
+            disabled={isProcessing}
+            className="flex items-center gap-2 rounded-lg bg-dark-6 px-6 py-3 text-white transition-all hover:bg-dark-5 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-5 w-5" />
+                Load More Results
+              </>
+            )}
+          </button>
+        </div>
       )}
     </section>
   );

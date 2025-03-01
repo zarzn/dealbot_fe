@@ -5,18 +5,25 @@ import axios from "axios";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import z from "zod";
-import { integrations, messages } from "../../../../../integrations.config";
+import { integrations } from "../../../../../integrations.config";
+
+// Define default messages
+const defaultMessages = {
+  opanAi: "OpenAI integration is not enabled. Please check your configuration."
+};
 
 const dataSchema = z.object({
   description: z.string(),
-  seedWords: z.string(),
+  productType: z.string(),
+  numberOfNames: z.string(),
 });
 
 const ProductNameGeneratorPage = () => {
   const [generatedContent, setGeneratedContent] = useState("");
   const [data, setData] = useState({
     description: "",
-    seedWords: "",
+    productType: "",
+    numberOfNames: "",
   });
 
   const handleChange = (e: any) => {
@@ -28,9 +35,11 @@ const ProductNameGeneratorPage = () => {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+    setGeneratedContent("Loading....");
 
-    if (!integrations?.isOpenAIEnabled) {
-      toast.error(messages.opanAi);
+    // Check if OpenAI is enabled, assuming it's not if property doesn't exist
+    if (!(integrations as any)?.isOpenAIEnabled) {
+      toast.error(defaultMessages.opanAi);
       return;
     }
 
@@ -39,8 +48,6 @@ const ProductNameGeneratorPage = () => {
       toast.error(validation.error.errors[0].message);
       return;
     }
-
-    setGeneratedContent("Loading....");
 
     // the prompt
     const prompt = [
@@ -51,7 +58,7 @@ const ProductNameGeneratorPage = () => {
       },
       {
         role: "user",
-        content: `Product description: ${data.description} \n Business seed words: ${data.seedWords}`,
+        content: `Product description: ${data.description} \n Business seed words: ${data.productType}`,
       },
     ];
 
@@ -77,7 +84,8 @@ const ProductNameGeneratorPage = () => {
 
     setData({
       description: "",
-      seedWords: "",
+      productType: "",
+      numberOfNames: "",
     });
   };
 
@@ -113,16 +121,16 @@ const ProductNameGeneratorPage = () => {
               </div>
 
               <div className="flex flex-col pt-5">
-                <label htmlFor="seedWords" className="pb-4">
-                  Seed Words
+                <label htmlFor="productType" className="pb-4">
+                  Product Type
                 </label>
                 <input
                   onChange={handleChange}
-                  value={data.seedWords}
-                  name="seedWords"
+                  value={data.productType}
+                  name="productType"
                   type="text"
                   className="rounded-lg border border-white/[0.12] bg-dark-7 py-3 pl-5 text-opacity-10 outline-none focus:border-purple"
-                  placeholder="Type your Seed Words"
+                  placeholder="Type your Product Type"
                 />
               </div>
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Filter, SlidersHorizontal, Check, Target } from 'lucide-react';
+import { Plus, Search, Filter, SlidersHorizontal, Check, Target, DollarSign, Tag, BarChart3 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import {
   DropdownMenu,
@@ -65,7 +65,7 @@ export default function GoalsPage() {
     
     // Price range filter
     if (priceRange !== 'all') {
-      const goalPriceRange = getPriceRangeFilter(goal.targetPrice || 0);
+      const goalPriceRange = getPriceRangeFilter(goal.constraints?.max_price || 0);
       if (goalPriceRange !== priceRange) return false;
     }
     
@@ -73,8 +73,8 @@ export default function GoalsPage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
-        (goal.title || '').toLowerCase().includes(query) ||
-        (goal.itemCategory || '').toLowerCase().includes(query)
+        goal.title.toLowerCase().includes(query) ||
+        goal.item_category.toLowerCase().includes(query)
       );
     }
     return true;
@@ -205,9 +205,9 @@ export default function GoalsPage() {
               className="block p-7.5 bg-white/[0.05] border border-white/10 rounded-xl hover:bg-white/[0.1] transition"
             >
               <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="font-semibold text-lg mb-1">{goal.title || 'Untitled Goal'}</h3>
-                  <p className="text-white/70 text-sm">{goal.itemCategory || 'No Category'}</p>
+                <div className="flex flex-col">
+                  <h3 className="font-semibold text-lg mb-1 line-clamp-1">{goal.title}</h3>
+                  <p className="text-white/70 text-sm">{goal.item_category}</p>
                 </div>
                 <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(goal.status || 'unknown')}`}>
                   {(goal.status || 'unknown').charAt(0).toUpperCase() + (goal.status || 'unknown').slice(1)}
@@ -215,21 +215,29 @@ export default function GoalsPage() {
               </div>
               
               <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/70">Target Price</span>
-                  <span className="font-medium">${(goal.targetPrice || 0).toFixed(2)}</span>
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-white/50" />
+                  <span>
+                    Target: ${goal.constraints?.max_price?.toFixed(2) || 'N/A'}
+                  </span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/70">Current Price</span>
-                  <span className="font-medium">${(goal.currentPrice || 0).toFixed(2)}</span>
+                <div className="flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-white/50" />
+                  <span>
+                    Current: ${goal.analytics?.best_match_score?.toFixed(2) || 'N/A'}
+                  </span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/70">Matches Found</span>
-                  <span className="font-medium">{goal.matchesFound || 0}</span>
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-white/50" />
+                  <span>
+                    Matches: {goal.analytics?.total_matches || 0}
+                  </span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/70">Success Rate</span>
-                  <span className="font-medium">{((goal.successRate || 0) * 100).toFixed(0)}%</span>
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-white/50" />
+                  <span>
+                    Success: {goal.analytics?.average_match_score ? `${(goal.analytics.average_match_score * 100).toFixed(0)}%` : 'N/A'}
+                  </span>
                 </div>
               </div>
             </Link>

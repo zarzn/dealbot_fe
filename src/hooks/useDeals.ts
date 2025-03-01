@@ -1,12 +1,29 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { DealSearch, DealResponse, AIAnalysis, PriceHistory } from '@/types/deals';
+import { DealSearch, DealResponse, AIAnalysis, PriceHistory, DealSuggestion } from '@/types/deals';
 import * as dealsApi from '@/api/deals';
 import { toast } from '@/components/ui/use-toast';
+import { SearchResponse } from '@/services/deals';
 
 export const useSearchDeals = (searchParams: DealSearch) => {
-  return useQuery({
+  return useQuery<SearchResponse, Error, DealSuggestion[]>({
     queryKey: ['deals', 'search', searchParams],
-    queryFn: () => dealsApi.searchDeals(searchParams),
+    queryFn: async () => {
+      try {
+        return await dealsApi.searchDeals(searchParams);
+      } catch (error) {
+        console.error('Error searching deals:', error);
+        toast({
+          title: 'Error searching deals',
+          description: error instanceof Error ? error.message : 'Unknown error',
+          variant: 'destructive',
+        });
+        throw error;
+      }
+    },
+    // Transform the response to extract just the deals array
+    select: (data) => data.deals,
+    // Only refetch when search params change
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 };
 

@@ -1,10 +1,15 @@
-const integrations = {
-  isSanityEnabled: true,
-  isStripeEnabled: true,
-  isOpenAIEnabled: true,
-  isMailchimpEnabled: true,
-  isAuthEnabled: true,
-};
+import React from 'react';
+
+// IMPORTANT: This configuration must match the values in integrations.config.ts
+// If you update this file, also update integrations.config.ts to maintain consistency
+export const integrations = {
+  isSanityEnabled: false, // Set to true when Sanity is properly configured
+  isNewsletterEnabled: true,
+  isPricingEnabled: true,
+  isSupportEnabled: true,
+  isReviewsEnabled: true,
+  isClientsEnabled: true,
+} as const;
 
 const messages = {
   sanity: (
@@ -75,4 +80,4 @@ const messages = {
   // Add more messages here
 };
 
-export { integrations, messages };
+export { messages };

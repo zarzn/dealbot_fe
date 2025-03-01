@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { DealResponse, DealSearch, PriceHistory, AIAnalysis } from '@/types/deals';
 
+// Import the SearchResponse interface from the deals service
+import { SearchResponse } from '@/services/deals';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 const dealsApi = axios.create({
@@ -19,9 +22,14 @@ dealsApi.interceptors.request.use((config) => {
   return config;
 });
 
-export const searchDeals = async (searchParams: DealSearch): Promise<DealResponse[]> => {
-  const { data } = await dealsApi.post('/search', searchParams);
-  return data;
+export const searchDeals = async (searchParams: DealSearch): Promise<SearchResponse> => {
+  try {
+    const { data } = await dealsApi.post('/search', searchParams);
+    return data;
+  } catch (error) {
+    console.error('Error searching deals:', error);
+    throw error;
+  }
 };
 
 export const getDeal = async (dealId: string): Promise<DealResponse> => {
@@ -30,7 +38,7 @@ export const getDeal = async (dealId: string): Promise<DealResponse> => {
 };
 
 export const getDealAnalysis = async (dealId: string): Promise<AIAnalysis> => {
-  const { data } = await dealsApi.get(`/${dealId}/analysis`);
+  const { data } = await dealsApi.get(`/analysis/${dealId}`);
   return data;
 };
 

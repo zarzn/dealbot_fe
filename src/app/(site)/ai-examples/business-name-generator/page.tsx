@@ -1,16 +1,21 @@
 "use client";
+import Breadcrumb from "@/components/Breadcrumb";
 import Options from "@/components/AiTools/Options";
 import PreviewGeneratedText from "@/components/AiTools/PreviewGeneratedText";
-import Breadcrumb from "@/components/Breadcrumb";
 import axios from "axios";
 import { useState } from "react";
 import z from "zod";
-import { integrations, messages } from "../../../../../integrations.config";
+import { integrations } from "../../../../../integrations.config";
 import toast from "react-hot-toast";
 
+// Define default messages
+const defaultMessages = {
+  opanAi: "OpenAI integration is not enabled. Please check your configuration."
+};
+
 const BusinessNameGeneratorSchema = z.object({
-  keyword: z.string(),
-  industry: z.string(),
+  numberOfWord: z.string(),
+  businessType: z.string(),
 });
 
 const optionData = [
@@ -37,9 +42,11 @@ const BusinessNameGeneratorPage = () => {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+    setGeneratedContent("Loading....");
 
-    if (!integrations?.isOpenAIEnabled) {
-      toast.error(messages.opanAi);
+    // Check if OpenAI is enabled, assuming it's not if property doesn't exist
+    if (!(integrations as any)?.isOpenAIEnabled) {
+      toast.error(defaultMessages.opanAi);
       return;
     }
 
@@ -48,8 +55,6 @@ const BusinessNameGeneratorPage = () => {
       toast.error(validation.error.errors[0].message);
       return;
     }
-
-    setGeneratedContent("Loading....");
 
     // the prompt
     const prompt = [

@@ -63,12 +63,21 @@ export interface PriceHistory {
 }
 
 export interface AIAnalysis {
+  deal_id: string;
   score: number;
   confidence: number;
-  price_trend: string;
-  price_prediction: number;
+  price_analysis: {
+    discount_percentage?: number;
+    is_good_deal?: boolean;
+    price_trend?: string;
+  };
+  market_analysis: {
+    competition?: string;
+    availability?: string;
+  };
   recommendations: string[];
-  meta_data?: Record<string, any>;
+  analysis_date: string;
+  expiration_analysis?: string;
 }
 
 export interface DealTrend {
@@ -112,6 +121,12 @@ export interface DealBase {
   category?: string;
   seller_info?: Record<string, any>;
   shipping_info?: ShippingInfo;
+  deal_metadata?: {
+    scraped_at?: string;
+    source?: string;
+    search_query?: string;
+    [key: string]: any;
+  };
 }
 
 export interface DealSearch {

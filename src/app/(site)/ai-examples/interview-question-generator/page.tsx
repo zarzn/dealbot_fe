@@ -5,10 +5,17 @@ import axios from "axios";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import z from "zod";
-import { integrations, messages } from "../../../../../integrations.config";
+import { integrations } from "../../../../../integrations.config";
+
+// Define default messages
+const defaultMessages = {
+  opanAi: "OpenAI integration is not enabled. Please check your configuration."
+};
 
 const dataSchema = z.object({
   description: z.string(),
+  jobTitle: z.string(),
+  numberOfQuestions: z.string(),
 });
 
 const InterviewQuestionGeneratorPage = () => {
@@ -26,9 +33,11 @@ const InterviewQuestionGeneratorPage = () => {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+    setGeneratedContent("Loading....");
 
-    if (!integrations?.isOpenAIEnabled) {
-      toast.error(messages.opanAi);
+    // Check if OpenAI is enabled, assuming it's not if property doesn't exist
+    if (!(integrations as any)?.isOpenAIEnabled) {
+      toast.error(defaultMessages.opanAi);
       return;
     }
 
@@ -37,8 +46,6 @@ const InterviewQuestionGeneratorPage = () => {
       toast.error(validation.error.errors[0].message);
       return;
     }
-
-    setGeneratedContent("Loading....");
 
     // the prompt
     const prompt = [

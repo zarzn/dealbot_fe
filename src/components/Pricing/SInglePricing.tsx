@@ -6,7 +6,19 @@ import OfferItem from "./OfferItem";
 import { integrations, messages } from "../../../integrations.config";
 import toast from "react-hot-toast";
 
-const SinglePricing = ({ price }: any) => {
+interface PriceData {
+  id: string;
+  unit_amount: number;
+  nickname: string;
+  title: string;
+  features: string[];
+}
+
+interface SinglePricingProps {
+  price: PriceData;
+}
+
+const SinglePricing = ({ price }: SinglePricingProps) => {
   // POST request
   const handleSubscription = async (e: any) => {
     e.preventDefault();
@@ -48,65 +60,34 @@ const SinglePricing = ({ price }: any) => {
       </span>
 
       <h3 className="mb-5.5 text-heading-6 font-semibold text-white">
-        {price.nickname === "Small" && "Starter"}
-        {price.nickname === "Medium" && "Medium"}
-        {price.nickname === "Large" && "Business"}
+        {price.title}
       </h3>
 
       <div className="flex items-center gap-3.5">
-        <h2 className="pricing-gradient-text text-custom-1 font-bold">
-          ${" "}
-          {(price.unit_amount / 100).toLocaleString("en-US", {
-            currency: "USD",
-          })}
+        <h2 className="text-3xl font-bold text-white">
+          ${price.unit_amount / 100}
         </h2>
 
-        <p className="font-medium">
+        <p className="font-medium text-white/70">
           /month <br />
           (billed annually)
         </p>
       </div>
 
-      <div className="pricing-gradient-divider my-10 h-[1px] w-full"></div>
+      <div className="my-10 h-[1px] w-full bg-white/10"></div>
 
-      {price.nickname === "Small" && (
-        <ul className="flex flex-col gap-4">
-          <OfferItem text="Subscription with levels" />
-          <OfferItem text="Advanced features included" />
-          <OfferItem text="Shared workspaces & tools" />
-          <OfferItem text="Premium versions functionality" />
-          <OfferItem text="Customizing the outputs" />
-          <OfferItem text="Priority customer support" />
-        </ul>
-      )}
-
-      {price.nickname === "Medium" && (
-        <ul className="flex flex-col gap-4">
-          <OfferItem text="Subscription with levels" />
-          <OfferItem text="Advanced features included" />
-          <OfferItem text="Shared workspaces & tools" />
-          <OfferItem text="Premium versions functionality" />
-          <OfferItem text="Customizing the outputs" />
-          <OfferItem text="Priority customer support" />
-        </ul>
-      )}
-      {price.nickname === "Large" && (
-        <ul className="flex flex-col gap-4">
-          <OfferItem text="Subscription with levels" />
-          <OfferItem text="Advanced features included" />
-          <OfferItem text="Shared workspaces & tools" />
-          <OfferItem text="Premium versions functionality" />
-          <OfferItem text="Customizing the outputs" />
-          <OfferItem text="Priority customer support" />
-        </ul>
-      )}
+      <ul className="flex flex-col gap-4">
+        {price.features.map((feature, index) => (
+          <OfferItem key={index} text={feature} />
+        ))}
+      </ul>
 
       <button
         aria-label="Get the plan button"
         onClick={handleSubscription}
-        className="pricing-button-gradient relative mt-11 flex w-full items-center justify-center gap-1.5 rounded-lg p-3 font-medium text-white transition-all duration-300 ease-in-out hover:shadow-button"
+        className="relative mt-11 flex w-full items-center justify-center gap-1.5 rounded-lg p-3 font-medium text-white transition-all duration-300 ease-in-out hover:shadow-button bg-gradient-to-r from-blue-500 to-blue-700"
       >
-        Get the plan
+        Get Started
         <svg
           width="17"
           height="16"
@@ -121,7 +102,7 @@ const SinglePricing = ({ price }: any) => {
         </svg>
       </button>
 
-      <p className="mt-4 text-center text-sm">No extra hidden charge</p>
+      <p className="mt-4 text-center text-sm text-white/70">No extra hidden charge</p>
 
       {/* <!-- bg shapes --> */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">

@@ -83,7 +83,7 @@ export default function VerifyEmailPage() {
           </motion.div>
           <h2 className="text-2xl font-semibold mb-2">Email Verified!</h2>
           <p className="text-muted-foreground mb-4">
-            Your email has been successfully verified. Redirecting to login...
+            Your email has been successfully verified. Redirecting to signin...
           </p>
         </div>
       </motion.div>

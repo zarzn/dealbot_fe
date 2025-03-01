@@ -6,6 +6,22 @@ import { PortableText } from "@portabletext/react";
 import Image from "next/image";
 import Link from "next/link";
 
+// Helper function to safely get image URL
+function getImageUrl(image: any): string {
+  const defaultImage = '/images/default-blog-image.jpg';
+  
+  if (!image) return defaultImage;
+  
+  try {
+    // Use type assertion to tell TypeScript that image is not null
+    const imageUrl = imageBuilder(image as any).url();
+    return imageUrl || defaultImage;
+  } catch (error) {
+    console.error('Error building image URL:', error);
+    return defaultImage;
+  }
+}
+
 type Props = {
   params: Promise<{ slug: string }>;
 };
@@ -40,15 +56,15 @@ export async function generateMetadata(props: Props) {
       openGraph: {
         title: `${post.title} | ${siteName}`,
         description: post.metadata,
-        url: `${siteURL}/blog/${post?.slug?.current}`,
-        siteName: siteName,
+        url: `${siteURL || ""}${post.slug?.current ? `/blog/${post.slug.current}` : ""}`,
+        siteName: siteName || "",
         images: [
           {
-            url: imageBuilder(post.mainImage).url(),
+            url: getImageUrl(post.mainImage),
             width: 1800,
             height: 1600,
-            alt: post.title,
-          },
+            alt: post.title || "",
+          }
         ],
         locale: "en_US",
         type: "article",
@@ -60,7 +76,7 @@ export async function generateMetadata(props: Props) {
         description: `${post.metadata?.slice(0, 136)}...`,
         creator: `@${authorName}`,
         site: `@${siteName}`,
-        images: [imageBuilder(post?.mainImage).url()],
+        images: [getImageUrl(post.mainImage)],
         url: `${siteURL}/blog/${post?.slug?.current}`,
       },
     };
@@ -85,8 +101,8 @@ export default async function BlogDetails(props: Props) {
       <section className="pb-17.5 pt-20 lg:pb-22.5 lg:pt-25 xl:pb-27.5">
         <div className="relative mx-auto mb-10 aspect-[97/44] w-full max-w-[1170px] overflow-hidden rounded-2xl px-4 sm:px-8 md:rounded-3xl xl:px-0">
           <Image
-            src={imageBuilder(post?.mainImage).url()}
-            alt={post.title}
+            src={getImageUrl(post?.mainImage)}
+            alt={post?.title || ""}
             fill
           />
         </div>

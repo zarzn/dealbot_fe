@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useSearchDeals, useTrackDeal, useUntrackDeal } from '@/hooks/useDeals';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { DealSearch, DealResponse } from '@/types/deals';
+import type { DealSearch, DealSuggestion } from '@/types/deals';
 import Image from 'next/image';
 
 const calculateDiscount = (originalPrice?: number, currentPrice?: number): number => {
@@ -31,9 +31,27 @@ export default function DealsPage() {
   const [priceRange, setPriceRange] = useState<PriceRange>('all');
   const [sortBy, setSortBy] = useState<SortOption>('score');
 
+  // Map frontend sort options to backend sort options
+  const getSortOptions = (): { sort_by: string, sort_order: string } => {
+    switch (sortBy) {
+      case 'price-low':
+        return { sort_by: 'price', sort_order: 'asc' };
+      case 'price-high':
+        return { sort_by: 'price', sort_order: 'desc' };
+      case 'savings':
+        return { sort_by: 'discount', sort_order: 'desc' };
+      case 'score':
+      default:
+        return { sort_by: 'relevance', sort_order: 'desc' };
+    }
+  };
+
+  const { sort_by, sort_order } = getSortOptions();
+
   const query: DealSearch = {
     query: searchQuery,
-    sort_by: sortBy,
+    sort_by,
+    sort_order,
     min_price: priceRange === 'all' ? undefined : 
              priceRange === 'under-50' ? 0 :
              priceRange === '50-100' ? 50 :
@@ -42,6 +60,8 @@ export default function DealsPage() {
              priceRange === 'under-50' ? 50 :
              priceRange === '50-100' ? 100 :
              priceRange === '100-500' ? 500 : undefined,
+    limit: 20,
+    offset: 0
   };
 
   const { data: deals = [], isLoading, error } = useSearchDeals(query);
@@ -68,11 +88,11 @@ export default function DealsPage() {
     return new Date(expiresAt) < new Date();
   };
 
-  const filteredDeals = deals.filter((deal: DealResponse) => {
+  const filteredDeals = deals.filter((deal: DealSuggestion) => {
     // Status filter
     if (filterStatus !== 'all') {
-      if (filterStatus === 'tracked' && !deal.is_tracked) return false;
-      if (filterStatus === 'untracked' && deal.is_tracked) return false;
+      if (filterStatus === 'tracked' && !deal.isTracked) return false;
+      if (filterStatus === 'untracked' && !deal.isTracked) return false;
     }
     return true;
   });
@@ -186,14 +206,14 @@ export default function DealsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7.5">
-          {filteredDeals.map((deal: DealResponse) => (
+          {filteredDeals.map((deal: DealSuggestion) => (
             <div
               key={deal.id}
               className="bg-white/[0.05] rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition"
             >
               <div className="relative aspect-video">
                 <Image
-                  src={deal.image_url || '/placeholder-deal.jpg'}
+                  src={deal.imageUrl || '/placeholder-deal.jpg'}
                   alt={deal.title}
                   fill
                   className="object-cover"
@@ -204,19 +224,19 @@ export default function DealsPage() {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-2xl font-bold text-purple">${deal.price}</p>
-                    {deal.original_price && (
+                    {deal.originalPrice && (
                       <p className="text-sm text-gray-500 line-through">
-                        ${deal.original_price}
+                        ${deal.originalPrice}
                       </p>
-                      )}
-                    </div>
+                    )}
+                  </div>
                   <div className="text-right">
                     <p className="text-sm text-gray-500">
-                      {calculateDiscount(deal.original_price, deal.price)}% OFF
+                      {calculateDiscount(deal.originalPrice, deal.price)}% OFF
                     </p>
-                    {deal.ai_analysis && (
+                    {deal.score && (
                       <p className="text-sm font-medium text-purple">
-                        Score: {deal.ai_analysis.score}
+                        Score: {deal.score}
                       </p>
                     )}
                   </div>
@@ -224,17 +244,17 @@ export default function DealsPage() {
                 <div className="space-y-2 mb-4">
                   <p className="text-sm text-gray-500 flex items-center gap-2">
                     <Package className="w-4 h-4" />
-                    {deal.shipping_info?.estimated_days
-                      ? `Delivery in ${deal.shipping_info.estimated_days} days`
+                    {deal.shippingInfo?.estimatedDays
+                      ? `Delivery in ${deal.shippingInfo.estimatedDays} days`
                       : 'Shipping info unavailable'}
                   </p>
                 </div>
-                    <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => deal.is_tracked ? handleUntrackDeal(deal.id) : handleTrackDeal(deal.id)}
+                    onClick={() => deal.isTracked ? handleUntrackDeal(deal.id) : handleTrackDeal(deal.id)}
                     className="flex-1 px-4 py-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20 transition"
                   >
-                    {deal.is_tracked ? 'Untrack Deal' : 'Track Deal'}
+                    {deal.isTracked ? 'Untrack Deal' : 'Track Deal'}
                   </button>
                   <a
                     href={deal.url}
@@ -245,11 +265,11 @@ export default function DealsPage() {
                     <ExternalLink className="w-5 h-5" />
                   </a>
                 </div>
-                </div>
               </div>
-            ))}
+            </div>
+          ))}
         </div>
-        )}
+      )}
     </div>
   );
 } 

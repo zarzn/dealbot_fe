@@ -7,7 +7,13 @@ import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue 
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { NotificationPreferences, notificationService } from '@/services/notifications';
@@ -61,7 +67,24 @@ export default function NotificationPreferencesPage() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      await notificationService.updatePreferences(values);
+      // Ensure all time_windows have required properties
+      const timeWindows: Record<string, { start_time: string; end_time: string; timezone: string }> = {};
+      
+      Object.entries(values.time_windows || {}).forEach(([key, window]) => {
+        timeWindows[key] = {
+          start_time: window.start_time || '09:00',
+          end_time: window.end_time || '17:00',
+          timezone: window.timezone || 'UTC'
+        };
+      });
+      
+      // Create a properly typed preferences object
+      const preferences: Partial<NotificationPreferences> = {
+        ...values,
+        time_windows: timeWindows
+      };
+      
+      await notificationService.updatePreferences(preferences);
       toast({
         title: 'Success',
         description: 'Notification preferences updated successfully'
@@ -163,25 +186,25 @@ export default function NotificationPreferencesPage() {
                   name={`notification_frequency.${type}`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-base capitalize">
+                      <FormLabel className="mb-2 block">
                         {type.replace('_', ' ')} Notifications
                       </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
+                      <FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select frequency" />
                           </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="immediate">Immediate</SelectItem>
-                          <SelectItem value="hourly">Hourly</SelectItem>
-                          <SelectItem value="daily">Daily</SelectItem>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                        </SelectContent>
-                      </Select>
+                          <SelectContent>
+                            <SelectItem value="realtime">Real-time</SelectItem>
+                            <SelectItem value="hourly">Hourly</SelectItem>
+                            <SelectItem value="daily">Daily</SelectItem>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
                     </FormItem>
                   )}
                 />

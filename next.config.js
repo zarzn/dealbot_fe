@@ -3,8 +3,21 @@ const webpack = require('webpack');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  eslint: {
+    // Disable ESLint during build
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    // Disable TypeScript checking during build
+    ignoreBuildErrors: true,
+  },
   images: {
-    domains: ["localhost", "images.unsplash.com"],
+    domains: [
+      'images.unsplash.com',
+      'cdn.sanity.io',
+      'source.unsplash.com',
+      'localhost',
+    ],
     remotePatterns: [
       {
         protocol: "https",

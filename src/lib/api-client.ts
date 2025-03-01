@@ -30,29 +30,61 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Special handling for search endpoint - don't retry with auth for this endpoint
+    if (originalRequest.url?.includes('/api/v1/deals/search') && error.response?.status === 401) {
+      // Just return the error for search endpoint - will be handled by the service layer
+      return Promise.reject(error);
+    }
+
     // If the error status is 401 and there is no originalRequest._retry flag,
     // it means the token has expired and we need to refresh it
-    if (error.response.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post(`${API_URL}/api/v1/auth/refresh-token`, {
-          refreshToken,
-        });
+        
+        // Only attempt to refresh if we have a refresh token
+        if (refreshToken) {
+          try {
+            const response = await axios.post(`${API_URL}/api/v1/auth/refresh-token`, {
+              refresh_token: refreshToken, // Use correct parameter name
+            });
 
-        const { token } = response.data;
-        localStorage.setItem('token', token);
+            const { access_token } = response.data;
+            localStorage.setItem('token', access_token);
 
-        // Retry the original request with the new token
-        originalRequest.headers.Authorization = `Bearer ${token}`;
+            // Retry the original request with the new token
+            originalRequest.headers.Authorization = `Bearer ${access_token}`;
+            return apiClient(originalRequest);
+          } catch (refreshError) {
+            // If refresh token endpoint fails, just clear tokens but don't redirect
+            console.error('Token refresh failed:', refreshError);
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+          }
+        }
+        
+        // If no refresh token or refresh failed, continue without authentication
+        // Remove any Authorization header to ensure request proceeds as unauthenticated
+        if (originalRequest.headers.Authorization) {
+          delete originalRequest.headers.Authorization;
+        }
+        
+        // Try the request again without auth headers
         return apiClient(originalRequest);
+        
       } catch (error) {
-        // If refresh token fails, redirect to login
+        // If refresh token fails, clear tokens but don't redirect
+        // This allows the request to continue as unauthenticated
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/auth/login';
-        return Promise.reject(error);
+        
+        // Remove Authorization header and retry the request
+        if (originalRequest.headers.Authorization) {
+          delete originalRequest.headers.Authorization;
+        }
+        return apiClient(originalRequest);
       }
     }
 

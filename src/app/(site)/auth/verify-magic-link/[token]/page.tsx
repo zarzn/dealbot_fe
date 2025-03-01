@@ -5,11 +5,6 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { authService } from '@/services/auth';
 
-export const metadata = {
-  title: 'Verify Magic Link | AI Deals System',
-  description: 'Verifying your magic link',
-};
-
 interface VerifyMagicLinkPageProps {
   params: {
     token: string;
@@ -24,7 +19,6 @@ export default function VerifyMagicLinkPage({ params }: VerifyMagicLinkPageProps
       try {
         const response = await authService.verifyMagicLink(params.token);
         authService.setTokens(response);
-        authService.setupAxiosInterceptors();
         toast.success('Successfully signed in!');
         router.push('/dashboard');
       } catch (error: any) {

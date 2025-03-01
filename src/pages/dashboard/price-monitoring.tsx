@@ -1,16 +1,28 @@
 import { useRouter } from 'next/router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PriceAlert, PriceChart, PriceHistory, PricePrediction } from '@/components/Price';
 import { dealsService } from '@/services/deals';
 import { DealSuggestion } from '@/types/deals';
+import { useState } from 'react';
 
 export default function PriceMonitoringPage() {
+  // Create a client
+  const [queryClient] = useState(() => new QueryClient());
+  
+  return (
+    <QueryClientProvider client={queryClient}>
+      <PriceMonitoringContent />
+    </QueryClientProvider>
+  );
+}
+
+function PriceMonitoringContent() {
   const router = useRouter();
   const { dealId } = router.query;
 
   const { data: deal, isLoading } = useQuery({
     queryKey: ['deal', dealId],
-    queryFn: () => (dealId ? dealsService.getDealById(dealId as string) : null),
+    queryFn: () => (dealId ? dealsService.getDealDetails(dealId as string) : null),
     enabled: !!dealId,
   });
 

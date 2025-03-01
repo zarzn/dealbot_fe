@@ -52,7 +52,7 @@ const RecentDeals = () => {
       <div className="text-center py-8">
         <ShoppingCart className="w-12 h-12 text-white/30 mx-auto mb-4" />
         <h3 className="text-lg font-semibold mb-2">No Deals Found Yet</h3>
-        <p className="text-white/70">We'll notify you when we find deals matching your goals</p>
+        <p className="text-white/70">We&apos;ll notify you when we find deals matching your goals</p>
       </div>
     );
   }

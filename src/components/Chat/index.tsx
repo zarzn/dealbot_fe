@@ -32,7 +32,7 @@ import {
 import { toast } from "react-hot-toast";
 import { dealsService, SearchResponse } from '@/services/deals';
 import { goalsService } from '@/services/goals';
-import type { AIAnalysis, DealSearch } from '@/types/deals';
+import type { AIAnalysis, DealSearch, DealResponse } from '@/types/deals';
 
 interface DealRequest {
   id: string;
@@ -53,40 +53,38 @@ interface DealRequest {
 interface DealSuggestion {
   id: string;
   title: string;
+  description: string;
   price: number;
-  originalPrice: number;
+  original_price: number;
   source: string;
-  score: number;
-  url: string;
-  imageUrl?: string;
-  expiresAt?: string;
-  status: string;
-  marketId: string;
-  sellerRating?: number;
-  matchScore: number;
-  relevanceExplanation: string;
   category: string;
-  condition: string;
-  shippingInfo: {
-    price: number;
-    estimatedDays: number;
-    freeShipping: boolean;
-  };
-  warranty?: string;
+  image_url: string;
+  score: number;
+  expires_at: string;
+  url: string;
+  is_tracked: boolean;
   reviews: {
+    average_rating: number;
     count: number;
-    averageRating: number;
+  };
+  shipping_info: {
+    free_shipping: boolean;
+    estimated_days: number;
+    price?: number;
+  };
+  availability: {
+    in_stock: boolean;
+    quantity?: number;
   };
   features: string[];
-  inStock: boolean;
-  stockCount?: number;
-  isTracked?: boolean;
-  deal_metadata?: {
-    scraped_at?: string;
-    source?: string;
-    search_query?: string;
-    [key: string]: any;
+  seller_info: {
+    name: string;
+    rating: number;
+    condition?: string;
+    warranty?: string;
   };
+  match_score?: number;
+  relevance_explanation?: string;
 }
 
 type SortOption = "relevance" | "price_asc" | "price_desc" | "rating" | "expiry";
@@ -168,6 +166,46 @@ function PriceAdjustmentModal({ deal, isOpen, onClose, onConfirm }: PriceAdjustm
       </div>
     </div>
   );
+}
+
+// Convert backend DealResponse to frontend DealSuggestion format
+function mapResponseToDealSuggestion(deal: DealResponse): DealSuggestion {
+  return {
+    id: deal.id,
+    title: deal.title,
+    description: deal.description || "",
+    price: typeof deal.price === 'number' ? deal.price : parseFloat(deal.price as any),
+    original_price: deal.original_price ? (typeof deal.original_price === 'number' ? deal.original_price : parseFloat(deal.original_price as any)) : 0,
+    source: deal.source || "",
+    category: deal.category || "Uncategorized",
+    image_url: deal.image_url || "",
+    score: deal.ai_analysis?.score || deal.latest_score || 0.5,
+    expires_at: deal.expires_at || new Date(Date.now() + 86400000 * 7).toISOString(),
+    url: deal.url,
+    is_tracked: deal.is_tracked || false,
+    reviews: {
+      average_rating: deal.seller_info?.rating || 0,
+      count: deal.seller_info?.reviews || 0
+    },
+    shipping_info: {
+      free_shipping: deal.shipping_info?.free_shipping || false,
+      estimated_days: deal.shipping_info?.estimated_days || 3,
+      price: deal.shipping_info?.cost || 0
+    },
+    availability: {
+      in_stock: deal.availability?.in_stock || true,
+      quantity: deal.availability?.quantity
+    },
+    features: deal.seller_info?.features || [],
+    seller_info: {
+      name: deal.seller_info?.name || "Unknown Seller",
+      rating: deal.seller_info?.rating || 0,
+      condition: deal.seller_info?.condition || "New",
+      warranty: deal.seller_info?.warranty
+    },
+    match_score: deal.ai_analysis?.score || 0.5,
+    relevance_explanation: deal.ai_analysis?.recommendations?.[0] || "Relevant deal based on your search"
+  };
 }
 
 export default function DealFinder() {
@@ -343,45 +381,9 @@ export default function DealFinder() {
       }
       
       // Map API response to component state
-      setSuggestions(searchResults.deals.map(deal => {
-        // Extract properties with proper type handling
-        const dealData = deal as any; // Use any to handle backend response format
-        
-        return {
-          id: dealData.id,
-          title: dealData.title,
-          description: dealData.description || "",
-          price: dealData.price,
-          originalPrice: dealData.original_price || dealData.price * 1.2, // Fallback if original price not provided
-          source: dealData.source,
-          category: dealData.category || "Uncategorized",
-          score: dealData.ai_analysis?.score || 0.5,
-          url: dealData.url,
-          imageUrl: dealData.image_url || "",
-          expiresAt: dealData.expires_at || new Date(Date.now() + 86400000 * 7).toISOString(), // Default 7 days
-          status: dealData.status || "active",
-          marketId: dealData.id,
-          sellerRating: dealData.seller_info?.rating || 0,
-          matchScore: dealData.ai_analysis?.score || 0.5,
-          relevanceExplanation: dealData.ai_analysis?.recommendations?.[0] || "Relevant deal based on your search",
-          condition: dealData.seller_info?.condition || "New",
-          shippingInfo: {
-            price: dealData.shipping_info?.cost || 0,
-            estimatedDays: dealData.shipping_info?.estimated_days || 3,
-            freeShipping: dealData.shipping_info?.free_shipping || false
-          },
-          warranty: dealData.seller_info?.warranty || "",
-          reviews: {
-            count: dealData.seller_info?.review_count || 0,
-            averageRating: dealData.seller_info?.rating || 0
-          },
-          features: dealData.seller_info?.features || [],
-          inStock: dealData.seller_info?.in_stock !== false,
-          stockCount: dealData.seller_info?.stock_count,
-          isTracked: dealData.is_tracked || false,
-          deal_metadata: dealData.deal_metadata || {}
-        };
-      }));
+      const mappedDeals = searchResults.deals.map(mapResponseToDealSuggestion);
+      setSuggestions(mappedDeals);
+      
     } catch (err) {
       console.error("Failed to process request:", err);
       
@@ -431,67 +433,32 @@ export default function DealFinder() {
       
       if (searchResults.deals && searchResults.deals.length > 0) {
         // Get AI analysis for each new deal
-        const analysisPromises = searchResults.deals.map(deal => 
-          dealsService.getAIAnalysis(deal.id)
-            .then(analysis => [deal.id, analysis] as [string, AIAnalysis])
-            .catch(() => [deal.id, {
-              deal_id: deal.id,
-              score: 0,
-              confidence: 0,
-              price_analysis: { price_trend: 'unknown', is_good_deal: false },
-              market_analysis: { availability: 'unknown' },
-              recommendations: ['Analysis not available'],
-              analysis_date: new Date().toISOString()
-            }] as [string, AIAnalysis])
-        );
-        
-        const analysisResults = await Promise.all(analysisPromises);
-        const newAnalysis = Object.fromEntries(analysisResults);
-        
-        setAiAnalysis(prev => ({ ...prev, ...newAnalysis }));
+        try {
+          const analysisPromises = searchResults.deals.map(deal => 
+            dealsService.getAIAnalysis(deal.id)
+              .then(analysis => [deal.id, analysis] as [string, AIAnalysis])
+              .catch(() => [deal.id, {
+                deal_id: deal.id,
+                score: 0,
+                confidence: 0,
+                price_analysis: { price_trend: 'unknown', is_good_deal: false },
+                market_analysis: { availability: 'unknown' },
+                recommendations: ['Analysis not available'],
+                analysis_date: new Date().toISOString()
+              }] as [string, AIAnalysis])
+          );
+          
+          const analysisResults = await Promise.all(analysisPromises);
+          const newAnalysis = Object.fromEntries(analysisResults);
+          
+          setAiAnalysis(prev => ({ ...prev, ...newAnalysis }));
+        } catch (analysisError) {
+          console.error("Error fetching AI analysis:", analysisError);
+        }
         
         // Map and append new deals
-        const newDeals = searchResults.deals.map(deal => {
-          // Extract properties with proper type handling
-          const dealData = deal as any; // Use any to handle backend response format
-          
-          return {
-            id: dealData.id,
-            title: dealData.title,
-            description: dealData.description || "",
-            price: dealData.price,
-            originalPrice: dealData.original_price || dealData.price * 1.2,
-            source: dealData.source,
-            category: dealData.category || "Uncategorized",
-            score: dealData.ai_analysis?.score || 0.5,
-            url: dealData.url,
-            imageUrl: dealData.image_url || "",
-            expiresAt: dealData.expires_at || new Date(Date.now() + 86400000 * 7).toISOString(),
-            status: dealData.status || "active",
-            marketId: dealData.id,
-            sellerRating: dealData.seller_info?.rating || 0,
-            matchScore: dealData.ai_analysis?.score || 0.5,
-            relevanceExplanation: dealData.ai_analysis?.recommendations?.[0] || "Relevant deal based on your search",
-            condition: dealData.seller_info?.condition || "New",
-            shippingInfo: {
-              price: dealData.shipping_info?.cost || 0,
-              estimatedDays: dealData.shipping_info?.estimated_days || 3,
-              freeShipping: dealData.shipping_info?.free_shipping || false
-            },
-            warranty: dealData.seller_info?.warranty || "",
-            reviews: {
-              count: dealData.seller_info?.review_count || 0,
-              averageRating: dealData.seller_info?.rating || 0
-            },
-            features: dealData.seller_info?.features || [],
-            inStock: dealData.seller_info?.in_stock !== false,
-            stockCount: dealData.seller_info?.stock_count,
-            isTracked: dealData.is_tracked || false,
-            deal_metadata: dealData.deal_metadata || {}
-          };
-        });
-        
-        setSuggestions(prev => [...prev, ...newDeals]);
+        const mappedDeals = searchResults.deals.map(mapResponseToDealSuggestion);
+        setSuggestions(prev => [...prev, ...mappedDeals]);
         setCurrentPage(nextPage);
       }
     } catch (err) {
@@ -510,11 +477,11 @@ export default function DealFinder() {
         case "price_desc":
           return b.price - a.price;
         case "rating":
-          return b.reviews.averageRating - a.reviews.averageRating;
+          return b.reviews.average_rating - a.reviews.average_rating;
         case "expiry":
-          return new Date(a.expiresAt!).getTime() - new Date(b.expiresAt!).getTime();
+          return new Date(a.expires_at!).getTime() - new Date(b.expires_at!).getTime();
         default:
-          return b.matchScore - a.matchScore;
+          return b.match_score - a.match_score;
       }
     });
   };
@@ -542,35 +509,39 @@ export default function DealFinder() {
         return;
       }
       
+      // First track the deal
+      await dealsService.trackDeal(selectedDeal.id);
+      
+      // Then create a goal for price tracking
       const goal = {
-        title: selectedDeal.title,
-        itemCategory: selectedDeal.category,
+        title: `Track price for: ${selectedDeal.title}`,
+        item_category: selectedDeal.category,
         marketplaces: [selectedDeal.source],
         constraints: {
-          maxPrice: targetPrice,
-          minPrice: 0,
-          brands: [selectedDeal.source],
-          conditions: [selectedDeal.condition],
+          max_price: targetPrice,
+          min_price: 0,
+          brands: [selectedDeal.seller_info.name],
+          conditions: [selectedDeal.seller_info.condition || "New"],
           features: selectedDeal.features
         },
         notifications: {
           email: true,
-          inApp: true,
-          priceThreshold: notifyThreshold
+          in_app: true,
+          price_threshold: notifyThreshold
         },
         priority: "medium" as const,
         deadline: undefined,
-        maxMatches: 10,
-        maxTokens: 1000
+        max_matches: 10,
+        max_tokens: 1000
       };
 
-      // Real API call
+      // Create the goal
       await goalsService.createGoal(goal);
       
       setTrackedDeals(prev => new Set(Array.from(prev).concat(selectedDeal.id)));
       toast.success("Deal tracking started! We'll notify you about price changes.");
     } catch (error) {
-      console.error("Failed to create goal:", error);
+      console.error("Failed to track deal:", error);
       
       // Provide more specific error messages
       if (error.response?.status === 401) {
@@ -942,10 +913,10 @@ export default function DealFinder() {
                   className="mb-4 overflow-hidden rounded-xl bg-dark-7 transition-all duration-300 hover:shadow-lg"
                 >
                   <div className="flex flex-col md:flex-row">
-                    {suggestion.imageUrl && (
+                    {suggestion.image_url && (
                       <div className="aspect-video w-full md:w-48">
                         <img
-                          src={suggestion.imageUrl}
+                          src={suggestion.image_url}
                           alt={suggestion.title}
                           className="h-full w-full object-cover"
                         />
@@ -963,13 +934,13 @@ export default function DealFinder() {
                           </span>
                           <span className="text-sm text-dark-3">•</span>
                           <span className="text-sm text-dark-3">
-                            {suggestion.condition}
+                            {suggestion.seller_info?.condition || "New"}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Star className="h-4 w-4 text-yellow-500" />
                           <span className="text-sm text-white">
-                            {suggestion.reviews.averageRating} ({suggestion.reviews.count} reviews)
+                            {suggestion.reviews.average_rating} ({suggestion.reviews.count} reviews)
                           </span>
                         </div>
                       </div>
@@ -982,13 +953,13 @@ export default function DealFinder() {
                             ${suggestion.price.toFixed(2)}
                           </p>
                           <p className="text-sm text-dark-3 line-through">
-                            ${suggestion.originalPrice.toFixed(2)}
+                            ${suggestion.original_price.toFixed(2)}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
                           <BarChart3 className="h-4 w-4 text-purple" />
                           <span className="text-sm text-white">
-                            Match: {Math.round(suggestion.matchScore * 100)}%
+                            Match: {Math.round(suggestion.match_score * 100)}%
                           </span>
                         </div>
                       </div>
@@ -1006,7 +977,7 @@ export default function DealFinder() {
                       </div>
 
                       <p className="mb-4 text-sm text-dark-3">
-                        {suggestion.relevanceExplanation}
+                        {suggestion.relevance_explanation}
                       </p>
 
                       {/* Additional Info */}
@@ -1014,9 +985,9 @@ export default function DealFinder() {
                         <div className="flex items-center gap-2">
                           <Package className="h-4 w-4 text-purple" />
                           <span className="text-sm text-dark-3">
-                            {suggestion.inStock ? (
-                              suggestion.stockCount
-                                ? `${suggestion.stockCount} in stock`
+                            {suggestion.availability.in_stock ? (
+                              suggestion.availability.quantity
+                                ? `${suggestion.availability.quantity} in stock`
                                 : "In Stock"
                             ) : "Out of Stock"}
                           </span>
@@ -1024,22 +995,22 @@ export default function DealFinder() {
                         <div className="flex items-center gap-2">
                           <Truck className="h-4 w-4 text-purple" />
                           <span className="text-sm text-dark-3">
-                            {suggestion.shippingInfo.freeShipping
+                            {suggestion.shipping_info.free_shipping
                               ? "Free Shipping"
-                              : `$${suggestion.shippingInfo.price.toFixed(2)} shipping`}
+                              : `$${suggestion.shipping_info?.price?.toFixed(2) || '0.00'} shipping`}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-purple" />
                           <span className="text-sm text-dark-3">
-                            {suggestion.shippingInfo.estimatedDays} days delivery
+                            {suggestion.shipping_info.estimated_days} days delivery
                           </span>
                         </div>
-                        {suggestion.warranty && (
+                        {suggestion.seller_info?.warranty && (
                           <div className="flex items-center gap-2">
                             <Shield className="h-4 w-4 text-purple" />
                             <span className="text-sm text-dark-3">
-                              {suggestion.warranty}
+                              {suggestion.seller_info?.warranty}
                             </span>
                           </div>
                         )}
@@ -1049,7 +1020,7 @@ export default function DealFinder() {
                         <div className="flex items-center gap-2 text-sm text-dark-3">
                           <Clock className="h-4 w-4" />
                           <span>
-                            Expires: {new Date(suggestion.expiresAt!).toLocaleDateString()}
+                            Expires: {new Date(suggestion.expires_at!).toLocaleDateString()}
                           </span>
                         </div>
                         <a

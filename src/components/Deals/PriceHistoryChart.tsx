@@ -19,14 +19,14 @@ export default function PriceHistoryChart({ data, currentPrice }: PriceHistoryCh
   const chartData = useMemo(() => {
     // Sort data by date
     const sortedData = [...data].sort((a, b) => 
-      new Date(a.date).getTime() - new Date(b.date).getTime()
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
     // Add current price point
     return [
       ...sortedData,
       {
-        date: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
         price: currentPrice,
         source: 'Current',
       },
@@ -60,7 +60,7 @@ export default function PriceHistoryChart({ data, currentPrice }: PriceHistoryCh
       return (
         <div className="bg-gray-900/90 backdrop-blur-sm border border-white/10 rounded-lg p-3 shadow-xl">
           <div className="text-sm font-medium">
-            {formatDate(data.date)}
+            {formatDate(data.timestamp)}
           </div>
           <div className="text-lg font-bold text-purple">
             {formatPrice(data.price)}
@@ -86,7 +86,7 @@ export default function PriceHistoryChart({ data, currentPrice }: PriceHistoryCh
           vertical={false}
         />
         <XAxis
-          dataKey="date"
+          dataKey="timestamp"
           tickFormatter={formatDate}
           stroke="rgba(255,255,255,0.5)"
           tick={{ fill: 'rgba(255,255,255,0.5)' }}

@@ -1,7 +1,9 @@
 export interface PricePoint {
+  id?: string;
   timestamp: string;
   price: number;
   source: string;
+  currency?: string;
   meta_data?: Record<string, any>;
 }
 
@@ -58,4 +60,15 @@ export interface PriceStatistics {
   last_update: string;
   trend: string;
   meta_data?: Record<string, any>;
+}
+
+export interface PriceHistoryResponse {
+  deal_id: string;
+  prices: PricePoint[];
+  average_price: number;
+  lowest_price: number;
+  highest_price: number;
+  start_date: string;
+  end_date: string;
+  trend: string;
 } 

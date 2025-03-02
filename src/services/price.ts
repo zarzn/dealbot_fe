@@ -1,10 +1,10 @@
-import { api } from '@/lib/api';
+import { apiClient } from '@/lib/api-client';
 import { PriceTracker, PricePrediction, PriceStatistics } from '@/types/price';
 
 export const priceService = {
   // Price Tracking
   async createTracker(dealId: string, thresholdPrice?: number) {
-    const response = await api.post('/price-tracking/trackers', {
+    const response = await apiClient.post('/api/v1/price-tracking/trackers', {
       deal_id: dealId,
       threshold_price: thresholdPrice,
     });
@@ -12,28 +12,28 @@ export const priceService = {
   },
 
   async getTrackers() {
-    const response = await api.get('/price-tracking/trackers');
+    const response = await apiClient.get('/api/v1/price-tracking/trackers');
     return response.data;
   },
 
   async getPriceHistory(dealId: string) {
-    const response = await api.get(`/price-tracking/history/${dealId}`);
+    const response = await apiClient.get(`/api/v1/deals/${dealId}/price-history`);
     return response.data;
   },
 
   // Price Predictions
   async getPrediction(dealId: string) {
-    const response = await api.get(`/price-prediction/deals/${dealId}/predictions`);
+    const response = await apiClient.get(`/api/v1/deals/${dealId}/predictions`);
     return response.data;
   },
 
   async getPriceTrends(dealId: string) {
-    const response = await api.get(`/price-prediction/deals/${dealId}/trends`);
+    const response = await apiClient.get(`/api/v1/deals/${dealId}/trends`);
     return response.data;
   },
 
   async analyzeDealPrice(dealId: string) {
-    const response = await api.get(`/price-prediction/deals/${dealId}/analysis`);
+    const response = await apiClient.get(`/api/v1/deals/analysis/${dealId}`);
     return response.data;
   }
 }; 

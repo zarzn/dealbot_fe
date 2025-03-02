@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { priceService } from '@/services/price';
-import { PricePoint } from '@/types/price';
+import { PricePoint, PriceHistoryResponse } from '@/types/price';
 
 interface PriceHistoryProps {
   dealId: string;
 }
 
 export const PriceHistory = ({ dealId }: PriceHistoryProps) => {
-  const { data: history, isLoading } = useQuery({
+  const { data: historyResponse, isLoading } = useQuery({
     queryKey: ['priceHistory', dealId],
     queryFn: () => priceService.getPriceHistory(dealId)
   });
@@ -17,9 +17,11 @@ export const PriceHistory = ({ dealId }: PriceHistoryProps) => {
     return <div>Loading price history...</div>;
   }
 
-  if (!history || history.length === 0) {
+  if (!historyResponse || !historyResponse.prices || historyResponse.prices.length === 0) {
     return <div>No price history available</div>;
   }
+
+  const history = historyResponse.prices;
 
   return (
     <div className="overflow-x-auto">

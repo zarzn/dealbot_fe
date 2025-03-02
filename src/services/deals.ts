@@ -1,8 +1,8 @@
 import { apiClient } from '@/lib/api-client';
-import type { DealSuggestion, AIAnalysis, PriceHistory, DealSearch } from '@/types/deals';
+import type { DealSuggestion, AIAnalysis, PriceHistory, DealSearch, DealResponse } from '@/types/deals';
 
 export interface SearchResponse {
-  deals: DealSuggestion[];
+  deals: DealResponse[];
   total: number;
   metadata?: {
     scraping_attempted?: boolean;
@@ -17,12 +17,11 @@ export class DealsService {
       return response.data;
     } catch (error) {
       console.error('Error searching deals:', error);
-      // Return empty results for errors
-      return { deals: [], total: 0 };
+      throw error;
     }
   }
 
-  async getDealDetails(dealId: string): Promise<DealSuggestion> {
+  async getDealDetails(dealId: string): Promise<DealResponse> {
     try {
       const response = await apiClient.get(`/api/v1/deals/${dealId}`);
       return response.data;
@@ -34,35 +33,21 @@ export class DealsService {
 
   async getAIAnalysis(dealId: string): Promise<AIAnalysis> {
     try {
-      const response = await apiClient.get(`/api/v1/deals/${dealId}/analysis`);
+      const response = await apiClient.get(`/api/v1/deals/analysis/${dealId}`);
       return response.data;
     } catch (error) {
       console.error(`Error getting AI analysis for ${dealId}:`, error);
-      // Return minimal analysis object instead of throwing
-      return {
-        deal_id: dealId,
-        score: 0,
-        confidence: 0,
-        price_analysis: { 
-          price_trend: 'unknown',
-          is_good_deal: false
-        },
-        market_analysis: { 
-          availability: 'unknown'
-        },
-        recommendations: ['Unable to retrieve AI analysis'],
-        analysis_date: new Date().toISOString()
-      };
+      throw error;
     }
   }
 
   async getPriceHistory(dealId: string): Promise<PriceHistory[]> {
     try {
       const response = await apiClient.get(`/api/v1/deals/${dealId}/price-history`);
-      return response.data;
+      return response.data.prices || [];
     } catch (error) {
       console.error(`Error getting price history for ${dealId}:`, error);
-      return []; // Return empty array instead of throwing
+      throw error;
     }
   }
 
@@ -80,6 +65,62 @@ export class DealsService {
       await apiClient.delete(`/api/v1/deals/${dealId}/track`);
     } catch (error) {
       console.error(`Error untracking deal ${dealId}:`, error);
+      throw error;
+    }
+  }
+
+  async validateDeal(dealId: string): Promise<{is_valid: boolean; validation_details: any}> {
+    try {
+      const response = await apiClient.post(`/api/v1/deals/${dealId}/validate`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error validating deal ${dealId}:`, error);
+      throw error;
+    }
+  }
+
+  async refreshDeal(dealId: string): Promise<DealResponse> {
+    try {
+      const response = await apiClient.post(`/api/v1/deals/${dealId}/refresh`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error refreshing deal ${dealId}:`, error);
+      throw error;
+    }
+  }
+
+  async getSimilarDeals(dealId: string, limit: number = 10): Promise<DealResponse[]> {
+    try {
+      const response = await apiClient.get(`/api/v1/deals/${dealId}/similar?limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error getting similar deals for ${dealId}:`, error);
+      throw error;
+    }
+  }
+
+  async getDeals(
+    filters: any = {},
+    page: number = 1,
+    pageSize: number = 20
+  ): Promise<DealResponse[]> {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      // Add pagination
+      queryParams.append('page', page.toString());
+      queryParams.append('page_size', pageSize.toString());
+      
+      // Add filters
+      if (filters.category) queryParams.append('category', filters.category);
+      if (filters.price_min) queryParams.append('price_min', filters.price_min.toString());
+      if (filters.price_max) queryParams.append('price_max', filters.price_max.toString());
+      if (filters.sort_by) queryParams.append('sort_by', filters.sort_by);
+      
+      const response = await apiClient.get(`/api/v1/deals?${queryParams.toString()}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting deals:', error);
       throw error;
     }
   }

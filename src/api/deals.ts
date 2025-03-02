@@ -46,7 +46,7 @@ export const getPriceHistory = async (dealId: string, days: number = 30): Promis
   const { data } = await dealsApi.get(`/${dealId}/price-history`, {
     params: { days },
   });
-  return data;
+  return data.prices || [];
 };
 
 export const trackDeal = async (dealId: string): Promise<void> => {

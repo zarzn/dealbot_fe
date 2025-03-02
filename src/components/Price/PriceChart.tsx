@@ -1,7 +1,7 @@
 import { Line } from 'react-chartjs-2';
 import { format } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
-import { PricePoint } from '@/types/price';
+import { PricePoint, PriceHistoryResponse } from '@/types/price';
 import { priceService } from '@/services/price';
 import {
   Chart as ChartJS,
@@ -30,7 +30,7 @@ interface PriceChartProps {
 }
 
 export const PriceChart = ({ dealId }: PriceChartProps) => {
-  const { data: priceHistory, isLoading } = useQuery({
+  const { data: priceHistoryResponse, isLoading } = useQuery({
     queryKey: ['priceHistory', dealId],
     queryFn: () => priceService.getPriceHistory(dealId)
   });
@@ -40,9 +40,12 @@ export const PriceChart = ({ dealId }: PriceChartProps) => {
     queryFn: () => priceService.getPrediction(dealId)
   });
 
-  if (isLoading || !priceHistory) {
+  if (isLoading || !priceHistoryResponse) {
     return <div>Loading price data...</div>;
   }
+
+  // Extract price points from the response
+  const priceHistory = priceHistoryResponse.prices || [];
 
   const data = {
     labels: priceHistory.map(p => format(new Date(p.timestamp), 'MMM d, yyyy')),

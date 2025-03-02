@@ -3,23 +3,39 @@ export interface Deal {
   title: string;
   description?: string;
   price: number;
-  originalPrice?: number;
+  original_price?: number;
   url?: string;
-  imageUrl?: string;
-  seller?: string;
-  shippingInfo?: {
+  image_url?: string;
+  seller_info?: {
+    name: string;
+    rating: number;
+    reviews?: number;
+    condition?: string;
+  };
+  shipping_info?: {
     cost: number;
-    freeShipping: boolean;
+    free_shipping: boolean;
+    estimated_days?: number;
   };
-  reviews?: {
-    count: number;
-    averageRating: number;
+  availability?: {
+    in_stock: boolean;
+    quantity?: number;
   };
-  warranty?: string;
-  inStock?: boolean;
-  stockCount?: number;
+  category?: string;
+  source?: string;
+  status?: string;
+  market_id?: string;
+  user_id?: string;
+  goal_id?: string;
+  found_at?: string;
+  expires_at?: string;
+  created_at?: string;
+  updated_at?: string;
   features?: string[];
-  isTracked?: boolean;
+  is_tracked?: boolean;
+  latest_score?: number;
+  deal_metadata?: Record<string, any>;
+  price_metadata?: Record<string, any>;
 }
 
 export interface DealSuggestion {
@@ -27,34 +43,46 @@ export interface DealSuggestion {
   title: string;
   description: string;
   price: number;
-  originalPrice: number;
+  original_price: number;
   source: string;
   category: string;
-  imageUrl: string;
+  image_url: string;
   score: number;
-  expiresAt: string;
+  expires_at: string;
   url: string;
-  isTracked: boolean;
+  is_tracked: boolean;
   reviews: {
-    averageRating: number;
+    average_rating: number;
     count: number;
   };
-  shippingInfo: {
-    freeShipping: boolean;
-    estimatedDays: number;
+  shipping_info: {
+    free_shipping: boolean;
+    estimated_days: number;
   };
-  inStock: boolean;
-  stockCount: number;
+  availability: {
+    in_stock: boolean;
+    quantity?: number;
+  };
   features: string[];
+  seller_info: {
+    name: string;
+    rating: number;
+    condition?: string;
+  };
+  match_score?: number;
+  relevance_explanation?: string;
 }
 
 export interface ShippingInfo {
+  cost?: number;
   estimated_days?: number;
   provider?: string;
   method?: string;
+  free_shipping?: boolean;
 }
 
 export interface PriceHistory {
+  id?: string;
   price: number;
   currency: string;
   timestamp: string;
@@ -84,17 +112,17 @@ export interface DealTrend {
   category: string;
   period: string;
   data: {
-    averagePrice: number;
-    lowestPrice: number;
-    highestPrice: number;
-    priceVolatility: number;
-    dealFrequency: number;
+    average_price: number;
+    lowest_price: number;
+    highest_price: number;
+    price_volatility: number;
+    deal_frequency: number;
   };
-  seasonalFactors: Array<{
+  seasonal_factors: Array<{
     factor: string;
     impact: number;
   }>;
-  bestTimeToBuy: {
+  best_time_to_buy: {
     timeframe: string;
     confidence: number;
     reasoning: string;
@@ -102,9 +130,9 @@ export interface DealTrend {
 }
 
 export interface SimilarDeal {
-  dealId: string;
+  deal_id: string;
   similarity: number;
-  priceDifference: number;
+  price_difference: number;
   advantages: string[];
   disadvantages: string[];
 }
@@ -145,9 +173,27 @@ export interface DealResponse extends DealBase {
   is_tracked: boolean;
   lowest_price?: number;
   highest_price?: number;
-  price_history: PriceHistory[];
+  price_history?: PriceHistory[];
   ai_analysis?: AIAnalysis;
   found_at: string;
   expires_at?: string;
   status: string;
+  market_id: string;
+  user_id?: string;
+  goal_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  availability?: {
+    in_stock: boolean;
+    quantity?: number;
+  };
+  seller_info?: {
+    name: string;
+    rating: number;
+    reviews?: number;
+    condition?: string;
+    features?: string[];
+    warranty?: string;
+  };
+  latest_score?: number;
 }

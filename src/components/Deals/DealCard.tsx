@@ -18,9 +18,9 @@ export default function DealCard({ deal }: DealCardProps) {
       className="bg-white/[0.05] rounded-xl overflow-hidden border border-white/10 hover:border-purple/50 transition group"
     >
       <div className="aspect-video relative">
-        {deal.imageUrl ? (
+        {deal.image_url ? (
           <Image
-            src={deal.imageUrl}
+            src={deal.image_url}
             alt={deal.title}
             fill
             className="object-cover"
@@ -31,9 +31,9 @@ export default function DealCard({ deal }: DealCardProps) {
           </div>
         )}
         {/* Discount badge */}
-        {deal.originalPrice > deal.price && (
+        {deal.original_price > deal.price && (
           <div className="absolute top-2 right-2 bg-purple/90 text-white px-2 py-1 rounded-lg text-sm font-medium">
-            {calculateDiscount(deal.originalPrice, deal.price)}% OFF
+            {calculateDiscount(deal.original_price, deal.price)}% OFF
           </div>
         )}
       </div>
@@ -47,9 +47,9 @@ export default function DealCard({ deal }: DealCardProps) {
           {/* Price */}
           <div className="flex items-baseline gap-2">
             <span className="text-xl font-bold">${deal.price.toFixed(2)}</span>
-            {deal.originalPrice > deal.price && (
+            {deal.original_price > deal.price && (
               <span className="text-white/50 line-through text-sm">
-                ${deal.originalPrice.toFixed(2)}
+                ${deal.original_price.toFixed(2)}
               </span>
             )}
           </div>
@@ -57,10 +57,10 @@ export default function DealCard({ deal }: DealCardProps) {
           {/* Meta info */}
           <div className="flex items-center gap-4 text-sm text-white/70">
             {/* Rating */}
-            {deal.reviews.averageRating > 0 && (
+            {deal.reviews.average_rating > 0 && (
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                <span>{deal.reviews.averageRating.toFixed(1)}</span>
+                <span>{deal.reviews.average_rating.toFixed(1)}</span>
               </div>
             )}
             {/* Source */}
@@ -69,7 +69,7 @@ export default function DealCard({ deal }: DealCardProps) {
               <span>{deal.source}</span>
             </div>
             {/* Expiry */}
-            {deal.expiresAt && (
+            {deal.expires_at && (
               <div className="flex items-center gap-1">
                 <Clock className="w-4 h-4" />
                 <span>Expires in 2d</span>
@@ -90,7 +90,7 @@ export default function DealCard({ deal }: DealCardProps) {
             >
               AI Score: {deal.score}/10
             </div>
-            {deal.shippingInfo.freeShipping && (
+            {deal.shipping_info.free_shipping && (
               <span className="text-sm text-white/70">
                 Free Shipping
               </span>

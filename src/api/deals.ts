@@ -1,17 +1,20 @@
 import axios from 'axios';
 import { DealResponse, DealSearch, PriceHistory, AIAnalysis } from '@/types/deals';
-
-// Import the SearchResponse interface from the deals service
 import { SearchResponse } from '@/services/deals';
+import { API_CONFIG } from '@/services/api/config';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-
+// Create axios instance with default config
 const dealsApi = axios.create({
-  baseURL: `${API_URL}/deals`,
+  baseURL: `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/deals`,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Log the API URL in development mode
+if (process.env.NODE_ENV === 'development') {
+  console.log('Deals API using URL:', `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/deals`);
+}
 
 // Add request interceptor to include auth token
 dealsApi.interceptors.request.use((config) => {

@@ -13,7 +13,8 @@ import {
   Bell, 
   Settings, 
   Menu,
-  X
+  X,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PageTransition } from '@/components/ui/page-transition';
@@ -31,6 +32,7 @@ const navigation = [
   { name: 'Deals', href: '/dashboard/deals', icon: TagIcon },
   { name: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
   { name: 'Notifications', href: '/dashboard/notifications', icon: Bell },
+  { name: 'Chat', href: '/websocket-chat', icon: MessageSquare },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 

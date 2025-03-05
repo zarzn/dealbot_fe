@@ -1,6 +1,3 @@
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
-const webpack = require('webpack');
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -25,28 +22,11 @@ const nextConfig = {
         port: "",
       },
     ],
-  },
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.plugins.push(
-        new NodePolyfillPlugin(),
-        new webpack.ProvidePlugin({
-          process: 'process/browser',
-        })
-      );
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        buffer: require.resolve('buffer/'),
-        stream: require.resolve('stream-browserify'),
-        util: require.resolve('util/'),
-        crypto: require.resolve('crypto-browserify'),
-        process: require.resolve('process/browser'),
-      };
-    }
-    return config;
+    unoptimized: true, // Required for static export
   },
   reactStrictMode: true,
   swcMinify: true,
+  output: 'export', // Enable static export
 };
 
 module.exports = nextConfig;

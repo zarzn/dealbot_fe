@@ -10,7 +10,8 @@
     "build": "next build",
     "build:prod": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "export": "next export"
   },
   "dependencies": {
     "@babel/core": "^7.22.0",
@@ -37,7 +38,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.4.16",
-    "axios": "^1.4.0",
+    "axios": "^1.8.1",
     "bcrypt": "^5.1.1",
     "buffer": "^6.0.3",
     "chart.js": "^4.4.7",
@@ -83,7 +84,7 @@
     "stream-browserify": "^3.0.0",
     "swiper": "^11.0.7",
     "tailwind-merge": "^3.0.1",
-    "tailwindcss": "^3.3.4",
+    "tailwindcss": "^3.4.17",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.4",
     "util": "^0.12.5",

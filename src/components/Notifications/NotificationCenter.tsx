@@ -7,9 +7,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { notificationService } from '@/services/notifications';
+import { notificationService, Notification as ServiceNotification } from '@/services/notifications';
 import { formatDistanceToNow } from '@/lib/date-utils';
-import type { Notification } from '@/types/api';
+import { Notification } from '@/types/api';
+import { WS_URL } from '@/services/api/config';
 
 export function NotificationCenter() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -18,13 +19,15 @@ export function NotificationCenter() {
 
   useEffect(() => {
     loadNotifications();
-    setupWebSocket();
+    const cleanup = setupWebSocket();
+    return cleanup;
   }, []);
 
   const loadNotifications = async () => {
     try {
       const { notifications: data } = await notificationService.getNotifications();
-      setNotifications(data);
+      // Cast the service notifications to the API notification type
+      setNotifications(data as unknown as Notification[]);
       setUnreadCount(data.filter(n => n.status === 'pending').length);
     } catch (error) {
       toast.error('Failed to load notifications');
@@ -32,11 +35,30 @@ export function NotificationCenter() {
   };
 
   const setupWebSocket = () => {
-    const ws = new WebSocket('ws://localhost:8000/notifications/ws');
+    // Log WebSocket URL in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('NotificationCenter connecting to WebSocket:', WS_URL);
+    }
+    
+    // If WS_URL is not available, return empty cleanup function
+    if (!WS_URL) {
+      console.error('WebSocket URL not available. Check configuration.');
+      return () => {};
+    }
+    
+    const ws = new WebSocket(`${WS_URL}/notifications/ws`);
     
     ws.onmessage = (event) => {
-      const notification = JSON.parse(event.data);
-      handleNewNotification(notification);
+      try {
+        const notification = JSON.parse(event.data);
+        handleNewNotification(notification);
+      } catch (error) {
+        console.error('Error processing WebSocket message:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
     };
 
     return () => ws.close();

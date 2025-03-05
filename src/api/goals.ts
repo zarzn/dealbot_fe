@@ -1,14 +1,19 @@
 import axios from 'axios';
 import { GoalResponse, GoalCreate, GoalUpdate, GoalAnalytics } from '@/types/goals';
+import { API_CONFIG } from '@/services/api/config';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-
+// Create axios instance with default config
 const goalsApi = axios.create({
-  baseURL: `${API_URL}/goals`,
+  baseURL: `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/goals`,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Log the API URL in development mode
+if (process.env.NODE_ENV === 'development') {
+  console.log('Goals API using URL:', `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/goals`);
+}
 
 // Add request interceptor to include auth token
 goalsApi.interceptors.request.use((config) => {

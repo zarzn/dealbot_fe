@@ -1,6 +1,21 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Make sure to use process.env values with proper fallbacks, and handle environment detection correctly
+const API_URL = typeof window !== 'undefined' 
+  ? (window.location.hostname === 'localhost' 
+    ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000' 
+    : process.env.NEXT_PUBLIC_API_URL)
+  : process.env.NEXT_PUBLIC_API_URL;
+
+// Log the API URL in development mode
+if (process.env.NODE_ENV === 'development') {
+  console.log('API Client using URL:', API_URL);
+}
+
+// If we're in production and the API_URL is not set, log an error
+if (process.env.NODE_ENV === 'production' && !API_URL) {
+  console.error('API_URL not set in production environment. Check environment variables.');
+}
 
 export const apiClient = axios.create({
   baseURL: API_URL,

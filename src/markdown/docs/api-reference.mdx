@@ -1,0 +1,249 @@
+---
+title: "API Reference"
+excerpt: "Complete reference for the REST and WebSocket APIs"
+coverImage: "/images/docs/api-reference.jpg"
+date: "2025-03-04"
+author: "AI Agentic Deals Team"
+---
+
+# API Reference
+
+This document provides a comprehensive reference for the AI Agentic Deals System APIs, including both REST and WebSocket interfaces.
+
+## Authentication
+
+All API requests require authentication using JWT tokens.
+
+### Obtaining a Token
+
+```
+POST /api/auth/login
+```
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "your_password"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "bearer",
+    "expires_in": 900
+  }
+}
+```
+
+### Using Tokens
+
+For REST API requests, include the token in the Authorization header:
+
+```
+Authorization: Bearer your_access_token
+```
+
+For WebSocket connections, include the token as a query parameter:
+
+```
+wss://api-gateway-url/prod?token=your_access_token
+```
+
+## REST API Endpoints
+
+### User Management
+
+#### Get Current User
+```
+GET /api/users/me
+```
+
+#### Update User Profile
+```
+PUT /api/users/me
+```
+
+**Request:**
+```json
+{
+  "name": "Updated Name",
+  "preferences": {
+    "notifications_enabled": true,
+    "categories": ["electronics", "home"]
+  }
+}
+```
+
+### Deal Management
+
+#### Search Deals
+```
+GET /api/deals/search?query=laptop&category=electronics&min_discount=20
+```
+
+#### Get Deal Details
+```
+GET /api/deals/{id}
+```
+
+#### Save Deal
+```
+POST /api/deals/save
+```
+
+**Request:**
+```json
+{
+  "deal_id": "deal_123456",
+  "notes": "Great laptop deal to consider"
+}
+```
+
+### AI Analysis
+
+#### Request Deal Analysis
+```
+POST /api/analysis/deal/{id}
+```
+
+#### Get Analysis Results
+```
+GET /api/analysis/deal/{id}/results
+```
+
+### Wallet Operations
+
+#### Get Wallet Balance
+```
+GET /api/wallet/balance
+```
+
+#### Get Transaction History
+```
+GET /api/wallet/transactions
+```
+
+## WebSocket API
+
+The WebSocket API enables real-time updates and bidirectional communication.
+
+### Connection
+
+Connect to the WebSocket endpoint:
+
+```
+wss://1ze1jsv3qg.execute-api.us-east-1.amazonaws.com/prod?token=your_access_token
+```
+
+### Message Format
+
+All WebSocket messages use the following format:
+
+**Client to Server:**
+```json
+{
+  "action": "actionName",
+  "data": {
+    "key1": "value1",
+    "key2": "value2"
+  },
+  "requestId": "client-generated-id"
+}
+```
+
+**Server to Client:**
+```json
+{
+  "type": "messageType",
+  "data": {
+    "key1": "value1",
+    "key2": "value2"
+  },
+  "requestId": "matching-client-id",
+  "timestamp": 1623456789
+}
+```
+
+### Available Actions
+
+#### Subscribe to Deal Updates
+```json
+{
+  "action": "subscribeToDeals",
+  "data": {
+    "category": "electronics",
+    "minDiscount": 20
+  },
+  "requestId": "sub-123"
+}
+```
+
+#### Unsubscribe from Updates
+```json
+{
+  "action": "unsubscribeFromDeals",
+  "data": {
+    "subscriptionId": "subscription-id"
+  },
+  "requestId": "unsub-123"
+}
+```
+
+#### Send a Message
+```json
+{
+  "action": "sendMessage",
+  "data": {
+    "recipientId": "user-id",
+    "content": "Hello, is this deal still available?",
+    "dealId": "deal-123"
+  },
+  "requestId": "msg-123"
+}
+```
+
+### Message Types from Server
+
+- `dealUpdate`: New or updated deal information
+- `notification`: System notification
+- `messageSent`: Confirmation of sent message
+- `messageReceived`: New message received
+- `subscriptionConfirmed`: Subscription confirmation
+- `error`: Error response
+
+## Rate Limits
+
+- REST API: 200 requests per minute
+- WebSocket: 20 messages per minute
+
+## Error Handling
+
+All API errors follow this format:
+
+```json
+{
+  "status": "error",
+  "code": "ERROR_CODE",
+  "message": "Human-readable error message",
+  "details": {
+    "field": "specific field with error"
+  }
+}
+```
+
+Common error codes:
+- `AUTHENTICATION_ERROR`: Authentication issues
+- `VALIDATION_ERROR`: Invalid request data
+- `RESOURCE_NOT_FOUND`: Requested resource doesn't exist
+- `RATE_LIMIT_EXCEEDED`: Too many requests
+- `SERVER_ERROR`: Internal server error
+
+## SDK and Code Examples
+
+For code examples in various languages, check the [SDK Documentation](/docs/sdk). 

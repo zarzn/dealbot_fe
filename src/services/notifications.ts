@@ -1,14 +1,20 @@
 import { api } from '@/lib/api';
 import { getSession } from 'next-auth/react';
 import axios from 'axios';
-import { Notification, NotificationPreferences } from '@/types/api';
+import { 
+  Notification as ApiNotification, 
+  NotificationPreferences as ApiNotificationPreferences 
+} from '@/types/api';
+import { API_CONFIG, WS_URL } from '@/services/api/config';
 
+// Local service interfaces - to be eventually updated to match API types
 export interface Notification {
   id: string;
   user_id: string;
   title: string;
   message: string;
   type: string;
+  status: string; // Added to match API type
   read: boolean;
   created_at: string;
 }
@@ -25,7 +31,41 @@ export interface NotificationPreferences {
   do_not_disturb: boolean;
   email_digest: boolean;
   push_enabled: boolean;
+  minimum_priority: string;
 }
+
+// Create axios instance with default config
+const notificationsApi = axios.create({
+  baseURL: `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/notifications`,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Log the API URLs in development mode
+if (process.env.NODE_ENV === 'development') {
+  console.log('Notification Service using API URL:', `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/notifications`);
+  console.log('Notification Service using WS URL:', WS_URL);
+}
+
+// Add auth token to requests
+notificationsApi.interceptors.request.use(async (config) => {
+  const session = await getSession();
+  if (session?.accessToken) {
+    config.headers.Authorization = `Bearer ${session.accessToken}`;
+  }
+  return config;
+});
+
+// Helper to convert API notification to service notification format if needed
+const convertApiNotification = (apiNotification: ApiNotification): ApiNotification => {
+  return apiNotification;
+};
+
+// Helper to convert service preference to API preference format if needed
+const convertToApiPreference = (pref: NotificationPreferences): ApiNotificationPreferences => {
+  return pref as unknown as ApiNotificationPreferences;
+};
 
 interface WebSocketCallbacks {
   onNotification: (notification: Notification) => void;
@@ -36,14 +76,24 @@ interface WebSocketCallbacks {
 
 export class NotificationService {
   private ws: WebSocket | null = null;
-  private reconnectAttempts = 0;
+  private callbacks: WebSocketCallbacks = {
+    onNotification: () => {} // Default empty handler to satisfy the type
+  };
+  private connectAttempts = 0;
   private readonly maxReconnectAttempts = 5;
   private readonly reconnectDelay = 1000; // Base delay in milliseconds
-  private readonly WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
-  private readonly API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  
   private lastNotificationTime = 0;
   private readonly notificationThrottle = 2000; // 2 seconds throttle
   private notificationQueue: Set<string> = new Set(); // Queue for deduplication
+
+  constructor() {
+    // Log URLs in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[NotificationService] Using WebSocket URL:', WS_URL);
+      console.log('[NotificationService] Using API URL:', API_CONFIG.baseURL);
+    }
+  }
 
   // Fetch notifications from the API with throttling
   async getNotifications(): Promise<{ notifications: Notification[] }> {
@@ -99,11 +149,11 @@ export class NotificationService {
         throw new Error('No access token available');
       }
 
-      this.ws = new WebSocket(`${this.WS_URL}/notifications/ws?token=${session.accessToken}`);
+      this.ws = new WebSocket(`${WS_URL}/notifications/ws?token=${session.accessToken}`);
 
       this.ws.onopen = () => {
         console.log('[NotificationService] WebSocket connected');
-        this.reconnectAttempts = 0;
+        this.connectAttempts = 0;
         callbacks.onConnect?.();
       };
 
@@ -128,7 +178,7 @@ export class NotificationService {
         console.log('[NotificationService] WebSocket closed:', event.code, event.reason);
         callbacks.onDisconnect?.();
         if (event.code !== 1000) {
-          this.reconnect(callbacks);
+          this.attemptReconnect();
         }
       };
 
@@ -165,6 +215,7 @@ export class NotificationService {
       return;
     }
     
+    // Process notification immediately
     this.processNotification(notification, callbacks);
   }
 
@@ -178,21 +229,21 @@ export class NotificationService {
     callbacks.onNotification(notification);
   }
 
-  private async reconnect(callbacks: WebSocketCallbacks) {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('[NotificationService] Max reconnection attempts reached');
+  private attemptReconnect() {
+    if (this.connectAttempts >= this.maxReconnectAttempts) {
+      console.log('[NotificationService] Max reconnect attempts reached');
       return;
     }
-
-    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts);
-    this.reconnectAttempts++;
-
-    console.log(`[NotificationService] Reconnecting in ${delay}ms... (attempt ${this.reconnectAttempts})`);
-    await new Promise(resolve => setTimeout(resolve, delay));
     
-    this.setupWebSocket(callbacks).catch(error => {
-      console.error('[NotificationService] Reconnection failed:', error);
-    });
+    const delay = this.reconnectDelay * Math.pow(2, this.connectAttempts);
+    console.log(`[NotificationService] Attempting to reconnect in ${delay}ms (attempt ${this.connectAttempts + 1}/${this.maxReconnectAttempts})`);
+    
+    setTimeout(() => {
+      this.connectAttempts++;
+      this.setupWebSocket(this.callbacks).catch(error => {
+        console.error('[NotificationService] Reconnect failed:', error);
+      });
+    }, delay);
   }
 }
 

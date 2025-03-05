@@ -1,0 +1,205 @@
+---
+title: "Troubleshooting Guide"
+excerpt: "Solutions for common issues with the AI Agentic Deals System"
+coverImage: "/images/docs/troubleshooting.jpg"
+date: "2025-03-04"
+author: "AI Agentic Deals Team"
+---
+
+# Troubleshooting Guide
+
+This guide provides solutions for common issues you might encounter while using the AI Agentic Deals System.
+
+## Authentication Issues
+
+### I can't log in to my account
+
+If you're unable to log in, try these solutions:
+
+1. **Verify your credentials**
+   - Double-check your email address and password
+   - Ensure Caps Lock is not enabled
+   - Try resetting your password via the [forgot password page](/auth/forgot-password)
+
+2. **Clear browser cache and cookies**
+   - This resolves many authentication issues related to cached data
+   - In Chrome: Settings → Privacy and Security → Clear browsing data
+   - In Firefox: Options → Privacy & Security → Cookies and Site Data → Clear Data
+
+3. **Check your email for verification**
+   - New accounts require email verification
+   - Check your spam/junk folder for the verification email
+   - Request a new verification email from the login page
+
+### My session keeps expiring
+
+If you're frequently logged out:
+
+1. **Check your browser settings**
+   - Ensure your browser isn't set to clear cookies when closed
+   - Verify that you haven't enabled "private browsing" or "incognito" mode
+
+2. **Update your browser**
+   - Outdated browsers may have issues with JWT token handling
+   - Make sure you're using the latest version of your browser
+
+## Wallet Connection Issues
+
+### I can't connect my Solana wallet
+
+Common Solana wallet connection issues:
+
+1. **Browser extension not detected**
+   - Ensure the wallet extension (e.g., Phantom, Solflare) is installed
+   - Try refreshing the page after making sure the extension is unlocked
+
+2. **Wrong network selected**
+   - Open your wallet and ensure it's connected to the correct network (Mainnet Beta)
+   - The platform will not recognize wallets connected to Devnet or Testnet
+
+3. **Permission denied**
+   - If you previously denied connection permission, you'll need to reset it
+   - Check your wallet settings for site permissions
+
+### My token balance isn't updating
+
+If your token balance appears incorrect:
+
+1. **Network congestion**
+   - During periods of high network activity, transactions may be delayed
+   - Wait a few minutes and refresh the page
+
+2. **Transaction failed**
+   - Check your wallet's transaction history to see if the transaction failed
+   - Look for error messages in the transaction details
+
+## Deal Search Issues
+
+### My searches return no results
+
+If you're not seeing any deals:
+
+1. **Search terms too specific**
+   - Try using more general terms (e.g., "laptops" instead of specific model numbers)
+   - Remove specific filters that might be too restrictive
+
+2. **Token balance insufficient**
+   - Some searches require a minimum token balance
+   - Check your wallet section to verify your current balance
+
+3. **Temporary API issues**
+   - Our scrapers occasionally encounter rate limiting from marketplaces
+   - Try again in a few minutes or search a different category
+
+### Deal analysis is not working
+
+If deal analysis features aren't functioning:
+
+1. **AI service temporarily unavailable**
+   - Our AI services occasionally undergo maintenance
+   - Try again later or check our status page for updates
+
+2. **Insufficient data for analysis**
+   - Some deals may not have enough historical data for comprehensive analysis
+   - Try analyzing more popular products with longer price histories
+
+## WebSocket Connection Issues
+
+### Real-time updates not working
+
+If you're not receiving real-time updates:
+
+1. **Check internet connection**
+   - WebSocket connections require a stable internet connection
+   - Try connecting to a different network if available
+
+2. **Firewall or proxy blocking WebSockets**
+   - Some network configurations block WebSocket connections
+   - Try using a different network without strict firewall rules
+
+3. **Manually reconnect**
+   - Log out and log back in to re-establish the WebSocket connection
+   - Refresh the page to attempt reconnection
+
+## Performance Issues
+
+### The application is slow or unresponsive
+
+If the platform is performing poorly:
+
+1. **Check your internet connection**
+   - Run a speed test to verify your connection is stable
+   - Try connecting to a different network if available
+
+2. **Clear browser cache**
+   - Accumulated cache can slow down web applications
+   - Clear your browser's cache and temporary files
+
+3. **Close unused tabs and applications**
+   - Limited system resources can impact performance
+   - Close other resource-intensive applications and browser tabs
+
+4. **Try a different browser**
+   - If issues persist, try accessing the platform in a different browser
+   - Chrome and Firefox generally provide the best performance
+
+## Mobile-Specific Issues
+
+### Display problems on mobile devices
+
+If the interface doesn't display correctly on your mobile device:
+
+1. **Use landscape orientation**
+   - Some complex features display better in landscape mode
+   - Try rotating your device
+
+2. **Enable desktop mode**
+   - For tablets or larger phones, request the desktop site
+   - In most mobile browsers, this option is in the menu or settings
+
+3. **Update your mobile browser**
+   - Older mobile browsers may have compatibility issues
+   - Update to the latest version available
+
+## Account Management Issues
+
+### I didn't receive verification email
+
+If you didn't receive your verification email:
+
+1. **Check spam/junk folders**
+   - Verification emails are sometimes filtered as spam
+   - Add our domain to your safe senders list
+
+2. **Verify email address**
+   - Make sure you entered your email address correctly
+   - Request a new verification email from the login page
+
+### I can't update my profile
+
+If you're unable to update your profile information:
+
+1. **Check required fields**
+   - All required fields must be completed
+   - Look for error messages indicating missing information
+
+2. **Session timeout**
+   - Your session may have expired during a long form edit
+   - Log in again and try updating your profile
+
+## Getting Additional Help
+
+If you've tried the relevant troubleshooting steps and still have issues:
+
+1. **Contact Support**
+   - Email: support@agentic-deals.example.com
+   - Include detailed information about your issue
+   - Mention troubleshooting steps you've already tried
+
+2. **Check System Status**
+   - Visit our [status page](https://status.agentic-deals.example.com)
+   - Check for any ongoing service disruptions
+
+3. **Community Forum**
+   - Our [community forum](/community) may have solutions from other users
+   - Search for similar issues before posting a new question 

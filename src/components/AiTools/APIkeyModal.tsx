@@ -30,7 +30,7 @@ const APIkeyModal = ({ handleModal }: { handleModal: () => void }) => {
             Enter your OpenAI API Key
           </h2>
           <p className="pb-8 pt-4">
-            To access the capabilities of AI Tools Template, a valid OpenAI API
+            To access the capabilities of AI Agentic Deals System, a valid OpenAI API
             Key is required.
           </p>
 

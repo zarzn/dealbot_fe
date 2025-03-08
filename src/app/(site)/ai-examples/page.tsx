@@ -43,10 +43,10 @@ const AiToolPage = () => {
 
   return (
     <>
-      <title>OpenAI Examples | AI Tool - Next.js Template for AI Tools</title>
-      <meta name="description" content="This is AI Examples page for AI Tool" />
+      <title>AI Examples | AI Agentic Deals System</title>
+      <meta name="description" content="AI Example tools for AI Agentic Deals System" />
 
-      <Breadcrumb pageTitle="OpenAI Examples" />
+      <Breadcrumb pageTitle="AI Examples" />
 
       <section className="pb-25 pt-3">
         <div className="z-10 mx-auto max-w-[1170px] px-4 sm:px-8 xl:px-0">

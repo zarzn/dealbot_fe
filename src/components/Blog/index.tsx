@@ -21,7 +21,7 @@ export default async function BlogSection() {
         <SectionTitle
           subTitle="Read Our Latest Blogs"
           title="Latest Blogs & News"
-          paragraph="Build SaaS AI applications using OpenAI and Next.js, this kit comes with pre-configured and pre-built examples, making it easier to quickly kickstart your AI startup."
+          paragraph="Stay informed about market trends, deal strategies, and AI-powered insights to maximize your savings and investment opportunities in today's fast-moving markets."
         />
 
         <div className="grid grid-cols-1 gap-7.5 sm:grid-cols-2 lg:grid-cols-3">

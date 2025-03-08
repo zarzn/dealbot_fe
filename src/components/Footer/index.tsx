@@ -39,9 +39,7 @@ const Footer = () => {
               </Link>
 
               <p className="mb-12 xl:w-4/5 text-white/70">
-                Build SaaS AI applications using OpenAI and Next.js, this kit
-                comes with pre-configured and pre-built examples, making it
-                easier to quickly kickstart your AI startup.
+                The AI Agentic Deals System helps you discover, track, and manage the best opportunities across markets with intelligent price monitoring, trend prediction, and personalized alerts for optimal decision-making.
               </p>
 
               <div className="flex items-center gap-5">

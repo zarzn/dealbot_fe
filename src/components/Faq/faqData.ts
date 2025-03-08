@@ -3,33 +3,33 @@ import { FAQ } from "@/types/faq";
 const faqData: FAQ[] = [
   {
     id: 74,
-    question: "What Is AI Tool Content Writing Tool?",
+    question: "What is the AI Agentic Deals System?",
     answer:
-      "Build SaaS AI applications using OpenAI and Next.js, this kit comes with pre-configured and pre-built examples, making it easier to quickly kickstart your AI startup.",
+      "AI Agentic Deals System is an intelligent platform that uses AI to help discover, manage, and track deals efficiently. It provides powerful tools for deal analysis, opportunity identification, and streamlined workflow management.",
   },
   {
     id: 100,
-    question: "Is there a limit on how much content I can generate?",
+    question: "Is there a limit on how many deals I can track?",
     answer:
-      "Build SaaS AI applications using OpenAI and Next.js, this kit comes with pre-configured and pre-built examples, making it easier to quickly kickstart your AI startup.",
+      "Our platform scales with your needs. Different subscription tiers offer varying levels of deal tracking capacity, from individual use to enterprise-level solutions with unlimited tracking capabilities.",
   },
   {
     id: 7,
-    question: "Is it helpful for Digital Marketer or Content Writer?",
+    question: "Is it helpful for investors and business development professionals?",
     answer:
-      "Build SaaS AI applications using OpenAI and Next.js, this kit comes with pre-configured and pre-built examples, making it easier to quickly kickstart your AI startup.",
+      "Absolutely. The AI Agentic Deals System is specifically designed for investors, business development teams, and deal-makers who need to identify opportunities quickly and manage complex deal pipelines efficiently.",
   },
   {
     id: 67,
-    question: "What Languages does it supports?",
+    question: "What integrations does it support?",
     answer:
-      "Build SaaS AI applications using OpenAI and Next.js, this kit comes with pre-configured and pre-built examples, making it easier to quickly kickstart your AI startup.",
+      "Our platform integrates with popular CRM systems, financial data providers, document management tools, and communication platforms to create a seamless deal management ecosystem.",
   },
   {
     id: 9,
-    question: "What is SEO Writing AI and how do I use it?",
+    question: "What are AI Agents and how do they help with deal discovery?",
     answer:
-      "Build SaaS AI applications using OpenAI and Next.js, this kit comes with pre-configured and pre-built examples, making it easier to quickly kickstart your AI startup.",
+      "AI Agents are intelligent components of our system that continuously scan various data sources to identify potential deals based on your criteria. They learn from your interactions and improve their recommendations over time for more targeted deal discovery.",
   },
 ];
 

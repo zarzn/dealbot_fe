@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Percent, Target } from 'lucide-react';
+import { API_CONFIG } from '@/services/api/config';
 
 interface Metrics {
   totalDeals: number;
@@ -21,8 +22,11 @@ const DealMetrics = () => {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        // TODO: Replace with actual API call
-        const response = await fetch('/api/deals/metrics');
+        // Use the full API URL instead of a relative path
+        const apiUrl = `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/deals/metrics`;
+        console.log('Making API request to:', apiUrl);
+        
+        const response = await fetch(apiUrl);
         const data = await response.json();
         setMetrics(data);
       } catch (error) {

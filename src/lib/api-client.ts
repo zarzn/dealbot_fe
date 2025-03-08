@@ -1,24 +1,35 @@
 import axios from 'axios';
 
-// Make sure to use process.env values with proper fallbacks, and handle environment detection correctly
-const API_URL = typeof window !== 'undefined' 
-  ? (window.location.hostname === 'localhost' 
-    ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000' 
-    : process.env.NEXT_PUBLIC_API_URL)
-  : process.env.NEXT_PUBLIC_API_URL;
+// Always use environment variable with explicit fallback URL for production
+// HARDCODED PRODUCTION URL - this will be used as a fallback
+const PRODUCTION_API_URL = 'https://7oxq7ujcmc.execute-api.us-east-1.amazonaws.com/prod';
+
+// First, check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined';
+
+// Use environment variable if available, otherwise fallback to hardcoded production URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || PRODUCTION_API_URL;
+
+// Check if we're in development mode
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+// In browser environments, always use production URL unless explicitly in development mode
+const finalApiUrl = isBrowser && !isDevelopment ? PRODUCTION_API_URL : API_URL;
 
 // Log the API URL in development mode
-if (process.env.NODE_ENV === 'development') {
-  console.log('API Client using URL:', API_URL);
+if (isDevelopment) {
+  console.log('API Client using URL:', finalApiUrl);
 }
 
-// If we're in production and the API_URL is not set, log an error
-if (process.env.NODE_ENV === 'production' && !API_URL) {
-  console.error('API_URL not set in production environment. Check environment variables.');
+// If we're in production and the API_URL is not set, log a warning but use the hardcoded production URL
+if (!isDevelopment && !process.env.NEXT_PUBLIC_API_URL) {
+  console.warn('NEXT_PUBLIC_API_URL not found in environment, using fallback production API URL');
 }
+
+console.log('Creating API client with baseURL:', finalApiUrl, 'NODE_ENV:', process.env.NODE_ENV);
 
 export const apiClient = axios.create({
-  baseURL: API_URL,
+  baseURL: finalApiUrl,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -62,7 +73,7 @@ apiClient.interceptors.response.use(
         // Only attempt to refresh if we have a refresh token
         if (refreshToken) {
           try {
-            const response = await axios.post(`${API_URL}/api/v1/auth/refresh-token`, {
+            const response = await axios.post(`${finalApiUrl}/api/v1/auth/refresh-token`, {
               refresh_token: refreshToken, // Use correct parameter name
             });
 

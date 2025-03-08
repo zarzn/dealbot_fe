@@ -65,22 +65,12 @@ export const authService = {
 
       console.log('Login successful, storing tokens');
       
-      // Store tokens first
+      // Store tokens
       this.setTokens(response.data);
 
-      // Sign in with NextAuth and wait for the result
-      console.log('Signing in with NextAuth');
-      const result = await signIn('credentials', {
-        redirect: false,
-        email: data.email,
-        accessToken: response.data.access_token,
-      });
-
-      if (result?.error) {
-        console.error('NextAuth sign in error:', result.error);
-        throw new Error(result.error);
-      }
-
+      // No longer need to call signIn here, will do that in the component
+      console.log('Returning tokens for NextAuth sign-in');
+      
       return response.data;
     } catch (error: any) {
       console.error('Login error:', error);
@@ -200,8 +190,35 @@ export const authService = {
 
   clearTokens(): void {
     console.log('Clearing tokens from localStorage and API headers');
+    
+    // Clear token from localStorage
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    
+    // Clear API authorization header
     delete api.defaults.headers.common['Authorization'];
+    
+    // Also clear any custom headers that might have auth tokens
+    if (api.defaults.headers.common) {
+      delete api.defaults.headers.common['Authorization'];
+      delete api.defaults.headers.common['x-access-token'];
+    }
+    
+    // Attempt to call the signout API to clear server-side cookies
+    try {
+      const signoutUrl = `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/auth/signout`;
+      console.log('Making signout request to:', signoutUrl);
+      
+      fetch(signoutUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      }).catch(e => console.error('Error calling signout API:', e));
+    } catch (e) {
+      // Ignore errors in this background process
+      console.error('Failed to call signout API:', e);
+    }
+    
+    console.log('Token cleanup complete');
   }
 }; 

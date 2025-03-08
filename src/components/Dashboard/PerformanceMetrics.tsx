@@ -3,8 +3,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
 import { analyticsService } from '@/services/analytics';
+import type { PerformanceMetrics as PerformanceMetricsType } from '@/services/analytics';
 import { toast } from 'sonner';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface TimeframeOption {
   label: string;
@@ -17,64 +20,82 @@ const timeframeOptions: TimeframeOption[] = [
   { label: 'Monthly', value: 'monthly' },
 ];
 
-// Mockup data
-const mockPerformanceMetrics = {
-  daily: [
-    { date: '2024-02-01', deals: 12, goals: 5, tokens: 45 },
-    { date: '2024-02-02', deals: 15, goals: 7, tokens: 52 },
-    { date: '2024-02-03', deals: 8, goals: 4, tokens: 38 },
-    { date: '2024-02-04', deals: 20, goals: 8, tokens: 65 },
-    { date: '2024-02-05', deals: 18, goals: 6, tokens: 58 },
-    { date: '2024-02-06', deals: 25, goals: 10, tokens: 72 },
-    { date: '2024-02-07', deals: 22, goals: 9, tokens: 68 },
-  ],
-  weekly: [
-    { week: 'Week 1', deals: 85, goals: 32, tokens: 280 },
-    { week: 'Week 2', deals: 92, goals: 38, tokens: 310 },
-    { week: 'Week 3', deals: 78, goals: 28, tokens: 265 },
-    { week: 'Week 4', deals: 105, goals: 42, tokens: 345 },
-  ],
-  monthly: [
-    { month: 'Jan 2024', deals: 320, goals: 125, tokens: 1150 },
-    { month: 'Feb 2024', deals: 360, goals: 140, tokens: 1280 },
-    { month: 'Mar 2024', deals: 280, goals: 110, tokens: 980 },
-    { month: 'Apr 2024', deals: 420, goals: 160, tokens: 1450 },
-    { month: 'May 2024', deals: 380, goals: 145, tokens: 1320 },
-    { month: 'Jun 2024', deals: 450, goals: 175, tokens: 1580 },
-  ],
-};
-
 export function PerformanceMetrics() {
   const [timeframe, setTimeframe] = useState<TimeframeOption['value']>('weekly');
-  const [metrics, setMetrics] = useState<typeof mockPerformanceMetrics | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
+  
+  // Use React Query to fetch performance metrics
+  const { 
+    data: metrics, 
+    isLoading, 
+    error,
+    refetch 
+  } = useQuery({
+    queryKey: ['performanceMetrics', timeframe],
+    queryFn: () => analyticsService.getPerformanceMetrics(timeframe),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 1,
+  });
+  
+  // Handle errors with useEffect
   useEffect(() => {
-    loadMetrics();
-  }, [timeframe]);
-
-  const loadMetrics = async () => {
-    try {
-      // In production, this would fetch from the API
-      // const data = await analyticsService.getPerformanceMetrics(timeframe);
-      setMetrics(mockPerformanceMetrics);
-    } catch (error) {
-      toast.error('Failed to load performance metrics');
-    } finally {
-      setIsLoading(false);
+    if (error) {
+      console.error('Performance metrics fetch error:', error);
     }
-  };
+  }, [error]);
 
-  if (isLoading) {
+  // Common header component regardless of data/error state
+  const HeaderComponent = () => (
+    <div className="flex justify-between items-center mb-6">
+      <h2 className="text-lg font-semibold">Performance Metrics</h2>
+      <div className="flex gap-2">
+        {timeframeOptions.map((option) => (
+          <button
+            key={option.value}
+            onClick={() => setTimeframe(option.value)}
+            className={`px-3 py-1 rounded-lg text-sm transition ${
+              timeframe === option.value
+                ? 'bg-purple text-white'
+                : 'bg-white/[0.05] text-white/70 hover:bg-white/[0.1]'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Error state component
+  if (error) {
     return (
       <div className="space-y-4">
-        <div className="h-8 w-48 bg-white/10 rounded animate-pulse" />
+        <HeaderComponent />
+        <div className="rounded-lg border border-white/10 p-6 text-center bg-white/[0.02]">
+          <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-amber-400" />
+          <h3 className="text-lg font-medium mb-2">Unable to load performance data</h3>
+          <p className="text-white/70 mb-4">We encountered an issue while retrieving your performance metrics.</p>
+          <button 
+            onClick={() => refetch()}
+            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition inline-flex items-center"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !metrics) {
+    return (
+      <div className="space-y-4">
+        <HeaderComponent />
         <div className="h-[300px] bg-white/10 rounded animate-pulse" />
       </div>
     );
   }
 
-  const chartData = metrics?.[timeframe] || [];
+  const chartData = metrics[timeframe] || [];
 
   const formatXAxis = (value: string) => {
     if (timeframe === 'daily') {
@@ -122,24 +143,7 @@ export function PerformanceMetrics() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold">Performance Metrics</h2>
-        <div className="flex gap-2">
-          {timeframeOptions.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => setTimeframe(option.value)}
-              className={`px-3 py-1 rounded-lg text-sm transition ${
-                timeframe === option.value
-                  ? 'bg-purple text-white'
-                  : 'bg-white/[0.05] text-white/70 hover:bg-white/[0.1]'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <HeaderComponent />
 
       <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">

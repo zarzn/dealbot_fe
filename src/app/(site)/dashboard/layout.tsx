@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, 
@@ -82,12 +82,50 @@ const NavItem = ({ href, icon: Icon, name, isActive, onClick }: {
 };
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { data: session } = useSession();
+  const { data: session, status: authStatus } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
-
-  if (!session) {
-    return null; // Protected by middleware, but just in case
+  const router = useRouter();
+  
+  // Check for localStorage tokens
+  const [hasLocalTokens, setHasLocalTokens] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Effect to check tokens in localStorage
+  useEffect(() => {
+    const accessToken = localStorage.getItem('access_token');
+    setHasLocalTokens(!!accessToken);
+    setIsLoading(false);
+    
+    console.log("Dashboard authentication status:", {
+      nextAuthStatus: authStatus,
+      hasSession: !!session,
+      hasLocalTokens: !!accessToken
+    });
+    
+    // If no authentication found at all, redirect to login
+    if (authStatus === 'unauthenticated' && !accessToken) {
+      console.log("No authentication detected, redirecting to login");
+      router.push('/auth/signin');
+    }
+  }, [authStatus, session, router]);
+  
+  // Show loading state while checking auth
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+  
+  // Allow access if either NextAuth session or localStorage token is present
+  const isAuthenticated = authStatus === 'authenticated' || hasLocalTokens;
+  
+  if (!isAuthenticated) {
+    // Redirect to login if not authenticated
+    router.push('/auth/signin');
+    return null;
   }
 
   return (

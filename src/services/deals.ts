@@ -3,9 +3,17 @@ import type { DealSuggestion, AIAnalysis, PriceHistory, DealSearch, DealResponse
 
 export interface SearchResponse {
   deals: DealResponse[];
-  total: number;
+  total?: number;
+  page?: number;
+  page_size?: number;
+  sort_by?: string;
+  sort_order?: string;
   metadata?: {
     scraping_attempted?: boolean;
+    scraping_success?: boolean;
+    real_time_search?: boolean;
+    search_time_ms?: number;
+    data_sources?: string[];
     [key: string]: any;
   };
 }
@@ -13,6 +21,12 @@ export interface SearchResponse {
 export class DealsService {
   async searchDeals(query: DealSearch): Promise<SearchResponse> {
     try {
+      // Log the full URL that will be used
+      const fullEndpoint = `${apiClient.defaults.baseURL}/api/v1/deals/search`;
+      console.log('Making DealsService.searchDeals request to:', fullEndpoint);
+      console.log('Using apiClient with baseURL:', apiClient.defaults.baseURL);
+      console.log('Query parameters:', query);
+      
       const response = await apiClient.post(`/api/v1/deals/search`, query);
       return response.data;
     } catch (error) {

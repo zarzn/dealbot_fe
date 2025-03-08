@@ -58,6 +58,8 @@ export interface DealSuggestion {
   shipping_info: {
     free_shipping: boolean;
     estimated_days: number;
+    cost?: number;
+    provider?: string;
   };
   availability: {
     in_stock: boolean;
@@ -71,6 +73,16 @@ export interface DealSuggestion {
   };
   match_score?: number;
   relevance_explanation?: string;
+  brand?: string;
+  product_specifications?: Record<string, string>;
+  delivery_options?: string;
+  compare_prices_available?: boolean;
+  compare_prices_link?: string;
+  market_position?: string;
+  match_description?: string;
+  product_highlights?: string[];
+  ratings_breakdown?: Record<string, number>;
+  recommendations?: string[];
 }
 
 export interface ShippingInfo {
@@ -166,6 +178,7 @@ export interface DealSearch {
   sort_order?: string;
   limit?: number;
   offset?: number;
+  use_realtime_scraping?: boolean;
 }
 
 export interface DealResponse extends DealBase {

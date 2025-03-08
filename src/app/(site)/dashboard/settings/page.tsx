@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { Bell, Mail, Palette, Globe, CreditCard } from 'lucide-react';
 import DashboardHeader from '@/components/Dashboard/DashboardHeader';
+import { API_CONFIG } from '@/services/api/config';
 
 const Settings = () => {
   const { data: session } = useSession();
@@ -22,7 +23,10 @@ const Settings = () => {
 
   const handlePreferenceChange = async (key: string, value: any) => {
     try {
-      const response = await fetch('/api/v1/auth/preferences', {
+      const apiUrl = `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/auth/preferences`;
+      console.log('Making preferences update request to:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

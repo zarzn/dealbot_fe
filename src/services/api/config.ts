@@ -4,52 +4,54 @@
 // Determine if we're running in a browser environment
 const isBrowser = typeof window !== 'undefined';
 
-// Determine if we're running on localhost based ONLY on hostname
-const isLocalhost = isBrowser && (
-  window.location.hostname === 'localhost' || 
-  window.location.hostname === '127.0.0.1'
-);
+// Determine if running in development mode
+const isDevelopment = process.env.NODE_ENV === 'development';
 
-// HARDCODED PRODUCTION URLS - these will be used when not on localhost
+// HARDCODED PRODUCTION URLS - these will be used in production
 const PRODUCTION_API_URL = 'https://7oxq7ujcmc.execute-api.us-east-1.amazonaws.com/prod';
 const PRODUCTION_WS_URL = 'wss://1ze1jsv3qg.execute-api.us-east-1.amazonaws.com/prod';
 const API_VERSION = 'v1';
 
-// Get environment variables with fallbacks - only used in development
-const apiUrl = isLocalhost ? 'http://localhost:8000' : PRODUCTION_API_URL;
+// IMPORTANT: In production, ALWAYS use production URLs
+// Only use localhost if we're explicitly in development mode AND not in a browser
+// In browsers, we always force production URLs unless explicitly in development mode
+const apiUrl = isDevelopment ? 'http://localhost:8000' : PRODUCTION_API_URL;
 const apiVersion = API_VERSION;
-const wsUrl = isLocalhost ? 'ws://localhost:8000' : PRODUCTION_WS_URL;
+const wsUrl = isDevelopment ? 'ws://localhost:8000' : PRODUCTION_WS_URL;
 
-// Determine if we're in development mode
-const isDevelopment = process.env.NODE_ENV === 'development';
+// For client-side code in browsers, we need to be extra careful and force production URLs
+// This prevents the common issue where NODE_ENV might not be correctly set in the browser
+const finalApiUrl = isBrowser && !isDevelopment ? PRODUCTION_API_URL : apiUrl;
+const finalWsUrl = isBrowser && !isDevelopment ? PRODUCTION_WS_URL : wsUrl;
 
 // Always log configuration to help with debugging
 console.log('API Configuration:', {
-  apiUrl,
+  providedApiUrl: apiUrl,
+  finalApiUrl,
   apiVersion,
-  wsUrl,
-  isLocalhost,
+  finalWsUrl,
   isDevelopment,
   NODE_ENV: process.env.NODE_ENV,
+  isBrowser,
   hostname: isBrowser ? window.location.hostname : 'not in browser'
 });
 
 // Define API configuration
 export const API_CONFIG = {
-  // Use localhost ONLY if we're actually on localhost
-  // Otherwise use the production API URL
-  baseURL: apiUrl,
+  // Use the final API URL that has been determined based on environment
+  baseURL: finalApiUrl,
   version: apiVersion,
+  timeout: 30000, // 30 seconds
   // For debugging - full URL that will be used
   get fullUrl() {
     return `${this.baseURL}/api/${this.version}`;
   }
 };
 
-// Define WebSocket URL
-export const WS_URL = isLocalhost 
+// Define WebSocket URL with the final WS URL
+export const WS_URL = isDevelopment
   ? `ws://localhost:8000/api/${apiVersion}/ws` 
-  : `${wsUrl}/api/${apiVersion}/ws`;
+  : `${finalWsUrl}/api/${apiVersion}/ws`;
 
 // Always log the final configuration to help with debugging
 console.log('Final API Configuration:', {
@@ -57,7 +59,8 @@ console.log('Final API Configuration:', {
   version: API_CONFIG.version,
   fullUrl: API_CONFIG.fullUrl,
   wsUrl: WS_URL,
-  isLocalhost,
+  isDevelopment,
+  isBrowser,
   hostname: isBrowser ? window.location.hostname : 'not in browser'
 });
 

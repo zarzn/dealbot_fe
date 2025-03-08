@@ -1,26 +1,34 @@
+"use client";
+
 import { useEffect, useState } from 'react';
 import { Coins } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { analyticsService } from '@/services/analytics';
+import { toast } from 'sonner';
 
 const TokenBalance = () => {
-  const [balance, setBalance] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
+  // Use React Query to fetch token balance
+  const { 
+    data: dashboardMetrics, 
+    isLoading, 
+    error 
+  } = useQuery({
+    queryKey: ['dashboardMetrics'],
+    queryFn: () => analyticsService.getDashboardMetrics(),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 1,
+  });
+  
+  // Handle errors with useEffect
   useEffect(() => {
-    const fetchBalance = async () => {
-      try {
-        // TODO: Replace with actual API call
-        const response = await fetch('/api/token/balance');
-        const data = await response.json();
-        setBalance(data.balance);
-      } catch (error) {
-        console.error('Error fetching token balance:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (error) {
+      toast.error('Failed to load token balance');
+      console.error('Token balance fetch error:', error);
+    }
+  }, [error]);
 
-    fetchBalance();
-  }, []);
+  // Get token balance from dashboard metrics
+  const balance = dashboardMetrics?.tokens.balance ?? null;
 
   return (
     <div>
@@ -29,7 +37,7 @@ const TokenBalance = () => {
         <Coins className="w-5 h-5 text-purple" />
       </div>
       
-      {isLoading ? (
+      {isLoading || balance === null ? (
         <div className="animate-pulse">
           <div className="h-8 bg-white/[0.1] rounded w-24 mb-2"></div>
           <div className="h-4 bg-white/[0.1] rounded w-32"></div>
@@ -37,7 +45,7 @@ const TokenBalance = () => {
       ) : (
         <>
           <div className="text-3xl font-bold text-purple">
-            {balance?.toLocaleString() ?? '0'} <span className="text-lg">AGNT</span>
+            {balance.toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="text-lg">AGNT</span>
           </div>
           <div className="text-white/70 text-sm mt-2">
             Available for deal searches

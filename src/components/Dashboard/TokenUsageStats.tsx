@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
 import { analyticsService } from '@/services/analytics';
 import { toast } from 'sonner';
-import { Coins, TrendingUp, TrendingDown } from 'lucide-react';
+import { Coins, TrendingUp, TrendingDown, AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface TimeframeOption {
   label: string;
@@ -21,67 +22,88 @@ const timeframeOptions: TimeframeOption[] = [
 
 const COLORS = ['#8b5cf6', '#10b981', '#3b82f6', '#f59e0b'];
 
-// Mockup data
-const mockTokenUsage = {
-  usage: [
-    { date: '2024-02-07', amount: 25, category: 'Deal Search' },
-    { date: '2024-02-07', amount: 15, category: 'Goal Creation' },
-    { date: '2024-02-07', amount: 35, category: 'AI Analysis' },
-    { date: '2024-02-06', amount: 20, category: 'Deal Search' },
-    { date: '2024-02-06', amount: 30, category: 'Market Research' },
-    { date: '2024-02-05', amount: 40, category: 'AI Analysis' },
-    { date: '2024-02-05', amount: 15, category: 'Goal Creation' },
-    { date: '2024-02-04', amount: 25, category: 'Deal Search' }
-  ],
-  summary: {
-    total: 205,
-    byCategory: {
-      'Deal Search': 70,
-      'Goal Creation': 30,
-      'AI Analysis': 75,
-      'Market Research': 30
-    }
-  }
-};
-
 export function TokenUsageStats() {
   const [timeframe, setTimeframe] = useState<TimeframeOption['value']>('week');
-  const [usageData, setUsageData] = useState<typeof mockTokenUsage | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
+  
+  // Use React Query to fetch token usage data
+  const { 
+    data: usageData, 
+    isLoading, 
+    error,
+    refetch 
+  } = useQuery({
+    queryKey: ['tokenUsage', timeframe],
+    queryFn: () => analyticsService.getTokenUsage(timeframe),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 1,
+  });
+  
+  // Handle errors with useEffect
   useEffect(() => {
-    loadUsageData();
-  }, [timeframe]);
-
-  const loadUsageData = async () => {
-    try {
-      // In production, this would fetch from the API
-      // const data = await analyticsService.getTokenUsage(timeframe);
-      setUsageData(mockTokenUsage);
-    } catch (error) {
-      toast.error('Failed to load token usage data');
-    } finally {
-      setIsLoading(false);
+    if (error) {
+      console.error('Token usage data fetch error:', error);
     }
-  };
+  }, [error]);
 
-  if (isLoading) {
+  // Common header component
+  const HeaderComponent = () => (
+    <div className="flex justify-between items-center mb-6">
+      <h2 className="text-lg font-semibold">Token Usage</h2>
+      <div className="flex gap-2">
+        {timeframeOptions.map((option) => (
+          <button
+            key={option.value}
+            onClick={() => setTimeframe(option.value)}
+            className={`px-3 py-1 rounded-lg text-sm transition ${
+              timeframe === option.value
+                ? 'bg-purple text-white'
+                : 'bg-white/[0.05] text-white/70 hover:bg-white/[0.1]'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Error state component
+  if (error) {
     return (
       <div className="space-y-4">
-        <div className="h-8 w-48 bg-white/10 rounded animate-pulse" />
+        <HeaderComponent />
+        <div className="rounded-lg border border-white/10 p-6 text-center bg-white/[0.02]">
+          <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-amber-400" />
+          <h3 className="text-lg font-medium mb-2">Unable to load token usage data</h3>
+          <p className="text-white/70 mb-4">We encountered an issue while retrieving your token usage statistics.</p>
+          <button 
+            onClick={() => refetch()}
+            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition inline-flex items-center"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (isLoading || !usageData) {
+    return (
+      <div className="space-y-4">
+        <HeaderComponent />
         <div className="h-[300px] bg-white/10 rounded animate-pulse" />
       </div>
     );
   }
 
-  const pieData = usageData
-    ? Object.entries(usageData.summary.byCategory).map(([name, value]) => ({
-        name,
-        value,
-      }))
-    : [];
+  const pieData = Object.entries(usageData.summary.byCategory).map(([name, value]) => ({
+    name,
+    value,
+  }));
 
-  const totalSpent = usageData?.summary.total || 0;
+  const totalSpent = usageData.summary.total || 0;
   const dailyAverage = totalSpent / (timeframe === 'day' ? 1 : timeframe === 'week' ? 7 : timeframe === 'month' ? 30 : 365);
 
   return (
@@ -90,24 +112,7 @@ export function TokenUsageStats() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold">Token Usage</h2>
-        <div className="flex gap-2">
-          {timeframeOptions.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => setTimeframe(option.value)}
-              className={`px-3 py-1 rounded-lg text-sm transition ${
-                timeframe === option.value
-                  ? 'bg-purple text-white'
-                  : 'bg-white/[0.05] text-white/70 hover:bg-white/[0.1]'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <HeaderComponent />
 
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white/[0.05] rounded-lg p-4">
@@ -180,7 +185,7 @@ export function TokenUsageStats() {
         <div className="bg-white/[0.05] rounded-lg p-4">
           <h3 className="text-sm font-medium mb-4">Recent Transactions</h3>
           <div className="space-y-3">
-            {usageData?.usage.slice(0, 5).map((transaction, index) => (
+            {usageData.usage.slice(0, 5).map((transaction, index) => (
               <div
                 key={index}
                 className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02]"

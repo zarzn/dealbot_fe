@@ -11,30 +11,77 @@ import { NotificationBell } from "../Notifications/NotificationBell";
 
 const Logo = () => {
   return (
-    <motion.div 
-      className="flex items-center gap-2"
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{
-        duration: 0.2,
-        ease: "easeOut"
-      }}
+    <Link
+      href="/"
+      className="flex items-center text-black dark:text-white text-xl font-bold"
     >
-      <div className="p-2 bg-purple/10 rounded-xl">
-        <Sparkles className="w-6 h-6 text-purple" />
-      </div>
-      <span className="text-xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400">
+      <motion.div
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.7 }}
+        className="text-blue-500"
+      >
         REBATON
-      </span>
-    </motion.div>
+      </motion.div>
+    </Link>
   );
 };
 
 const Header = () => {
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [stickyMenu, setStickyMenu] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
-  const { data: session } = useSession();
+  // Use useSession hook to get auth state
+  const { data: session, status: authStatus } = useSession();
+  
+  // Check for tokens to handle case where session might be missing but tokens exist
+  const [hasTokens, setHasTokens] = useState(false);
+
+  // Simplified authentication logic - if either auth mechanism reports logout, treat as logged out
+  const isAuthenticated = authStatus === 'authenticated' && hasTokens;
+
+  // Effect to check for tokens in localStorage (can only run client-side)
+  useEffect(() => {
+    if (typeof window === 'undefined') return; // Only run in browser
+    
+    setIsClient(true);
+    
+    // Function to check token status
+    const checkTokens = () => {
+      // Check if we have tokens in localStorage
+      const accessToken = localStorage.getItem('access_token');
+      setHasTokens(!!accessToken);
+      
+      // Log authentication status for debugging
+      console.log("Header auth status:", { 
+        nextAuthStatus: authStatus, 
+        hasLocalTokens: !!accessToken,
+        isAuthenticated: authStatus === 'authenticated' && !!accessToken
+      });
+    };
+    
+    // Initial check
+    checkTokens();
+    
+    // Set up interval to check tokens regularly (every 2 seconds)
+    // This ensures the header updates even if tokens are cleared elsewhere
+    const intervalId = setInterval(checkTokens, 2000);
+    
+    // Listen for forced logout event
+    const handleForceLogout = () => {
+      console.log("Force logout event received in Header");
+      setHasTokens(false);
+    };
+    
+    window.addEventListener('force-logout', handleForceLogout);
+    
+    // Clean up interval and event listener on unmount
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('force-logout', handleForceLogout);
+    };
+  }, [authStatus, session]);
 
   const pathUrl = usePathname();
 
@@ -49,7 +96,19 @@ const Header = () => {
 
   useEffect(() => {
     window.addEventListener("scroll", handleStickyMenu);
-  });
+    return () => window.removeEventListener("scroll", handleStickyMenu);
+  }, []);
+  
+  // Function for secure sign-out
+  const handleSignOut = () => {
+    // Clear tokens first to ensure immediate UI update
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    setHasTokens(false);
+    
+    // Then navigate to the dedicated sign-out page
+    window.location.href = "/auth/signout";
+  };
 
   return (
     <>
@@ -142,13 +201,18 @@ const Header = () => {
             </nav>
 
             <div className="mt-7 flex items-center gap-6 lg:mt-0">
-              {session ? (
+              {isAuthenticated ? (
                 <>
                   <NotificationBell />
-                  <p>{session?.user?.name}</p>
+                  <Link 
+                    href="/dashboard" 
+                    className="text-sm font-medium text-white hover:text-purple transition-colors"
+                  >
+                    Dashboard
+                  </Link>
                   <button
                     aria-label="Sign Out button"
-                    onClick={() => signOut()}
+                    onClick={handleSignOut}
                     className="text-sm text-white hover:text-opacity-75"
                   >
                     Sign Out

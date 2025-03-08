@@ -5,8 +5,8 @@ import PricingGrids from "@/components/Pricing/PricingGrids";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Pricing | AI Tool - Next.js Template for AI Tools",
-  description: "This is Pricing page for AI Tool",
+  title: "Pricing | AI Agentic Deals System",
+  description: "Pricing plans for AI Agentic Deals System",
   // other metadata
 };
 

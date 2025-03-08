@@ -1,0 +1,1 @@
+{"Comment":"Creating alias record for apex domain","Changes":[{"Action":"CREATE","ResourceRecordSet":{"Name":"rebaton.ai","Type":"A","AliasTarget":{"HostedZoneId":"Z2FDTNDATAQYW2","DNSName":"d3irpl0o2ddv9y.cloudfront.net","EvaluateTargetHealth":false}}}]}

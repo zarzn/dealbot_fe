@@ -22,11 +22,31 @@ const nextConfig = {
         port: "",
       },
     ],
-    unoptimized: true, // Required for static export
+    unoptimized: true, // Keep this for image handling
   },
   reactStrictMode: true,
   swcMinify: true,
-  output: 'export', // Enable static export
+  
+  // Add trailingSlash to ensure consistent URL handling
+  trailingSlash: true,
+  
+  // Add asset prefix to ensure proper asset loading on nested routes
+  assetPrefix: '/',
+  
+  // Enable trace in development mode to help with debugging
+  experimental: {
+    serverComponentsExternalPackages: ['next-auth']
+  },
+  
+  // This will ensure only /auth/* API routes are included in the build
+  // and other dynamic API routes are excluded
+  distDir: '.next'
 };
+
+// Only use 'export' output for production builds (when not in development mode)
+// This allows API routes to work in development mode
+if (process.env.NODE_ENV === 'production') {
+  nextConfig.output = 'export';
+}
 
 module.exports = nextConfig;

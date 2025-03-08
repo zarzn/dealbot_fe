@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Tag, ArrowUpRight, ShoppingCart } from 'lucide-react';
 import Image from 'next/image';
+import { API_CONFIG } from '@/services/api/config';
 
 interface Deal {
   id: string;
@@ -21,8 +22,11 @@ const RecentDeals = () => {
   useEffect(() => {
     const fetchDeals = async () => {
       try {
-        // TODO: Replace with actual API call
-        const response = await fetch('/api/deals/recent');
+        // Use the full API URL instead of a relative path
+        const apiUrl = `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/deals/recent`;
+        console.log('Making API request to:', apiUrl);
+        
+        const response = await fetch(apiUrl);
         const data = await response.json();
         setDeals(data.deals);
       } catch (error) {

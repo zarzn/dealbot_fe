@@ -7,6 +7,7 @@ import {
   Search,
   CheckCircle2
 } from 'lucide-react';
+import { API_CONFIG } from '@/services/api/config';
 
 interface Activity {
   id: string;
@@ -23,8 +24,11 @@ const ActivityFeed = () => {
   useEffect(() => {
     const fetchActivities = async () => {
       try {
-        // TODO: Replace with actual API call
-        const response = await fetch('/api/activity');
+        // Use the full API URL instead of a relative path
+        const apiUrl = `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/activity`;
+        console.log('Making API request to:', apiUrl);
+        
+        const response = await fetch(apiUrl);
         const data = await response.json();
         setActivities(data.activities);
       } catch (error) {

@@ -14,8 +14,8 @@ import { Metadata } from "next";
 import { integrations } from "../../../integrations.config";
 
 export const metadata: Metadata = {
-  title: "AI Tool - Next.js Template for AI Tools",
-  description: "This is Home for AI Tool",
+  title: "AI Agentic Deals System",
+  description: "AI-powered deal discovery, management and tracking platform",
   // other metadata
 };
 

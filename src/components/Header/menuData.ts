@@ -25,6 +25,7 @@ const menuData: Menu[] = [
     newTab: false,
     path: "/docs",
   },
+  /* Commented out Pages menu item
   {
     id: 5,
     title: "Pages",
@@ -74,7 +75,9 @@ const menuData: Menu[] = [
       },
     ],
   },
+  */
 
+  /* Commented out OpenAI Examples menu item
   {
     id: 6,
     title: "OpenAI Examples",
@@ -119,5 +122,6 @@ const menuData: Menu[] = [
       },
     ],
   },
+  */
 ];
 export default menuData;

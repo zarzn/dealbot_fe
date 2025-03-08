@@ -1,5 +1,10 @@
+"use client";
+
 import { useEffect, useState } from 'react';
-import { Target, Clock, AlertCircle } from 'lucide-react';
+import { Target, Clock, AlertCircle, RefreshCw } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api-client';
+import { toast } from 'sonner';
 
 interface Goal {
   id: string;
@@ -10,26 +15,35 @@ interface Goal {
   priority: 'low' | 'medium' | 'high';
 }
 
+// Goals service function to get active goals
+const getActiveGoals = async (): Promise<{ goals: Goal[] }> => {
+  const response = await apiClient.get('/api/v1/goals?status=active');
+  return response.data;
+};
+
 const ActiveGoals = () => {
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
+  // Use React Query to fetch active goals
+  const { 
+    data, 
+    isLoading, 
+    error,
+    refetch 
+  } = useQuery({
+    queryKey: ['activeGoals'],
+    queryFn: getActiveGoals,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 1,
+  });
+  
+  // Get goals from response data
+  const goals = data?.goals || [];
+  
+  // Handle errors with useEffect
   useEffect(() => {
-    const fetchGoals = async () => {
-      try {
-        // TODO: Replace with actual API call
-        const response = await fetch('/api/goals/active');
-        const data = await response.json();
-        setGoals(data.goals);
-      } catch (error) {
-        console.error('Error fetching active goals:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchGoals();
-  }, []);
+    if (error) {
+      console.error('Active goals fetch error:', error);
+    }
+  }, [error]);
 
   const getPriorityColor = (priority: Goal['priority']) => {
     switch (priority) {
@@ -41,6 +55,24 @@ const ActiveGoals = () => {
         return 'text-green-400';
     }
   };
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="rounded-lg border border-white/10 p-6 text-center bg-white/[0.02]">
+        <AlertCircle className="w-10 h-10 mx-auto mb-3 text-amber-400" />
+        <h3 className="text-lg font-medium mb-2">Unable to load goals</h3>
+        <p className="text-white/70 mb-4">We encountered an issue while retrieving your active goals.</p>
+        <button 
+          onClick={() => refetch()}
+          className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition inline-flex items-center"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

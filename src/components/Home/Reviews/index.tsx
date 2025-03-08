@@ -25,9 +25,9 @@ const Reviews = () => {
     <>
       <div className="mx-auto max-w-[1170px] px-4 sm:px-8 xl:px-0">
         <SectionTitle
-          subTitle="Wall of love"
-          title="What Our User Says"
-          paragraph="Build SaaS AI applications using OpenAI and Next.js, this kit comes with pre-configured and pre-built examples, making it easier to quickly kickstart your AI startup."
+          subTitle="Testimonials"
+          title="What Our Clients Say"
+          paragraph="Hear from our satisfied users who have transformed their deal-finding process and saved both time and money with our AI-powered platform."
         />
 
         <div

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Search, Filter, SlidersHorizontal, Check, Tag, Star, Package, ExternalLink } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import {
@@ -15,11 +15,10 @@ import { useSearchDeals, useTrackDeal, useUntrackDeal } from '@/hooks/useDeals';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { DealSearch, DealSuggestion } from '@/types/deals';
 import Image from 'next/image';
-
-const calculateDiscount = (originalPrice?: number, currentPrice?: number): number => {
-  if (!originalPrice || !currentPrice || originalPrice <= currentPrice) return 0;
-  return Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
-};
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { DealCard } from '@/components/Deals/DealCard';
+import { calculateDiscount } from '@/lib/utils';
 
 type SortOption = 'score' | 'price-low' | 'price-high' | 'savings';
 type FilterOption = 'all' | 'tracked' | 'untracked';
@@ -60,11 +59,29 @@ export default function DealsPage() {
              priceRange === 'under-50' ? 50 :
              priceRange === '50-100' ? 100 :
              priceRange === '100-500' ? 500 : undefined,
-    limit: 20,
+    limit: 10,
     offset: 0
   };
 
   const { data: deals = [], isLoading, error } = useSearchDeals(query);
+  
+  // Debug logging to track API responses
+  useEffect(() => {
+    console.log('Deals API response:', deals);
+    if (deals && deals.length > 0) {
+      // Check first deal for expected properties
+      const sampleDeal = deals[0];
+      console.log('Sample deal structure:', {
+        hasId: !!sampleDeal.id,
+        hasTitle: !!sampleDeal.title,
+        hasPrice: !!sampleDeal.price,
+        hasScore: typeof sampleDeal.score !== 'undefined',
+        hasImageUrl: !!sampleDeal.image_url,
+        hasTrackedStatus: typeof sampleDeal.is_tracked !== 'undefined',
+        completeObject: sampleDeal
+      });
+    }
+  }, [deals]);
 
   const trackDeal = useTrackDeal();
   const untrackDeal = useUntrackDeal();
@@ -91,18 +108,18 @@ export default function DealsPage() {
   const filteredDeals = deals.filter((deal: DealSuggestion) => {
     // Status filter
     if (filterStatus !== 'all') {
-      if (filterStatus === 'tracked' && !deal.isTracked) return false;
-      if (filterStatus === 'untracked' && !deal.isTracked) return false;
+      if (filterStatus === 'tracked' && !deal.is_tracked) return false;
+      if (filterStatus === 'untracked' && deal.is_tracked) return false;
     }
     return true;
   });
 
-  const handleTrackDeal = async (dealId: string) => {
-    await trackDeal.mutateAsync(dealId);
-  };
-
-  const handleUntrackDeal = async (dealId: string) => {
-    await untrackDeal.mutateAsync(dealId);
+  const handleTrackDeal = async (deal: DealSuggestion) => {
+    if (deal.is_tracked) {
+      await untrackDeal.mutateAsync(deal.id);
+    } else {
+      await trackDeal.mutateAsync(deal.id);
+    }
   };
 
   return (
@@ -122,6 +139,13 @@ export default function DealsPage() {
             placeholder="Search deals..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                // Just trigger the search without clearing the input
+                // The value is already in the searchQuery state
+              }
+            }}
             className="w-full pl-10 pr-4 py-2 bg-white/[0.05] border border-white/10 rounded-lg focus:outline-none focus:border-purple"
           />
         </div>
@@ -207,66 +231,11 @@ export default function DealsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7.5">
           {filteredDeals.map((deal: DealSuggestion) => (
-            <div
-              key={deal.id}
-              className="bg-white/[0.05] rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition"
-            >
-              <div className="relative aspect-video">
-                <Image
-                  src={deal.imageUrl || '/placeholder-deal.jpg'}
-                  alt={deal.title}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="p-7.5">
-                <h3 className="text-lg font-semibold mb-2 line-clamp-2">{deal.title}</h3>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-2xl font-bold text-purple">${deal.price}</p>
-                    {deal.originalPrice && (
-                      <p className="text-sm text-gray-500 line-through">
-                        ${deal.originalPrice}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500">
-                      {calculateDiscount(deal.originalPrice, deal.price)}% OFF
-                    </p>
-                    {deal.score && (
-                      <p className="text-sm font-medium text-purple">
-                        Score: {deal.score}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-2 mb-4">
-                  <p className="text-sm text-gray-500 flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    {deal.shippingInfo?.estimatedDays
-                      ? `Delivery in ${deal.shippingInfo.estimatedDays} days`
-                      : 'Shipping info unavailable'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => deal.isTracked ? handleUntrackDeal(deal.id) : handleTrackDeal(deal.id)}
-                    className="flex-1 px-4 py-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20 transition"
-                  >
-                    {deal.isTracked ? 'Untrack Deal' : 'Track Deal'}
-                  </button>
-                  <a
-                    href={deal.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20 transition"
-                  >
-                    <ExternalLink className="w-5 h-5" />
-                  </a>
-                </div>
-              </div>
-            </div>
+            <DealCard 
+              key={deal.id} 
+              deal={deal} 
+              onTrack={handleTrackDeal}
+            />
           ))}
         </div>
       )}

@@ -18,9 +18,9 @@ const Faq = () => {
 
       <div className="mx-auto max-w-[770px] px-4 sm:px-8 xl:px-0">
         <SectionTitle
-          subTitle="Questions About our AI Tool?"
+          subTitle="Questions About AI Agentic Deals System?"
           title="Frequently Asked Questions"
-          paragraph="Build SaaS AI applications using OpenAI and Next.js, this kit comes with pre-configured and pre-built examples, making it easier to quickly kickstart your AI startup."
+          paragraph="Our AI-powered platform helps you discover and manage deals more efficiently, providing intelligent insights and streamlined workflows for optimal decision-making and execution."
         />
 
         <div className="wow fadeInUp">

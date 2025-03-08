@@ -5,8 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Error | AI Tool - Next.js Template for AI Tools",
-  description: "This is Error page for AI Tool",
+  title: "Error | AI Agentic Deals System",
+  description: "Error page for AI Agentic Deals System",
   // other metadata
 };
 

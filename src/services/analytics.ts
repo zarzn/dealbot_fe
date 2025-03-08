@@ -123,7 +123,7 @@ class AnalyticsService {
     return response.data;
   }
 
-  async getActivityHistory(page: number = 1, limit: number = 20): Promise<{
+  async getActivityHistory(page: number = 1, limit: number = 10): Promise<{
     items: DashboardMetrics['activity'];
     total: number;
     page: number;

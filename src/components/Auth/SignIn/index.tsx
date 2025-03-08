@@ -9,6 +9,8 @@ import SocialSignup from "../SocialSignup/index";
 import MagicLink from "../MagicLink";
 import SwitchOptions from "../SwitchOptions";
 import Loader from "@/components/Common/Loader";
+import { signIn } from "next-auth/react";
+import { setAuthCookie } from "@/lib/authCookies";
 
 const SignIn: React.FC = () => {
   const [data, setData] = useState({
@@ -30,12 +32,49 @@ const SignIn: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await authService.login({ email: data.email, password: data.password });
+      // First use our backend API to get tokens
+      const response = await authService.login({ email: data.email, password: data.password });
+      
+      console.log("Login successful, got tokens:", { 
+        accessToken: response.access_token ? "present" : "missing",
+        refreshToken: response.refresh_token ? "present" : "missing" 
+      });
+      
+      // Store tokens in localStorage
+      localStorage.setItem('access_token', response.access_token);
+      localStorage.setItem('refresh_token', response.refresh_token);
+      
+      // IMPORTANT: Set the auth cookie for middleware detection
+      // This must happen before any redirect
+      setAuthCookie();
+      
       toast.success('Successfully signed in!');
-      router.replace('/dashboard');
+      
+      // Wait a bit longer to ensure cookies are set
+      // This is critical to prevent the redirect to error page
+      setTimeout(async () => {
+        try {
+          // Use redirect: false to prevent NextAuth from handling redirection
+          // But still initialize the session for components that rely on it
+          await signIn('credentials', {
+            redirect: false,
+            email: data.email,
+            accessToken: response.access_token,
+          });
+          
+          // Manually redirect to dashboard after ensuring auth is set up
+          console.log("Auth completed, redirecting to dashboard");
+          window.location.href = '/dashboard';
+        } catch (nextAuthError) {
+          console.error("NextAuth error (non-critical):", nextAuthError);
+          // Still redirect to dashboard since we have our own token system
+          console.log("Redirecting to dashboard despite NextAuth error");
+          window.location.href = '/dashboard';
+        }
+      }, 800); // Longer delay to ensure cookies are properly set
     } catch (error: any) {
+      console.error("Login error:", error);
       toast.error(error.message || 'Failed to sign in');
-    } finally {
       setIsLoading(false);
     }
   };

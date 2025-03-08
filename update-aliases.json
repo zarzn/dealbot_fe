@@ -1,0 +1,14 @@
+{
+  "ViewerCertificate": {
+    "MinimumProtocolVersion": "TLSv1.2_2021",
+    "CertificateSource": "acm",
+    "ACMCertificateArn": "arn:aws:acm:us-east-1:586794462529:certificate/4af39d7c-b4d4-473c-a2f3-0696f1b22441",
+    "SSLSupportMethod": "sni-only"
+  },
+  "Aliases": {
+    "Quantity": 1,
+    "Items": [
+      "rebaton.ai"
+    ]
+  }
+}

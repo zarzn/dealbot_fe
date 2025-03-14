@@ -2,12 +2,15 @@ import React from 'react';
 import { Notification } from '@/services/notifications';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
+import { Button } from '@/components/ui/button';
 
-interface NotificationListProps {
+export interface NotificationListProps {
   notifications: Notification[];
   isLoading: boolean;
   error: string | null;
   onMarkAsRead: (id: string) => void;
+  onMarkAllAsRead?: () => void;
+  onClearAll?: () => void;
 }
 
 export function NotificationList({
@@ -15,6 +18,8 @@ export function NotificationList({
   isLoading,
   error,
   onMarkAsRead,
+  onMarkAllAsRead,
+  onClearAll,
 }: NotificationListProps) {
   if (isLoading) {
     return (
@@ -42,30 +47,59 @@ export function NotificationList({
   }
 
   return (
-    <ScrollArea className="h-[300px] w-[350px]">
-      <div className="p-4">
-        {notifications.map((notification) => (
-          <div
-            key={notification.id}
-            className={`mb-4 p-3 rounded-lg transition-colors ${
-              notification.read
-                ? "bg-muted/50"
-                : "bg-muted hover:bg-muted/80 cursor-pointer"
-            }`}
-            onClick={() => !notification.read && onMarkAsRead(notification.id)}
-          >
-            <h4 className="text-sm font-medium">{notification.title}</h4>
-            <p className="text-sm text-muted-foreground mt-1">
-              {notification.message}
-            </p>
-            <p className="text-xs text-muted-foreground mt-2">
-              {formatDistanceToNow(new Date(notification.created_at), {
-                addSuffix: true,
-              })}
-            </p>
+    <div>
+      {(onMarkAllAsRead || onClearAll) && (
+        <div className="p-2 flex justify-between items-center border-b">
+          <h3 className="font-semibold">Notifications</h3>
+          <div className="flex gap-2">
+            {onMarkAllAsRead && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onMarkAllAsRead}
+                className="text-xs"
+              >
+                Mark all read
+              </Button>
+            )}
+            {onClearAll && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onClearAll}
+                className="text-xs text-destructive"
+              >
+                Clear all
+              </Button>
+            )}
           </div>
-        ))}
-      </div>
-    </ScrollArea>
+        </div>
+      )}
+      <ScrollArea className="h-[300px] w-[350px]">
+        <div className="p-4">
+          {notifications.map((notification) => (
+            <div
+              key={notification.id}
+              className={`mb-4 p-3 rounded-lg transition-colors ${
+                notification.read
+                  ? "bg-muted/50"
+                  : "bg-muted hover:bg-muted/80 cursor-pointer"
+              }`}
+              onClick={() => !notification.read && onMarkAsRead(notification.id)}
+            >
+              <h4 className="text-sm font-medium">{notification.title}</h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                {notification.message}
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                {formatDistanceToNow(new Date(notification.created_at), {
+                  addSuffix: true,
+                })}
+              </p>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
   );
 } 

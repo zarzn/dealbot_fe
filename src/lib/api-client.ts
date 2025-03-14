@@ -1,119 +1,141 @@
-import axios from 'axios';
+import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
+import { API_BASE_URL } from '@/services/api/config';
 
-// Always use environment variable with explicit fallback URL for production
-// HARDCODED PRODUCTION URL - this will be used as a fallback
-const PRODUCTION_API_URL = 'https://7oxq7ujcmc.execute-api.us-east-1.amazonaws.com/prod';
+/**
+ * Custom error event for forced logout
+ */
+export const FORCE_LOGOUT_EVENT = 'force_logout';
 
-// First, check if we're in a browser environment
-const isBrowser = typeof window !== 'undefined';
-
-// Use environment variable if available, otherwise fallback to hardcoded production URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || PRODUCTION_API_URL;
-
-// Check if we're in development mode
-const isDevelopment = process.env.NODE_ENV === 'development';
-
-// In browser environments, always use production URL unless explicitly in development mode
-const finalApiUrl = isBrowser && !isDevelopment ? PRODUCTION_API_URL : API_URL;
-
-// Log the API URL in development mode
-if (isDevelopment) {
-  console.log('API Client using URL:', finalApiUrl);
-}
-
-// If we're in production and the API_URL is not set, log a warning but use the hardcoded production URL
-if (!isDevelopment && !process.env.NEXT_PUBLIC_API_URL) {
-  console.warn('NEXT_PUBLIC_API_URL not found in environment, using fallback production API URL');
-}
-
-console.log('Creating API client with baseURL:', finalApiUrl, 'NODE_ENV:', process.env.NODE_ENV);
-
-export const apiClient = axios.create({
-  baseURL: finalApiUrl,
+/**
+ * Create and configure the API client instance
+ */
+export const apiClient: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000, // 10 seconds
 });
 
-// Add a request interceptor
+/**
+ * Add a request interceptor to inject auth token
+ */
 apiClient.interceptors.request.use(
   (config) => {
-    // Get the token from localStorage
-    const token = localStorage.getItem('token');
+    // Get the token from localStorage 
+    const token = typeof window !== 'undefined' 
+      ? localStorage.getItem('token') 
+      : null;
+    
+    // If token exists, add it to the headers
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
     return config;
   },
   (error) => {
+    console.error('API Request Error:', error);
     return Promise.reject(error);
   }
 );
 
-// Add a response interceptor
+/**
+ * Add a response interceptor to handle common errors
+ */
 apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    // Special handling for search endpoint - don't retry with auth for this endpoint
-    if (originalRequest.url?.includes('/api/v1/deals/search') && error.response?.status === 401) {
-      // Just return the error for search endpoint - will be handled by the service layer
-      return Promise.reject(error);
-    }
-
-    // If the error status is 401 and there is no originalRequest._retry flag,
-    // it means the token has expired and we need to refresh it
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        
-        // Only attempt to refresh if we have a refresh token
-        if (refreshToken) {
-          try {
-            const response = await axios.post(`${finalApiUrl}/api/v1/auth/refresh-token`, {
-              refresh_token: refreshToken, // Use correct parameter name
-            });
-
-            const { access_token } = response.data;
-            localStorage.setItem('token', access_token);
-
-            // Retry the original request with the new token
-            originalRequest.headers.Authorization = `Bearer ${access_token}`;
-            return apiClient(originalRequest);
-          } catch (refreshError) {
-            // If refresh token endpoint fails, just clear tokens but don't redirect
-            console.error('Token refresh failed:', refreshError);
-            localStorage.removeItem('token');
-            localStorage.removeItem('refreshToken');
+  (response) => {
+    return response;
+  },
+  async (error: AxiosError) => {
+    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+    
+    // Log detailed error information
+    if (error.response) {
+      console.error(`API Error ${error.response.status}:`, error.response.data);
+      
+      // Handle specific status codes
+      switch (error.response.status) {
+        case 401: // Unauthorized
+          // Check if it's a refresh token failure
+          if (originalRequest._retry) {
+            // Token refresh failed, force logout
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('token');
+              localStorage.removeItem('refreshToken');
+              window.dispatchEvent(new Event(FORCE_LOGOUT_EVENT));
+            }
+          } else {
+            // Try to refresh the token
+            try {
+              const refreshToken = localStorage.getItem('refreshToken');
+              
+              if (refreshToken) {
+                originalRequest._retry = true;
+                const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+                  refresh_token: refreshToken
+                });
+                
+                if (response.data.access_token) {
+                  localStorage.setItem('token', response.data.access_token);
+                  apiClient.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
+                  
+                  // Retry the original request with the new token
+                  if (originalRequest.headers) {
+                    originalRequest.headers.Authorization = `Bearer ${response.data.access_token}`;
+                  }
+                  return apiClient(originalRequest);
+                }
+              } else {
+                // No refresh token, force logout
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('token');
+                  window.dispatchEvent(new Event(FORCE_LOGOUT_EVENT));
+                }
+              }
+            } catch (refreshError) {
+              console.error('Token refresh failed:', refreshError);
+              // Force logout on refresh failure
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('token');
+                localStorage.removeItem('refreshToken');
+                window.dispatchEvent(new Event(FORCE_LOGOUT_EVENT));
+              }
+            }
           }
-        }
-        
-        // If no refresh token or refresh failed, continue without authentication
-        // Remove any Authorization header to ensure request proceeds as unauthenticated
-        if (originalRequest.headers.Authorization) {
-          delete originalRequest.headers.Authorization;
-        }
-        
-        // Try the request again without auth headers
-        return apiClient(originalRequest);
-        
-      } catch (error) {
-        // If refresh token fails, clear tokens but don't redirect
-        // This allows the request to continue as unauthenticated
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        
-        // Remove Authorization header and retry the request
-        if (originalRequest.headers.Authorization) {
-          delete originalRequest.headers.Authorization;
-        }
-        return apiClient(originalRequest);
+          break;
+          
+        case 403: // Forbidden
+          console.error('Access forbidden:', error.response.data);
+          break;
+          
+        case 404: // Not found
+          console.error('Resource not found:', error.response.data);
+          break;
+          
+        case 405: // Method not allowed
+          console.error('Method not allowed. Check API endpoint configuration:', error.response.data);
+          break;
+          
+        case 500: // Server error
+        case 502: // Bad gateway
+        case 503: // Service unavailable
+          console.error('Server error:', error.response.data);
+          break;
+          
+        default:
+          console.error('Unhandled error:', error.response.data);
       }
+    } else if (error.request) {
+      // Request was made but no response received
+      console.error('API No Response Error:', error.request);
+    } else {
+      // Error in setting up the request
+      console.error('API Configuration Error:', error.message);
     }
-
+    
     return Promise.reject(error);
   }
-); 
+);
+
+export default apiClient; 

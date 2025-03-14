@@ -7,24 +7,30 @@ import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import DropDown from "./DropDown";
 import menuData from "./menuData";
-import { NotificationBell } from "../Notifications/NotificationBell";
+import ClientLiveNotifications from "../Notifications/ClientLiveNotifications";
 
-const Logo = () => {
-  return (
+// Modified Logo component to accept an optional linkWrapper prop
+const Logo = ({ linkWrapper = true }) => {
+  const logoContent = (
+    <motion.div
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.7 }}
+      className="text-blue-500 flex items-center text-black dark:text-white text-xl font-bold"
+    >
+      REBATON
+    </motion.div>
+  );
+
+  // Return either wrapped in Link or just the content
+  return linkWrapper ? (
     <Link
       href="/"
       className="flex items-center text-black dark:text-white text-xl font-bold"
     >
-      <motion.div
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.7 }}
-        className="text-blue-500"
-      >
-        REBATON
-      </motion.div>
+      {logoContent}
     </Link>
-  );
+  ) : logoContent;
 };
 
 const Header = () => {
@@ -121,9 +127,8 @@ const Header = () => {
       >
         <div className="relative mx-auto max-w-[1170px] items-center justify-between px-4 sm:px-8 lg:flex xl:px-0">
           <div className="flex w-full items-center justify-between lg:w-1/4">
-            <Link href="/">
-              <Logo />
-            </Link>
+            {/* Use the Logo directly - it already has a Link inside */}
+            <Logo />
 
             <button
               onClick={() => setNavigationOpen(!navigationOpen)}
@@ -203,7 +208,7 @@ const Header = () => {
             <div className="mt-7 flex items-center gap-6 lg:mt-0">
               {isAuthenticated ? (
                 <>
-                  <NotificationBell />
+                  <ClientLiveNotifications />
                   <Link 
                     href="/dashboard" 
                     className="text-sm font-medium text-white hover:text-purple transition-colors"

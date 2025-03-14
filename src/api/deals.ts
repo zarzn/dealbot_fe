@@ -2,6 +2,9 @@ import axios from 'axios';
 import { DealResponse, DealSearch, PriceHistory, AIAnalysis } from '@/types/deals';
 import { SearchResponse } from '@/services/deals';
 import { API_CONFIG } from '@/services/api/config';
+import { AxiosResponse } from 'axios';
+import { Deal, CreateDealRequest, UpdateDealRequest } from '@/types/deals';
+import { API_URL } from '@/config/constants';
 
 // Create axios instance with default config
 const dealsApi = axios.create({
@@ -198,4 +201,85 @@ export const trackDeal = async (dealId: string): Promise<void> => {
 
 export const untrackDeal = async (dealId: string): Promise<void> => {
   await dealsApi.delete(`/${dealId}/track`);
-}; 
+};
+
+/**
+ * API service for dealing with deal-related endpoints
+ */
+export class DealsApi {
+  private static BASE_URL = `${API_URL}/api/deals`;
+
+  /**
+   * Get all deals
+   * @returns Promise with deal list response
+   */
+  static async getDeals(): Promise<AxiosResponse<Deal[]>> {
+    return axios.get<Deal[]>(this.BASE_URL);
+  }
+
+  /**
+   * Get a specific deal by ID
+   * @param id Deal ID
+   * @returns Promise with deal response
+   */
+  static async getDealById(id: string): Promise<AxiosResponse<Deal>> {
+    return axios.get<Deal>(`${this.BASE_URL}/${id}`);
+  }
+
+  /**
+   * Create a new deal
+   * @param deal Deal creation request data
+   * @returns Promise with the created deal
+   */
+  static async createDeal(deal: CreateDealRequest): Promise<AxiosResponse<Deal>> {
+    return axios.post<Deal>(this.BASE_URL, deal);
+  }
+
+  /**
+   * Update an existing deal
+   * @param id Deal ID
+   * @param deal Deal update request data
+   * @returns Promise with the updated deal
+   */
+  static async updateDeal(id: string, deal: UpdateDealRequest): Promise<AxiosResponse<Deal>> {
+    return axios.put<Deal>(`${this.BASE_URL}/${id}`, deal);
+  }
+
+  /**
+   * Delete a deal
+   * @param id Deal ID
+   * @returns Promise with the operation result
+   */
+  static async deleteDeal(id: string): Promise<AxiosResponse<void>> {
+    return axios.delete(`${this.BASE_URL}/${id}`);
+  }
+
+  /**
+   * Refresh AI analysis for a deal
+   * @param id Deal ID
+   * @returns Promise with the updated deal including fresh analysis
+   */
+  static async refreshDealAnalysis(id: string): Promise<AxiosResponse<Deal>> {
+    return axios.post<Deal>(`${this.BASE_URL}/${id}/analyze`, {});
+  }
+
+  /**
+   * Track a deal to add it to user's watchlist
+   * @param id Deal ID
+   * @returns Promise with the operation result
+   */
+  static async trackDeal(id: string): Promise<AxiosResponse<void>> {
+    return axios.post<void>(`${this.BASE_URL}/${id}/track`, {});
+  }
+
+  /**
+   * Untrack a deal to remove it from user's watchlist
+   * @param id Deal ID
+   * @returns Promise with the operation result
+   */
+  static async untrackDeal(id: string): Promise<AxiosResponse<void>> {
+    return axios.delete<void>(`${this.BASE_URL}/${id}/track`);
+  }
+}
+
+export default DealsApi; 

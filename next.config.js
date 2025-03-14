@@ -45,8 +45,11 @@ const nextConfig = {
 
 // Only use 'export' output for production builds (when not in development mode)
 // This allows API routes to work in development mode
+// TEMPORARILY DISABLED due to conflicts with dynamic routes
+/*
 if (process.env.NODE_ENV === 'production') {
   nextConfig.output = 'export';
 }
+*/
 
 module.exports = nextConfig;

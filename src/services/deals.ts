@@ -138,6 +138,38 @@ export class DealsService {
       throw error;
     }
   }
+
+  async createDeal(dealData: any): Promise<DealResponse> {
+    try {
+      console.log('Creating new deal with data:', dealData);
+      const response = await apiClient.post('/api/v1/deals', dealData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating deal:', error);
+      throw error;
+    }
+  }
+
+  async updateDeal(dealId: string, dealData: any): Promise<DealResponse> {
+    try {
+      console.log(`Updating deal ${dealId} with data:`, dealData);
+      const response = await apiClient.put(`/api/v1/deals/${dealId}`, dealData);
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating deal ${dealId}:`, error);
+      throw error;
+    }
+  }
+
+  async deleteDeal(dealId: string): Promise<void> {
+    try {
+      console.log(`Deleting deal ${dealId}`);
+      await apiClient.delete(`/api/v1/deals/${dealId}`);
+    } catch (error) {
+      console.error(`Error deleting deal ${dealId}:`, error);
+      throw error;
+    }
+  }
 }
 
 export const dealsService = new DealsService(); 

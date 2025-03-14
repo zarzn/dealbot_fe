@@ -9,7 +9,7 @@ import Newsletter from "@/components/Newsletter";
 import Pricing from "@/components/Pricing";
 import Support from "@/components/Support";
 import Chat from "@/components/Chat";
-import Markets from "@/components/Markets";
+import MarketsSection from "@/components/Home/MarketsSection";
 import { Metadata } from "next";
 import { integrations } from "../../../integrations.config";
 
@@ -23,7 +23,7 @@ export default function Home() {
   return (
     <>
       <Hero />
-      <Markets />
+      <MarketsSection />
       <Chat />
       <Features />
       <FeaturesList />

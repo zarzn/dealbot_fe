@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { signIn } from 'next-auth/react';
 import { API_CONFIG } from './api/config';
+import { apiClient } from '@/lib/api-client';
 
 export interface LoginRequest {
   email: string;
@@ -49,17 +50,19 @@ export const authService = {
     try {
       console.log('Login attempt with:', { email: data.email });
       
+      // OAuth2PasswordRequestForm requires username (not email) and password in form-urlencoded format
       const formData = new URLSearchParams();
-      formData.append('username', data.email);
+      formData.append('username', data.email); // Backend expects username field but we use email
       formData.append('password', data.password);
-
-      const response = await api.post(
-        '/auth/login',
-        formData,
+      
+      // Use the full path with API prefix as required by the backend
+      const response = await apiClient.post(
+        '/api/v1/auth/login',
+        formData.toString(),
         {
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
         }
       );
 
@@ -82,13 +85,12 @@ export const authService = {
   async register(data: RegisterRequest): Promise<UserResponse> {
     try {
       console.log('Registration attempt with:', { email: data.email, name: data.name });
-      console.log('Request to /auth/register:', {
+      console.log('Request to /api/v1/auth/register:', {
         method: 'post',
-        headers: api.defaults.headers,
         data: data
       });
       
-      const response = await api.post('/auth/register', data);
+      const response = await apiClient.post('/api/v1/auth/register', data);
       console.log('Registration successful');
       return response.data;
     } catch (error: any) {
@@ -101,7 +103,7 @@ export const authService = {
   async requestMagicLink(email: string): Promise<void> {
     try {
       console.log('Requesting magic link for:', email);
-      await api.post('/auth/magic-link', { email });
+      await apiClient.post('/api/v1/auth/magic-link', { email });
       console.log('Magic link request successful');
     } catch (error: any) {
       console.error('Magic link request error:', error);
@@ -113,7 +115,7 @@ export const authService = {
   async verifyMagicLink(token: string): Promise<AuthResponse> {
     try {
       console.log('Verifying magic link with token');
-      const response = await api.post('/auth/verify-magic-link', { token });
+      const response = await apiClient.post('/api/v1/auth/verify-magic-link', { token });
       console.log('Magic link verification successful');
       this.setTokens(response.data);
       return response.data;
@@ -127,7 +129,7 @@ export const authService = {
   async verifyEmail(token: string): Promise<void> {
     try {
       console.log('Verifying email with token');
-      await api.post('/auth/verify-email', { token });
+      await apiClient.post('/api/v1/auth/verify-email', { token });
       console.log('Email verification successful');
     } catch (error: any) {
       console.error('Email verification error:', error);
@@ -149,7 +151,7 @@ export const authService = {
   async socialLogin(provider: string, token: string): Promise<AuthResponse> {
     try {
       console.log('Processing social login for provider:', provider);
-      const response = await api.post(`/auth/social/${provider}`, { token });
+      const response = await apiClient.post(`/api/v1/auth/social/${provider}`, { token });
       console.log('Social login successful');
       this.setTokens(response.data);
       return response.data;
@@ -163,7 +165,7 @@ export const authService = {
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
       console.log('Refreshing token');
-      const response = await api.post('/auth/refresh', {
+      const response = await apiClient.post('/api/v1/auth/refresh', {
         refresh_token: refreshToken
       });
       console.log('Token refresh successful');
@@ -206,7 +208,7 @@ export const authService = {
     
     // Attempt to call the signout API to clear server-side cookies
     try {
-      const signoutUrl = `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/auth/signout`;
+      const signoutUrl = `${API_CONFIG.baseURL}/api/v1/auth/signout`;
       console.log('Making signout request to:', signoutUrl);
       
       fetch(signoutUrl, {
@@ -221,4 +223,12 @@ export const authService = {
     
     console.log('Token cleanup complete');
   }
-}; 
+};
+
+// Export function to get auth token for use in other services
+export function getAuthToken(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('access_token');
+  }
+  return null;
+} 

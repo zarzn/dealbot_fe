@@ -1,57 +1,142 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Session } from "next-auth"
+import Link from "next/link"
+import { useSession } from "next-auth/react"
+import { userService, UserProfile } from "@/services/users"
+import { toast } from "react-hot-toast"
 
 interface UserInfoProps {
-  session: Session | null
   isMobile?: boolean
 }
 
-export function UserInfo({ session, isMobile }: UserInfoProps) {
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        duration: 0.3,
-        ease: "easeOut"
-      }}
-      className="mb-6 pb-6 border-b border-white/10"
-    >
-      <motion.div 
-        className="flex items-center gap-3 p-3 -mx-3 rounded-lg transition-colors hover:bg-white/[0.02]"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+const UserInfoSkeleton = () => (
+  <div className="flex items-center gap-4">
+    <div className="h-10 w-10 rounded-full bg-white/10 animate-pulse"></div>
+    <div className="space-y-2">
+      <div className="h-4 w-32 bg-white/10 rounded animate-pulse"></div>
+      <div className="h-3 w-24 bg-white/10 rounded animate-pulse"></div>
+    </div>
+  </div>
+)
+
+const UserInfoError = ({ onRetry }: { onRetry: () => void }) => (
+  <div className="flex items-center gap-4">
+    <div className="flex items-center justify-center h-10 w-10 rounded-full bg-red-500/20 border border-red-500">
+      <span className="text-red-500">!</span>
+    </div>
+    <div className="space-y-1">
+      <p className="text-sm text-red-200">Error loading profile</p>
+      <button 
+        onClick={onRetry} 
+        className="text-xs text-red-400 hover:text-red-300"
       >
-        <motion.div 
-          className="h-10 w-10 rounded-full bg-purple/20 text-purple flex items-center justify-center text-sm font-medium overflow-hidden"
-          whileHover={{ scale: 1.1 }}
-          transition={{ type: "spring", stiffness: 400, damping: 10 }}
-        >
-          {session?.user?.email?.[0].toUpperCase()}
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <motion.div 
-            className="font-medium text-sm"
-            whileHover={{ color: "#8b5cf6" }}
-            transition={{ duration: 0.2 }}
+        Retry
+      </button>
+    </div>
+  </div>
+)
+
+export default function UserInfo({ isMobile = false }: UserInfoProps) {
+  const { data: session } = useSession()
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [userProfile, setUserProfile] = useState<{
+    email: string;
+    tier: string;
+    displayName?: string;
+  } | null>(null)
+  
+  const fetchUserData = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      const profile = await userService.getProfile()
+      setUserProfile({
+        email: profile.email,
+        tier: profile.subscription_tier || "Free User",
+        displayName: profile.name
+      })
+    } catch (err) {
+      console.error("Failed to fetch user profile:", err)
+      setError("Could not load user data")
+      
+      // Fallback to session data if available
+      if (session?.user?.email) {
+        setUserProfile({
+          email: session.user.email,
+          tier: "Free User"
+        })
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+  
+  useEffect(() => {
+    fetchUserData()
+  }, [session])
+  
+  // Get first letter of email for avatar
+  const getInitial = (email: string) => {
+    return email && email.length > 0 ? email[0].toUpperCase() : "U"
+  }
+  
+  if (isLoading) {
+    return <UserInfoSkeleton />
+  }
+  
+  if (error && !userProfile) {
+    return <UserInfoError onRetry={fetchUserData} />
+  }
+  
+  const email = userProfile?.email || (session?.user?.email || "user@example.com")
+  const tier = userProfile?.tier || "Free User"
+  const displayName = userProfile?.displayName
+  
+  return (
+    <Link href="/dashboard/settings">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="flex items-center gap-4 p-2 rounded-md hover:bg-white/[0.03] transition-colors cursor-pointer"
+      >
+        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-medium">
+          {getInitial(email)}
+        </div>
+        
+        <div className="flex flex-col">
+          <p className="text-sm font-medium">{displayName || email}</p>
+          <p className="text-xs text-white/60">{tier}</p>
+        </div>
+        
+        {!isMobile && (
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="ml-1 text-white/40 hover:text-white"
           >
-            {session?.user?.email}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 20s8-4 8-10V6a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2h4a2 2 0 0 1 2 2v2.5"></path>
+              <path d="M9 18.93A6 6 0 0 1 5 14a6 6 0 0 1 11.33-2.75"></path>
+              <circle cx="16" cy="16" r="3"></circle>
+            </svg>
           </motion.div>
-          <motion.div 
-            className="text-xs text-white/50"
-            whileHover={{ color: "rgba(255,255,255,0.7)" }}
-            transition={{ duration: 0.2 }}
-          >
-            Premium Member
-          </motion.div>
-        </motion.div>
+        )}
       </motion.div>
-    </motion.div>
+    </Link>
   )
 } 

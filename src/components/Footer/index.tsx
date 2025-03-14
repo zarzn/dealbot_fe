@@ -6,8 +6,8 @@ import { Sparkles } from 'lucide-react';
 import FooterLinkList from "./FooterLinkList";
 import { companiesLink, productsLink, supportsLink } from "./linksData";
 
-const Logo = () => {
-  return (
+const Logo = ({ linkWrapper = false }) => {
+  const logoContent = (
     <motion.div 
       className="flex items-center gap-2"
       initial={{ opacity: 0, scale: 0.95 }}
@@ -25,6 +25,12 @@ const Logo = () => {
       </span>
     </motion.div>
   );
+
+  return linkWrapper ? (
+    <Link href="/">
+      {logoContent}
+    </Link>
+  ) : logoContent;
 };
 
 const Footer = () => {

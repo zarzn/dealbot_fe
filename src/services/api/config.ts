@@ -7,7 +7,7 @@ const isBrowser = typeof window !== 'undefined';
 // Determine if running in development mode
 const isDevelopment = process.env.NODE_ENV === 'development';
 
-// HARDCODED PRODUCTION URLS - these will be used in production
+// HARDCODED PRODUCTION URL - this will be used as a fallback
 const PRODUCTION_API_URL = 'https://7oxq7ujcmc.execute-api.us-east-1.amazonaws.com/prod';
 const PRODUCTION_WS_URL = 'wss://1ze1jsv3qg.execute-api.us-east-1.amazonaws.com/prod';
 const API_VERSION = 'v1';
@@ -24,17 +24,22 @@ const wsUrl = isDevelopment ? 'ws://localhost:8000' : PRODUCTION_WS_URL;
 const finalApiUrl = isBrowser && !isDevelopment ? PRODUCTION_API_URL : apiUrl;
 const finalWsUrl = isBrowser && !isDevelopment ? PRODUCTION_WS_URL : wsUrl;
 
+// Export the base URL for use in api-client.ts
+export const API_BASE_URL = finalApiUrl;
+
 // Always log configuration to help with debugging
-console.log('API Configuration:', {
-  providedApiUrl: apiUrl,
-  finalApiUrl,
-  apiVersion,
-  finalWsUrl,
-  isDevelopment,
-  NODE_ENV: process.env.NODE_ENV,
-  isBrowser,
-  hostname: isBrowser ? window.location.hostname : 'not in browser'
-});
+if (isDevelopment) {
+  console.log('API Configuration:', {
+    providedApiUrl: apiUrl,
+    finalApiUrl,
+    apiVersion,
+    finalWsUrl,
+    isDevelopment,
+    NODE_ENV: process.env.NODE_ENV,
+    isBrowser,
+    hostname: isBrowser ? window.location.hostname : 'not in browser'
+  });
+}
 
 // Define API configuration
 export const API_CONFIG = {
@@ -54,15 +59,17 @@ export const WS_URL = isDevelopment
   : `${finalWsUrl}/api/${apiVersion}/ws`;
 
 // Always log the final configuration to help with debugging
-console.log('Final API Configuration:', {
-  baseURL: API_CONFIG.baseURL,
-  version: API_CONFIG.version,
-  fullUrl: API_CONFIG.fullUrl,
-  wsUrl: WS_URL,
-  isDevelopment,
-  isBrowser,
-  hostname: isBrowser ? window.location.hostname : 'not in browser'
-});
+if (isDevelopment) {
+  console.log('Final API Configuration:', {
+    baseURL: API_CONFIG.baseURL,
+    version: API_CONFIG.version,
+    fullUrl: API_CONFIG.fullUrl,
+    wsUrl: WS_URL,
+    isDevelopment,
+    isBrowser,
+    hostname: isBrowser ? window.location.hostname : 'not in browser'
+  });
+}
 
 // Helper function to construct API URLs
 export const getApiUrl = (endpoint: string): string => {
@@ -70,31 +77,48 @@ export const getApiUrl = (endpoint: string): string => {
   return `${API_CONFIG.baseURL}/api/${API_CONFIG.version}${url}`;
 };
 
-// API endpoints
+// API Endpoints
 export const API_ENDPOINTS = {
   // Auth
-  LOGIN: '/auth/login',
-  REGISTER: '/auth/register',
-  REFRESH_TOKEN: '/auth/refresh-token',
+  LOGIN: '/api/v1/auth/login',
+  REGISTER: '/api/v1/auth/register',
+  LOGOUT: '/api/v1/auth/logout',
+  REFRESH_TOKEN: '/api/v1/auth/refresh-token',
+  FORGOT_PASSWORD: '/api/v1/auth/forgot-password',
+  RESET_PASSWORD: '/api/v1/auth/reset-password',
   
   // User
-  USER_PROFILE: '/users/profile',
-  USER_SETTINGS: '/users/settings',
-  
-  // Goals
-  GOALS: '/goals',
-  GOAL_BY_ID: (id: string) => `/goals/${id}`,
+  USER_PROFILE: '/api/v1/users/profile',
+  USER_SETTINGS: '/api/v1/users/settings',
+  TOKEN_BALANCE: '/api/v1/users/token-balance',
   
   // Deals
-  DEALS: '/deals',
-  DEAL_BY_ID: (id: string) => `/deals/${id}`,
-  DEAL_SEARCH: '/deals/search',
+  DEALS: '/api/v1/deals',
+  DEALS_SEARCH: '/api/v1/deals/search',
+  DEALS_RECENT: '/api/v1/deals/recent',
+  DEALS_METRICS: '/api/v1/deals/metrics',
+  DEAL_DETAILS: (id: string) => `/api/v1/deals/${id}`,
+  SIMILAR_DEALS: (id: string) => `/api/v1/deals/${id}/similar`,
+  
+  // Goals
+  GOALS: '/api/v1/goals',
+  GOAL_DETAILS: (id: string) => `/api/v1/goals/${id}`,
+  GOAL_ACTIVATE: (id: string) => `/api/v1/goals/${id}/activate`,
+  GOAL_DEACTIVATE: (id: string) => `/api/v1/goals/${id}/deactivate`,
   
   // Notifications
-  NOTIFICATIONS: '/notifications',
-  NOTIFICATION_BY_ID: (id: string) => `/notifications/${id}`,
+  NOTIFICATIONS: '/api/v1/notifications',
+  MARK_NOTIFICATION_READ: (id: string) => `/api/v1/notifications/${id}/read`,
+  NOTIFICATIONS_COUNT: '/api/v1/notifications/count',
+  NOTIFICATION_SETTINGS: '/api/v1/notifications/settings',
+  WEBSOCKET_TOKEN: '/api/v1/notifications/websocket-token',
   
-  // Token
-  TOKEN_BALANCE: '/token/balance',
-  TOKEN_TRANSACTIONS: '/token/transactions',
-} as const; 
+  // Analytics
+  DASHBOARD_ANALYTICS: '/api/v1/analytics/dashboard',
+  PERFORMANCE_ANALYTICS: '/api/v1/analytics/performance',
+  
+  // Wallet
+  TOKEN_TRANSACTIONS: '/api/v1/wallet/transactions',
+} as const;
+
+export default API_ENDPOINTS; 

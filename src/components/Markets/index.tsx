@@ -14,16 +14,12 @@ import {
   Store,
   Tag,
 } from "lucide-react";
+import { marketService, MarketWithStats } from "@/services/markets";
+import { dealsService } from "@/services/api/deals";
+import { DealResponse } from "@/types/deals";
+import { toast } from "sonner";
 
-interface Market {
-  id: string;
-  name: string;
-  status: string;
-  successRate: number;
-  avgResponseTime: number;
-  totalDeals: number;
-}
-
+// Interface for the component's internal use
 interface Deal {
   id: string;
   title: string;
@@ -40,154 +36,83 @@ interface Deal {
   priceHistory?: Array<{ date: string; price: number }>;
 }
 
-// Dummy data for markets
-const dummyMarkets: Market[] = [
-  {
-    id: "1",
-    name: "Amazon",
-    status: "active",
-    successRate: 98,
-    avgResponseTime: 150,
-    totalDeals: 1250,
-  },
-  {
-    id: "2",
-    name: "Walmart",
-    status: "active",
-    successRate: 95,
-    avgResponseTime: 180,
-    totalDeals: 850,
-  },
-  {
-    id: "3",
-    name: "Best Buy",
-    status: "active",
-    successRate: 92,
-    avgResponseTime: 200,
-    totalDeals: 620,
-  },
-];
-
-// Dummy data for deals
-const dummyDeals: Deal[] = [
-  {
-    id: "1",
-    title: "Apple MacBook Pro M2 (2023)",
-    price: 1299.99,
-    originalPrice: 1499.99,
-    source: "Amazon",
-    score: 0.92,
-    url: "#",
-    imageUrl: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1026&q=80",
-    status: "active",
-    marketId: "1",
-    sellerRating: 4.8,
-    expiresAt: new Date(Date.now() + 86400000 * 3).toISOString(), // 3 days from now
-  },
-  {
-    id: "2",
-    title: "Sony WH-1000XM5 Wireless Headphones",
-    price: 299.99,
-    originalPrice: 399.99,
-    source: "Best Buy",
-    score: 0.88,
-    url: "#",
-    imageUrl: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
-    status: "active",
-    marketId: "3",
-    sellerRating: 4.6,
-    expiresAt: new Date(Date.now() + 86400000 * 2).toISOString(), // 2 days from now
-  },
-  {
-    id: "3",
-    title: "Samsung 65\" QLED 4K Smart TV",
-    price: 899.99,
-    originalPrice: 1299.99,
-    source: "Walmart",
-    score: 0.95,
-    url: "#",
-    imageUrl: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
-    status: "active",
-    marketId: "2",
-    sellerRating: 4.7,
-    expiresAt: new Date(Date.now() + 86400000 * 5).toISOString(), // 5 days from now
-  },
-  {
-    id: "4",
-    title: "PlayStation 5 Console Bundle",
-    price: 449.99,
-    originalPrice: 549.99,
-    source: "Amazon",
-    score: 0.89,
-    url: "#",
-    imageUrl: "https://images.unsplash.com/photo-1607853202273-797f1c22a38e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=627&q=80",
-    status: "active",
-    marketId: "1",
-    sellerRating: 4.9,
-    expiresAt: new Date(Date.now() + 86400000).toISOString(), // 1 day from now
-  },
-  {
-    id: "5",
-    title: "iPad Air (5th Generation)",
-    price: 549.99,
-    originalPrice: 649.99,
-    source: "Best Buy",
-    score: 0.87,
-    url: "#",
-    imageUrl: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1163&q=80",
-    status: "active",
-    marketId: "3",
-    sellerRating: 4.5,
-    expiresAt: new Date(Date.now() + 86400000 * 4).toISOString(), // 4 days from now
-  },
-  {
-    id: "6",
-    title: "Dyson V15 Detect Vacuum",
-    price: 649.99,
-    originalPrice: 749.99,
-    source: "Walmart",
-    score: 0.91,
-    url: "#",
-    imageUrl: "https://images.unsplash.com/photo-1558317374-067fb5f30001?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
-    status: "active",
-    marketId: "2",
-    sellerRating: 4.7,
-    expiresAt: new Date(Date.now() + 86400000 * 6).toISOString(), // 6 days from now
-  },
-];
-
 export default function Markets() {
-  const [markets, setMarkets] = useState<Market[]>([]);
+  // Add client-side detection to prevent hydration mismatch
+  const [isMounted, setIsMounted] = useState(false);
+  const [markets, setMarkets] = useState<MarketWithStats[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [selectedMarket, setSelectedMarket] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Set mounted state
   useEffect(() => {
-    // Simulate API call with dummy data
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    // Only fetch data on client-side
+    if (!isMounted) return;
+
+    // Fetch real data from APIs
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        setMarkets(dummyMarkets);
-        setDeals(dummyDeals);
+        // Fetch active markets
+        const marketsResponse = await marketService.getActiveMarkets();
+        const marketsWithStats = marketService.transformMarketsForUI(marketsResponse);
+        setMarkets(marketsWithStats);
+        
+        // Fetch latest deals (limited to 6)
+        const dealsResponse = await dealsService.getDeals({}, 1, 6);
+        
+        // Transform deals to match our UI format
+        const transformedDeals = dealsResponse.map(deal => ({
+          id: deal.id,
+          title: deal.title,
+          price: deal.price,
+          originalPrice: deal.original_price || deal.price * 1.2, // Fallback if no original price
+          source: deal.source || 'Unknown',
+          score: deal.latest_score ? deal.latest_score / 100 : 0.8, // Convert to 0-1 range
+          url: deal.url || '#',
+          imageUrl: deal.image_url,
+          expiresAt: deal.expires_at,
+          status: deal.status || 'active',
+          marketId: deal.market_id || '',
+          sellerRating: deal.seller_info?.rating || 4.5,
+        }));
+        
+        setDeals(transformedDeals);
       } catch (err) {
         setError("Failed to load markets and deals");
         console.error("Error fetching data:", err);
+        toast.error("Failed to load markets and deals");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [isMounted]); // Add isMounted as a dependency
 
   const calculateDiscount = (original: number, current: number) => {
     return Math.round(((original - current) / original) * 100);
   };
 
+  // Show a loading spinner until client-side rendering is ready
+  if (!isMounted) {
+    return (
+      <section className="relative z-10 overflow-hidden py-20 lg:py-25">
+        <div className="container">
+          <div className="flex items-center justify-center py-20">
+            <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-purple"></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+  
   return (
     <section className="relative z-10 overflow-hidden py-20 lg:py-25">
       <div className="container">
@@ -226,7 +151,7 @@ export default function Markets() {
                         <span className="text-sm text-dark-3">Success Rate</span>
                       </div>
                       <p className="mt-2 text-lg font-medium text-white">
-                        {market.successRate}%
+                        {market.stats.successRate}%
                       </p>
                     </div>
                     <div className="rounded-lg bg-dark-7 p-4">
@@ -235,7 +160,7 @@ export default function Markets() {
                         <span className="text-sm text-dark-3">Response</span>
                       </div>
                       <p className="mt-2 text-lg font-medium text-white">
-                        {market.avgResponseTime}ms
+                        {market.stats.avgResponseTime}ms
                       </p>
                     </div>
                   </div>
@@ -263,6 +188,13 @@ export default function Markets() {
                     </option>
                   ))}
                 </select>
+                <a
+                  href={isMounted ? "/dashboard/deals" : "#"}
+                  className="flex items-center gap-2 rounded-md border border-white/[0.12] bg-white/[0.05] px-5 py-3 text-white transition-all duration-300 hover:bg-white hover:text-black"
+                >
+                  <span>View All Deals</span>
+                  <ChevronRight className="h-4 w-4" />
+                </a>
               </div>
             </div>
 
@@ -340,7 +272,7 @@ export default function Markets() {
                       )}
 
                       <a
-                        href={deal.url}
+                        href={isMounted ? deal.url : "#"}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-400 px-4 py-2 text-white transition-all duration-300 hover:opacity-90"
@@ -363,6 +295,16 @@ export default function Markets() {
               <div className="flex items-center justify-center gap-2 rounded-lg bg-red-500/10 px-4 py-3 text-red-500">
                 <AlertCircle className="h-5 w-5" />
                 <p>{error}</p>
+              </div>
+            )}
+
+            {!loading && !error && deals.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <ShoppingBag className="h-16 w-16 text-gray-400 mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">No Deals Found</h3>
+                <p className="text-gray-400 max-w-md">
+                  We couldn&apos;t find any deals at the moment. Please check back later or try another market.
+                </p>
               </div>
             )}
           </div>

@@ -9,8 +9,8 @@ import { ActivityHistory } from '@/components/Dashboard/ActivityHistory';
 import { TokenUsageStats } from '@/components/Dashboard/TokenUsageStats';
 import TokenBalance from '@/components/Dashboard/TokenBalance';
 import ActiveGoals from '@/components/Dashboard/ActiveGoals';
-import RecentDeals from '@/components/Dashboard/RecentDeals';
-import DealMetrics from '@/components/Dashboard/DealMetrics';
+import ClientRecentDeals from '@/components/Dashboard/ClientRecentDeals';
+import ClientDealMetrics from '@/components/Dashboard/ClientDealMetrics';
 import ActivityFeed from '@/components/Dashboard/ActivityFeed';
 import { DashboardSkeleton } from '@/components/Dashboard/DashboardSkeleton';
 import { analyticsService } from '@/services/analytics';
@@ -167,7 +167,7 @@ export default function DashboardPage() {
           {/* Recent Deals */}
           <div className="bg-white/[0.05] rounded-xl p-6 backdrop-blur-lg">
             <h2 className="text-lg font-semibold mb-6">Recent Deals</h2>
-            <RecentDeals />
+            <ClientRecentDeals />
           </div>
         </div>
 
@@ -186,7 +186,7 @@ export default function DashboardPage() {
 
           {/* Deal Metrics */}
           <div className="bg-white/[0.05] rounded-xl p-6 backdrop-blur-lg">
-            <DealMetrics />
+            <ClientDealMetrics />
           </div>
 
           {/* Activity History */}

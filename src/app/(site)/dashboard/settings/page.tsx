@@ -1,230 +1,342 @@
 "use client";
 
-import { useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { motion } from 'framer-motion';
-import { Bell, Mail, Palette, Globe, CreditCard } from 'lucide-react';
-import DashboardHeader from '@/components/Dashboard/DashboardHeader';
-import { API_CONFIG } from '@/services/api/config';
+import { useEffect, useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { userService, UserProfile, UserSettings, UpdateProfileRequest, UpdateSettingsRequest } from "@/services/users";
+import { toast } from "sonner";
 
-const Settings = () => {
-  const { data: session } = useSession();
-  const [preferences, setPreferences] = useState({
-    notification_email: true,
-    notification_push: true,
-    notification_sms: false,
-    deal_alert_threshold: 20,
-    preferred_markets: ['amazon', 'walmart'],
-    preferred_categories: ['electronics', 'home'],
-    currency: 'USD',
-    language: 'en',
-    theme: 'dark'
-  });
-
-  const handlePreferenceChange = async (key: string, value: any) => {
-    try {
-      const apiUrl = `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/auth/preferences`;
-      console.log('Making preferences update request to:', apiUrl);
-      
-      const response = await fetch(apiUrl, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ [key]: value })
-      });
-
-      if (response.ok) {
-        setPreferences(prev => ({ ...prev, [key]: value }));
+export default function SettingsPage() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [profileData, setProfileData] = useState<UserProfile | null>(null);
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    async function fetchUserData() {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // Fetch user profile
+        const profile = await userService.getProfile();
+        setProfileData(profile);
+        
+        // Fetch user settings
+        const userSettings = await userService.getSettings();
+        setSettings(userSettings);
+      } catch (err) {
+        console.error("Error fetching user data:", err);
+        setError("Failed to load user data. Please try again.");
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Failed to update preference:', error);
+    }
+    
+    fetchUserData();
+  }, []);
+  
+  const handleUpdateProfile = async () => {
+    if (!profileData) return;
+    
+    try {
+      setIsSaving(true);
+      
+      const updatedData: UpdateProfileRequest = {
+        name: profileData.name,
+        email: profileData.email,
+        // Add other fields as needed
+      };
+      
+      // Update profile
+      const result = await userService.updateProfile(updatedData);
+      
+      // Update local state
+      setProfileData(result);
+      
+      toast.success("Profile updated successfully!");
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      toast.error("Failed to update profile. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
-      <DashboardHeader heading="Settings" />
+  
+  const handleUpdateSettings = async () => {
+    if (!settings) return;
+    
+    try {
+      setIsSaving(true);
       
-      <main className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Settings</h1>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Settings Column */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Profile Section */}
-            <div className="bg-white/[0.05] rounded-xl p-6 backdrop-blur-lg">
-              <h2 className="text-xl font-bold mb-6">Profile</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Email</label>
-                  <input
-                    type="email"
-                    value={session?.user?.email || ''}
-                    disabled
-                    className="w-full px-4 py-2 bg-white/[0.05] rounded-lg border border-white/10 focus:border-purple focus:ring-1 focus:ring-purple"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Name</label>
-                  <input
-                    type="text"
-                    placeholder="Your name"
-                    className="w-full px-4 py-2 bg-white/[0.05] rounded-lg border border-white/10 focus:border-purple focus:ring-1 focus:ring-purple"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Notifications Section */}
-            <div className="bg-white/[0.05] rounded-xl p-6 backdrop-blur-lg">
-              <h2 className="text-xl font-bold mb-6">Notifications</h2>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Mail className="w-5 h-5 text-purple" />
-                    <div>
-                      <div className="font-medium">Email Notifications</div>
-                      <div className="text-sm text-white/70">Get deal alerts via email</div>
-                    </div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={preferences.notification_email}
-                      onChange={(e) => handlePreferenceChange('notification_email', e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-white/10 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Bell className="w-5 h-5 text-purple" />
-                    <div>
-                      <div className="font-medium">Push Notifications</div>
-                      <div className="text-sm text-white/70">Get instant deal alerts</div>
-                    </div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={preferences.notification_push}
-                      onChange={(e) => handlePreferenceChange('notification_push', e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-white/10 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple"></div>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Preferences Section */}
-            <div className="bg-white/[0.05] rounded-xl p-6 backdrop-blur-lg">
-              <h2 className="text-xl font-bold mb-6">Preferences</h2>
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Deal Alert Threshold (%)</label>
-                  <input
-                    type="number"
-                    value={preferences.deal_alert_threshold}
-                    onChange={(e) => handlePreferenceChange('deal_alert_threshold', parseInt(e.target.value))}
-                    min="0"
-                    max="100"
-                    className="w-full px-4 py-2 bg-white/[0.05] rounded-lg border border-white/10 focus:border-purple focus:ring-1 focus:ring-purple"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Preferred Markets</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['amazon', 'walmart', 'ebay', 'target'].map(market => (
-                      <label key={market} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={preferences.preferred_markets.includes(market)}
-                          onChange={(e) => {
-                            const newMarkets = e.target.checked
-                              ? [...preferences.preferred_markets, market]
-                              : preferences.preferred_markets.filter(m => m !== market);
-                            handlePreferenceChange('preferred_markets', newMarkets);
-                          }}
-                          className="rounded border-white/10 text-purple focus:ring-purple bg-white/[0.05]"
-                        />
-                        <span className="capitalize">{market}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Preferred Categories</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['electronics', 'home', 'fashion', 'books', 'toys', 'sports'].map(category => (
-                      <label key={category} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={preferences.preferred_categories.includes(category)}
-                          onChange={(e) => {
-                            const newCategories = e.target.checked
-                              ? [...preferences.preferred_categories, category]
-                              : preferences.preferred_categories.filter(c => c !== category);
-                            handlePreferenceChange('preferred_categories', newCategories);
-                          }}
-                          className="rounded border-white/10 text-purple focus:ring-purple bg-white/[0.05]"
-                        />
-                        <span className="capitalize">{category}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - Quick Settings */}
-          <div className="space-y-8">
-            <div className="bg-white/[0.05] rounded-xl p-6 backdrop-blur-lg">
-              <h2 className="text-xl font-bold mb-6">Quick Settings</h2>
-              <div className="space-y-4">
-                <button className="w-full px-4 py-3 bg-purple/20 hover:bg-purple/30 rounded-lg text-left transition flex items-center space-x-3">
-                  <Globe className="w-5 h-5" />
-                  <div>
-                    <div className="font-semibold">Language</div>
-                    <div className="text-sm text-white/70">English (US)</div>
-                  </div>
-                </button>
-                <button className="w-full px-4 py-3 bg-purple/20 hover:bg-purple/30 rounded-lg text-left transition flex items-center space-x-3">
-                  <CreditCard className="w-5 h-5" />
-                  <div>
-                    <div className="font-semibold">Currency</div>
-                    <div className="text-sm text-white/70">USD ($)</div>
-                  </div>
-                </button>
-                <button className="w-full px-4 py-3 bg-purple/20 hover:bg-purple/30 rounded-lg text-left transition flex items-center space-x-3">
-                  <Palette className="w-5 h-5" />
-                  <div>
-                    <div className="font-semibold">Theme</div>
-                    <div className="text-sm text-white/70">Dark Mode</div>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-white/[0.05] rounded-xl p-6 backdrop-blur-lg">
-              <h2 className="text-xl font-bold mb-6">Account</h2>
-              <div className="space-y-4">
-                <button className="w-full px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-500 rounded-lg transition">
-                  Delete Account
-                </button>
-              </div>
-            </div>
+      const updatedSettings: UpdateSettingsRequest = {
+        email_notifications: settings.email_notifications,
+        theme: settings.theme,
+        notification_preferences: settings.notification_preferences,
+      };
+      
+      // Update settings
+      const result = await userService.updateSettings(updatedSettings);
+      
+      // Update local state
+      setSettings(result);
+      
+      toast.success("Settings updated successfully!");
+    } catch (err) {
+      console.error("Error updating settings:", err);
+      toast.error("Failed to update settings. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-10">
+        <h1 className="text-2xl font-bold mb-6">Settings</h1>
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 bg-white/5 rounded-md w-full max-w-xs"></div>
+          <div className="grid gap-4">
+            <div className="h-24 bg-white/5 rounded-lg"></div>
+            <div className="h-48 bg-white/5 rounded-lg"></div>
           </div>
         </div>
-      </main>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="container mx-auto py-10">
+        <h1 className="text-2xl font-bold mb-6">Settings</h1>
+        <div className="bg-red-900/20 border border-red-500 text-red-200 p-4 rounded-md">
+          <p>{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-2 px-4 py-2 bg-red-800 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="container mx-auto py-10">
+      <h1 className="text-2xl font-bold mb-6">Settings</h1>
+      
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="profile">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Settings</CardTitle>
+              <CardDescription>
+                Manage your profile information and preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="name" className="text-sm font-medium">Display Name</label>
+                  <input
+                    id="name"
+                    type="text"
+                    className="w-full p-2 rounded-md bg-white/5 border border-white/10 focus:border-primary focus:outline-none"
+                    value={profileData?.name || ''}
+                    onChange={(e) => setProfileData(prev => prev ? { ...prev, name: e.target.value } : null)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium">Email</label>
+                  <input
+                    id="email"
+                    type="email"
+                    className="w-full p-2 rounded-md bg-white/5 border border-white/10 focus:border-primary focus:outline-none"
+                    value={profileData?.email || ''}
+                    disabled
+                  />
+                  <p className="text-xs text-white/60">Your email cannot be changed</p>
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="bio" className="text-sm font-medium">Bio</label>
+                  <textarea
+                    id="bio"
+                    rows={4}
+                    className="w-full p-2 rounded-md bg-white/5 border border-white/10 focus:border-primary focus:outline-none"
+                    placeholder="Tell us about yourself"
+                    value={''}
+                    onChange={(e) => {
+                      // Since bio is not in the UserProfile interface, we don't update it
+                      // This is just a placeholder until the backend supports bio
+                    }}
+                  ></textarea>
+                  <p className="text-xs text-white/60">This feature is coming soon.</p>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <button
+                onClick={handleUpdateProfile}
+                disabled={isSaving}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="notifications">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notification Settings</CardTitle>
+              <CardDescription>
+                Configure how you receive notifications
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Email Notifications</p>
+                  <p className="text-sm text-white/60">Receive email notifications for important updates</p>
+                </div>
+                <Switch 
+                  checked={settings?.email_notifications || false}
+                  onCheckedChange={(checked) => 
+                    setSettings(prev => prev ? { 
+                      ...prev, 
+                      email_notifications: checked 
+                    } : null)
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Deal Updates</p>
+                  <p className="text-sm text-white/60">Get notified when deals are updated</p>
+                </div>
+                <Switch 
+                  checked={settings?.notification_preferences?.deals || false}
+                  onCheckedChange={(checked) => 
+                    setSettings(prev => prev ? { 
+                      ...prev, 
+                      notification_preferences: { 
+                        ...prev.notification_preferences, 
+                        deals: checked 
+                      } 
+                    } : null)
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">System Notifications</p>
+                  <p className="text-sm text-white/60">Receive system notifications and updates</p>
+                </div>
+                <Switch 
+                  checked={settings?.notification_preferences?.system || false}
+                  onCheckedChange={(checked) => 
+                    setSettings(prev => prev ? { 
+                      ...prev, 
+                      notification_preferences: { 
+                        ...prev.notification_preferences, 
+                        system: checked 
+                      } 
+                    } : null)
+                  }
+                />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <button
+                onClick={handleUpdateSettings}
+                disabled={isSaving}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="appearance">
+          <Card>
+            <CardHeader>
+              <CardTitle>Appearance Settings</CardTitle>
+              <CardDescription>
+                Customize how the application looks
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Dark Mode</p>
+                  <p className="text-sm text-white/60">Use dark theme throughout the application</p>
+                </div>
+                <Switch 
+                  checked={settings?.theme === 'dark'}
+                  onCheckedChange={(checked) => 
+                    setSettings(prev => prev ? { 
+                      ...prev, 
+                      theme: checked ? 'dark' : 'light' 
+                    } : null)
+                  }
+                />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <button
+                onClick={handleUpdateSettings}
+                disabled={isSaving}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="security">
+          <Card>
+            <CardHeader>
+              <CardTitle>Security Settings</CardTitle>
+              <CardDescription>
+                Manage your account security settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Two-Factor Authentication</p>
+                  <p className="text-sm text-white/60">Add an extra layer of security to your account</p>
+                </div>
+                <Switch 
+                  checked={false}
+                  disabled={true}
+                />
+              </div>
+              <div className="pt-4">
+                <button className="px-4 py-2 bg-white/10 text-white rounded-md hover:bg-white/20 transition-colors">
+                  Change Password
+                </button>
+              </div>
+              <p className="text-sm text-white/60 mt-2">
+                Note: Two-factor authentication and password change functionality will be available soon.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
-};
-
-export default Settings; 
+} 

@@ -16,10 +16,20 @@ interface Deal {
 }
 
 const RecentDeals = () => {
-  const [deals, setDeals] = useState<Deal[]>([]);
+  const [deals, setDeals] = useState<Deal[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Set mounted state first
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
+    // Only fetch data on client-side
+    if (!isMounted) return;
+    
     const fetchDeals = async () => {
       try {
         // Use the full API URL instead of a relative path
@@ -27,17 +37,37 @@ const RecentDeals = () => {
         console.log('Making API request to:', apiUrl);
         
         const response = await fetch(apiUrl);
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        
         const data = await response.json();
-        setDeals(data.deals);
+        setDeals(data.deals || []);
       } catch (error) {
         console.error('Error fetching recent deals:', error);
+        setError('Failed to load deals');
+        setDeals([]);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchDeals();
-  }, []);
+  }, [isMounted]); // Add isMounted as a dependency
+
+  // Show loading state until component is mounted
+  if (!isMounted) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="animate-pulse">
+            <div className="h-24 bg-white/[0.1] rounded-lg"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -51,7 +81,18 @@ const RecentDeals = () => {
     );
   }
 
-  if (deals.length === 0) {
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <ShoppingCart className="w-12 h-12 text-white/30 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold mb-2">Error Loading Deals</h3>
+        <p className="text-white/70">{error}</p>
+      </div>
+    );
+  }
+
+  // Safely check if deals exist and have length
+  if (!deals || deals.length === 0) {
     return (
       <div className="text-center py-8">
         <ShoppingCart className="w-12 h-12 text-white/30 mx-auto mb-4" />
@@ -72,7 +113,7 @@ const RecentDeals = () => {
             {/* Product Image */}
             <div className="relative w-16 h-16 flex-shrink-0">
               <Image
-                src={deal.imageUrl}
+                src={deal.imageUrl || '/images/placeholder.jpg'}
                 alt={deal.title}
                 fill
                 className="object-cover rounded-lg"
@@ -105,7 +146,7 @@ const RecentDeals = () => {
 
             {/* View Deal Button */}
             <a
-              href={deal.url}
+              href={isMounted ? deal.url : "#"}
               target="_blank"
               rel="noopener noreferrer"
               className="w-8 h-8 flex items-center justify-center rounded-full bg-purple/20 hover:bg-purple/30 transition flex-shrink-0"

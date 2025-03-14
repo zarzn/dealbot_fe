@@ -36,6 +36,9 @@ export interface Deal {
   latest_score?: number;
   deal_metadata?: Record<string, any>;
   price_metadata?: Record<string, any>;
+  tags?: string[];
+  verified?: boolean;
+  featured?: boolean;
 }
 
 export interface DealSuggestion {
@@ -118,6 +121,9 @@ export interface AIAnalysis {
   recommendations: string[];
   analysis_date: string;
   expiration_analysis?: string;
+  summary?: string;
+  pros?: string[];
+  cons?: string[];
 }
 
 export interface DealTrend {
@@ -170,15 +176,47 @@ export interface DealBase {
 }
 
 export interface DealSearch {
+  /** Optional search query text */
   query?: string;
+  /** Product category filter */
   category?: string;
+  /** Minimum price filter */
   min_price?: number;
+  /** Maximum price filter */
   max_price?: number;
+  /** Field to sort results by */
   sort_by?: string;
+  /** Sort order (asc/desc) */
   sort_order?: string;
+  /** Maximum number of results to return */
   limit?: number;
+  /** Number of results to skip for pagination */
   offset?: number;
+  /** Whether to use real-time web scraping when no results are found */
   use_realtime_scraping?: boolean;
+  /** 
+   * Whether to use AI to enhance search results.
+   * When enabled, AI will:
+   * 1. Analyze the search query to extract structured parameters
+   * 2. Filter results based on relevance to the original query
+   * 3. Generate product recommendations and scores
+   */
+  use_ai_enhanced_search?: boolean;
+  
+  /** Page number for pagination */
+  page?: number;
+  /** Number of items per page */
+  page_size?: number;
+  /** Additional filters */
+  filters?: {
+    category?: string;
+    price_min?: number;
+    price_max?: number;
+    featured?: boolean;
+    verified?: boolean;
+    tags?: string[];
+    [key: string]: any;
+  };
 }
 
 export interface DealResponse extends DealBase {
@@ -209,4 +247,66 @@ export interface DealResponse extends DealBase {
     warranty?: string;
   };
   latest_score?: number;
+  tags?: string[];
+  verified?: boolean;
+  featured?: boolean;
+}
+
+/**
+ * Request model for creating a new deal
+ */
+export interface CreateDealRequest {
+  title: string;
+  description: string;
+  url?: string;
+  price?: number;
+  currency?: string;
+  category?: string;
+  deal_type?: string;
+  image_url?: string;
+  tags?: string[];
+  merchant?: {
+    name: string;
+    rating?: number;
+    website?: string;
+  };
+  shipping_info?: {
+    price?: number;
+    estimated_delivery?: string;
+    free_shipping?: boolean;
+    international?: boolean;
+  };
+  coupon_code?: string;
+  discount_percentage?: number;
+  ends_at?: string;
+}
+
+/**
+ * Request model for updating an existing deal
+ */
+export interface UpdateDealRequest {
+  title?: string;
+  description?: string;
+  url?: string;
+  price?: number;
+  currency?: string;
+  category?: string;
+  deal_type?: string;
+  image_url?: string;
+  tags?: string[];
+  merchant?: {
+    name?: string;
+    rating?: number;
+    website?: string;
+  };
+  shipping_info?: {
+    price?: number;
+    estimated_delivery?: string;
+    free_shipping?: boolean;
+    international?: boolean;
+  };
+  coupon_code?: string;
+  discount_percentage?: number;
+  status?: string;
+  ends_at?: string;
 }

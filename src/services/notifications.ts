@@ -1,250 +1,222 @@
-import { api } from '@/lib/api';
-import { getSession } from 'next-auth/react';
-import axios from 'axios';
-import { 
-  Notification as ApiNotification, 
-  NotificationPreferences as ApiNotificationPreferences 
-} from '@/types/api';
-import { API_CONFIG, WS_URL } from '@/services/api/config';
+import { apiClient } from '@/lib/api-client';
+import { toast } from 'sonner';
 
-// Local service interfaces - to be eventually updated to match API types
+// Notification type definition
 export interface Notification {
   id: string;
   user_id: string;
   title: string;
   message: string;
-  type: string;
-  status: string; // Added to match API type
+  type: 'info' | 'success' | 'warning' | 'error';
   read: boolean;
+  link?: string;
+  deal_id?: string;
   created_at: string;
+  expires_at?: string;
+  meta?: Record<string, any>;
 }
 
-export interface NotificationPreferences {
-  enabled_channels: string[];
-  notification_frequency: Record<string, string>;
-  time_windows: Record<string, {
-    start_time: string;
-    end_time: string;
-    timezone: string;
-  }>;
-  muted_until: string | null;
-  do_not_disturb: boolean;
-  email_digest: boolean;
-  push_enabled: boolean;
-  minimum_priority: string;
-}
-
-// Create axios instance with default config
-const notificationsApi = axios.create({
-  baseURL: `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/notifications`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Log the API URLs in development mode
-if (process.env.NODE_ENV === 'development') {
-  console.log('Notification Service using API URL:', `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/notifications`);
-  console.log('Notification Service using WS URL:', WS_URL);
-}
-
-// Add auth token to requests
-notificationsApi.interceptors.request.use(async (config) => {
-  const session = await getSession();
-  if (session?.accessToken) {
-    config.headers.Authorization = `Bearer ${session.accessToken}`;
-  }
-  return config;
-});
-
-// Helper to convert API notification to service notification format if needed
-const convertApiNotification = (apiNotification: ApiNotification): ApiNotification => {
-  return apiNotification;
-};
-
-// Helper to convert service preference to API preference format if needed
-const convertToApiPreference = (pref: NotificationPreferences): ApiNotificationPreferences => {
-  return pref as unknown as ApiNotificationPreferences;
-};
-
-interface WebSocketCallbacks {
-  onNotification: (notification: Notification) => void;
+// WebSocket connection options
+export interface WebSocketOptions {
+  onNotification?: (notification: Notification) => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
   onError?: (error: Event) => void;
 }
 
-export class NotificationService {
-  private ws: WebSocket | null = null;
-  private callbacks: WebSocketCallbacks = {
-    onNotification: () => {} // Default empty handler to satisfy the type
-  };
-  private connectAttempts = 0;
-  private readonly maxReconnectAttempts = 5;
-  private readonly reconnectDelay = 1000; // Base delay in milliseconds
-  
-  private lastNotificationTime = 0;
-  private readonly notificationThrottle = 2000; // 2 seconds throttle
-  private notificationQueue: Set<string> = new Set(); // Queue for deduplication
+/**
+ * Notification API service for interacting with notification endpoints and WebSocket
+ */
+class NotificationApiService {
+  private static BASE_URL = `/api/v1/notifications`;
+  private webSocket: WebSocket | null = null;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
 
-  constructor() {
-    // Log URLs in development mode
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[NotificationService] Using WebSocket URL:', WS_URL);
-      console.log('[NotificationService] Using API URL:', API_CONFIG.baseURL);
-    }
-  }
-
-  // Fetch notifications from the API with throttling
-  async getNotifications(): Promise<{ notifications: Notification[] }> {
-    const response = await api.get('/notifications');
-    return response.data;
-  }
-
-  async markAsRead(notificationId: string): Promise<void> {
-    await api.put(`/notifications/${notificationId}/read`);
-  }
-
-  async markMultipleAsRead(notificationIds: string[]) {
-    const response = await api.put<Notification[]>('/notifications/read', { notification_ids: notificationIds });
-    return response.data;
-  }
-
-  async getPreferences(): Promise<NotificationPreferences> {
-    const response = await api.get('/notifications/preferences');
-    return response.data;
-  }
-
-  async updatePreferences(preferences: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
-    const response = await api.put('/notifications/preferences', preferences);
-    return response.data;
-  }
-
-  async clearAll(): Promise<void> {
-    await api.delete('/notifications');
-  }
-
-  async markAllAsRead(): Promise<void> {
-    await api.put('/notifications/read-all');
-  }
-
-  // WebSocket connection for real-time notifications
-  async setupWebSocket(callbacks: WebSocketCallbacks): Promise<() => void> {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      console.log('[NotificationService] WebSocket already connected');
-      return () => this.ws?.close();
-    }
-
-    console.log('[NotificationService] Setting up WebSocket...');
-    
+  /**
+   * Get all notifications for the current user
+   * @param page Page number
+   * @param limit Items per page
+   * @returns Promise with notifications list
+   */
+  async getNotifications(page: number = 1, limit: number = 20): Promise<{ 
+    notifications: Notification[]; 
+    total: number; 
+    unread: number; 
+  }> {
     try {
-      // Close existing connection if any
-      if (this.ws) {
-        this.ws.close();
-        this.ws = null;
-      }
-
-      const session = await getSession();
-      if (!session?.accessToken) {
-        throw new Error('No access token available');
-      }
-
-      this.ws = new WebSocket(`${WS_URL}/notifications/ws?token=${session.accessToken}`);
-
-      this.ws.onopen = () => {
-        console.log('[NotificationService] WebSocket connected');
-        this.connectAttempts = 0;
-        callbacks.onConnect?.();
-      };
-
-      this.ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          
-          // Handle notification with throttling and deduplication
-          if (message.type === 'notification' && message.data) {
-            this.handleNotification(message.data, callbacks);
-          } else if (message.type === 'error') {
-            console.error('[NotificationService] Server error:', message.message);
-            callbacks.onError?.(new ErrorEvent('error', { message: message.message }));
-          }
-        } catch (error) {
-          console.error('[NotificationService] Error processing message:', error);
-          callbacks.onError?.(new ErrorEvent('error', { error: error as Error }));
-        }
-      };
-
-      this.ws.onclose = (event) => {
-        console.log('[NotificationService] WebSocket closed:', event.code, event.reason);
-        callbacks.onDisconnect?.();
-        if (event.code !== 1000) {
-          this.attemptReconnect();
-        }
-      };
-
-      this.ws.onerror = (error) => {
-        console.error('[NotificationService] WebSocket error:', error);
-        callbacks.onError?.(error);
-      };
-
-      return () => {
-        if (this.ws) {
-          this.ws.close();
-          this.ws = null;
-        }
-      };
+      const response = await apiClient.get(
+        `${NotificationApiService.BASE_URL}?page=${page}&limit=${limit}`
+      );
+      return response.data;
     } catch (error) {
-      console.error('[NotificationService] Setup error:', error);
-      callbacks.onError?.(new ErrorEvent('error', { error: error as Error }));
+      console.error('Error fetching notifications:', error);
       throw error;
     }
   }
 
-  private handleNotification(notification: Notification, callbacks: WebSocketCallbacks) {
-    const now = Date.now();
+  /**
+   * Mark a notification as read
+   * @param id Notification ID
+   * @returns Promise with operation result
+   */
+  async markAsRead(id: string): Promise<void> {
+    try {
+      await apiClient.put(`${NotificationApiService.BASE_URL}/${id}/read`);
+    } catch (error) {
+      console.error(`Error marking notification ${id} as read:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark all notifications as read
+   * @returns Promise with operation result
+   */
+  async markAllAsRead(): Promise<void> {
+    try {
+      await apiClient.put(`${NotificationApiService.BASE_URL}/read-all`);
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clear all notifications
+   * @returns Promise with operation result
+   */
+  async clearAll(): Promise<void> {
+    try {
+      await apiClient.delete(`${NotificationApiService.BASE_URL}/clear-all`);
+    } catch (error) {
+      console.error('Error clearing all notifications:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a notification
+   * @param id Notification ID
+   * @returns Promise with operation result
+   */
+  async deleteNotification(id: string): Promise<void> {
+    try {
+      await apiClient.delete(`${NotificationApiService.BASE_URL}/${id}`);
+    } catch (error) {
+      console.error(`Error deleting notification ${id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Setup WebSocket connection for real-time notifications
+   * @param options WebSocket connection options
+   * @returns Cleanup function
+   */
+  async setupWebSocket(options: WebSocketOptions): Promise<() => void> {
+    try {
+      // Clean up any existing connection
+      this.cleanupWebSocket();
+      
+      // Get authentication token for WebSocket
+      const tokenResponse = await apiClient.get(`${NotificationApiService.BASE_URL}/websocket-token`);
+      const token = tokenResponse.data.token;
+      
+      // Create WebSocket URL (adjust based on your API configuration)
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = process.env.NEXT_PUBLIC_WS_HOST || window.location.host;
+      const wsUrl = `${protocol}//${host}/api/v1/notifications/ws?token=${token}`;
+      
+      console.log('Connecting to WebSocket:', wsUrl);
+      this.webSocket = new WebSocket(wsUrl);
+      
+      // Setup event handlers
+      this.webSocket.onopen = () => {
+        console.log('WebSocket connection established');
+        this.reconnectAttempts = 0;
+        if (options.onConnect) {
+          options.onConnect();
+        }
+      };
+      
+      this.webSocket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('WebSocket message received:', data);
+          
+          if (data.type === 'notification' && options.onNotification) {
+            options.onNotification(data.notification);
+          }
+        } catch (error) {
+          console.error('Error processing WebSocket message:', error);
+        }
+      };
+      
+      this.webSocket.onclose = (event) => {
+        console.log('WebSocket connection closed:', event);
+        
+        if (options.onDisconnect) {
+          options.onDisconnect();
+        }
+        
+        // Attempt to reconnect if not a clean close
+        if (!event.wasClean && this.reconnectAttempts < this.maxReconnectAttempts) {
+          const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+          console.log(`Attempting to reconnect in ${delay / 1000} seconds...`);
+          
+          this.reconnectTimeout = setTimeout(() => {
+            this.reconnectAttempts++;
+            this.setupWebSocket(options);
+          }, delay);
+        }
+      };
+      
+      this.webSocket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        if (options.onError) {
+          options.onError(error);
+        }
+      };
+      
+      // Return cleanup function
+      return () => this.cleanupWebSocket();
+    } catch (error) {
+      console.error('Error setting up WebSocket:', error);
+      toast.error('Failed to connect to notification service');
+      
+      // Return no-op cleanup function
+      return () => {};
+    }
+  }
+  
+  /**
+   * Clean up WebSocket connection
+   */
+  private cleanupWebSocket(): void {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
     
-    // Check throttle
-    if (now - this.lastNotificationTime < this.notificationThrottle) {
-      // Queue notification for later if not already queued
-      if (!this.notificationQueue.has(notification.id)) {
-        this.notificationQueue.add(notification.id);
-        setTimeout(() => {
-          this.processQueuedNotification(notification, callbacks);
-        }, this.notificationThrottle);
+    if (this.webSocket) {
+      // Remove all event listeners
+      this.webSocket.onopen = null;
+      this.webSocket.onmessage = null;
+      this.webSocket.onclose = null;
+      this.webSocket.onerror = null;
+      
+      // Close connection if not already closed
+      if (this.webSocket.readyState === WebSocket.OPEN || 
+          this.webSocket.readyState === WebSocket.CONNECTING) {
+        this.webSocket.close();
       }
-      return;
+      
+      this.webSocket = null;
     }
-    
-    // Process notification immediately
-    this.processNotification(notification, callbacks);
-  }
-
-  private processQueuedNotification(notification: Notification, callbacks: WebSocketCallbacks) {
-    this.notificationQueue.delete(notification.id);
-    this.processNotification(notification, callbacks);
-  }
-
-  private processNotification(notification: Notification, callbacks: WebSocketCallbacks) {
-    this.lastNotificationTime = Date.now();
-    callbacks.onNotification(notification);
-  }
-
-  private attemptReconnect() {
-    if (this.connectAttempts >= this.maxReconnectAttempts) {
-      console.log('[NotificationService] Max reconnect attempts reached');
-      return;
-    }
-    
-    const delay = this.reconnectDelay * Math.pow(2, this.connectAttempts);
-    console.log(`[NotificationService] Attempting to reconnect in ${delay}ms (attempt ${this.connectAttempts + 1}/${this.maxReconnectAttempts})`);
-    
-    setTimeout(() => {
-      this.connectAttempts++;
-      this.setupWebSocket(this.callbacks).catch(error => {
-        console.error('[NotificationService] Reconnect failed:', error);
-      });
-    }, delay);
   }
 }
 
-export const notificationService = new NotificationService();
+// Export a singleton instance for use across the app
+export const notificationService = new NotificationApiService();

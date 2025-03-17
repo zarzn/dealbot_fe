@@ -84,8 +84,8 @@ export default function WalletPage() {
                 onConnectionChange={handleWalletConnection}
               />
             </div>
-            <div className="text-3xl font-bold mb-2">{balance.toFixed(2)} AIDL</div>
-            <p className="text-white/70">≈ ${(balance * 0.1).toFixed(2)} USD</p>
+            <div className="text-3xl font-bold mb-2">{typeof balance === 'number' ? balance.toFixed(2) : '0.00'} AIDL</div>
+            <p className="text-white/70">≈ ${typeof balance === 'number' ? (balance * 0.1).toFixed(2) : '0.00'} USD</p>
           </div>
 
           {/* Quick Actions */}

@@ -1,8 +1,8 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { authService } from "@/services/auth";
 import SocialSignup from "../SocialSignup/index";
@@ -21,6 +21,22 @@ const SignIn: React.FC = () => {
   const [remember, setRemember] = useState(false);
   const [isPassword, setIsPassword] = useState(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Check for session expired reason
+  useEffect(() => {
+    const reason = searchParams.get('reason');
+    if (reason === 'session_expired') {
+      toast.error('Your session has expired. Please sign in again.', {
+        duration: 5000,
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+      });
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

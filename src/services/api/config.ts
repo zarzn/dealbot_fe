@@ -118,7 +118,7 @@ export const API_ENDPOINTS = {
   PERFORMANCE_ANALYTICS: '/api/v1/analytics/performance',
   
   // Wallet
-  TOKEN_TRANSACTIONS: '/api/v1/wallet/transactions',
+  TOKEN_TRANSACTIONS: '/api/v1/token/transactions',
 } as const;
 
 export default API_ENDPOINTS; 

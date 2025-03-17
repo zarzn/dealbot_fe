@@ -51,7 +51,7 @@ export default function TokenCostModal({
           </div>
           <div>
             <div className="font-medium">Cost: {cost.tokenCost} AIDL</div>
-            <div className="text-sm text-white/70">Balance: {balance.toFixed(2)} AIDL</div>
+            <div className="text-sm text-white/70">Balance: {typeof balance === 'number' ? balance.toFixed(2) : '0.00'} AIDL</div>
           </div>
         </div>
 
@@ -74,7 +74,7 @@ export default function TokenCostModal({
             <div>
               <p className="font-medium">Insufficient Balance</p>
               <p className="text-red-400/70 mt-1">
-                You need {(cost.tokenCost - balance).toFixed(2)} more AIDL tokens to perform this search.
+                You need {typeof balance === 'number' && typeof cost.tokenCost === 'number' ? (cost.tokenCost - balance).toFixed(2) : '0.00'} more AIDL tokens to perform this search.
               </p>
             </div>
           </div>

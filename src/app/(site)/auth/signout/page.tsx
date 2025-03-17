@@ -6,6 +6,7 @@ import { signOut } from "next-auth/react";
 import { authService } from '@/services/auth';
 import { clearAuthCookies } from '@/lib/authCookies';
 import { API_CONFIG } from '@/services/api/config';
+import { FORCE_LOGOUT_EVENT } from '@/lib/api-client';
 
 export default function SignOutPage() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function SignOutPage() {
         
         // Immediately force the session state to appear logged out 
         // by dispatching a custom event that the Header can listen for
-        window.dispatchEvent(new Event('force-logout'));
+        window.dispatchEvent(new Event(FORCE_LOGOUT_EVENT));
         
         // Clear any local tokens using auth service
         authService.clearTokens();
@@ -37,11 +38,11 @@ export default function SignOutPage() {
         
         setMessage("Calling server-side sign-out API...");
         // Use full API URL
-        const signoutUrl = `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/auth/signout`;
-        console.log('Making signout request to:', signoutUrl);
+        const signoutUrl = `${API_CONFIG.baseURL}/api/${API_CONFIG.version}/auth/logout`;
+        console.log('Making logout request to:', signoutUrl);
         
         await fetch(signoutUrl, {
-          method: 'POST',
+          method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
           },

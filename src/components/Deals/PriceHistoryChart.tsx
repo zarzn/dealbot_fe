@@ -51,7 +51,7 @@ export default function PriceHistoryChart({ data, currentPrice }: PriceHistoryCh
   };
 
   const formatPrice = (price: number) => {
-    return `$${price.toFixed(2)}`;
+    return `$${typeof price === 'number' ? price.toFixed(2) : '0.00'}`;
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {

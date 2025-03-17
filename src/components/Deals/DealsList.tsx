@@ -198,7 +198,7 @@ export const DealsList: React.FC<DealsListProps> = ({
     if (onCreateDeal) {
       onCreateDeal();
     } else {
-      router.push('/deals/create');
+      router.push('/dashboard/goals/create');
     }
   }, [isMounted, onCreateDeal, router]);
 
@@ -307,7 +307,10 @@ export const DealsList: React.FC<DealsListProps> = ({
     <div className="space-y-6" style={{ maxWidth }}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-xl font-semibold">Deals</h2>
+        <div>
+          <h2 className="text-xl font-semibold">Deals</h2>
+          <p className="text-sm text-white/60">Discovered based on your goals</p>
+        </div>
         {showCreateButton && (
           <Button 
             onClick={handleCreateClick}
@@ -316,7 +319,7 @@ export const DealsList: React.FC<DealsListProps> = ({
             disabled={isLoading || externalLoading}
           >
             <Plus className="w-5 h-5" />
-            New Deal
+            Create Goal for Deals
           </Button>
         )}
       </div>
@@ -486,10 +489,12 @@ export const DealsList: React.FC<DealsListProps> = ({
                   <div className="flex items-center gap-2">
                     <DollarSign className="w-4 h-4 text-white/50" />
                     <span>
-                      ${deal.price?.toFixed(2) || 'N/A'}
-                      {deal.original_price && (
+                      {typeof deal.price === 'number' 
+                        ? `$${deal.price.toFixed(2)}` 
+                        : 'N/A'}
+                      {deal.original_price && typeof deal.original_price === 'number' && (
                         <span className="text-white/50 line-through ml-2">
-                          ${deal.original_price?.toFixed(2)}
+                          ${deal.original_price.toFixed(2)}
                         </span>
                       )}
                     </span>

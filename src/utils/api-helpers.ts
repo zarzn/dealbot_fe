@@ -1,5 +1,6 @@
 import { AxiosError } from 'axios';
 import { ApiError } from '@/types/api';
+import { API_CONFIG } from '@/services/api/config';
 
 export const isApiError = (error: any): error is AxiosError<ApiError> => {
   return error?.isAxiosError === true;
@@ -40,4 +41,27 @@ export const parseApiResponse = <T>(response: any): T => {
     return response.data as T;
   }
   throw new Error('Invalid API response format');
+};
+
+/**
+ * Check if the backend is available
+ * @returns {Promise<boolean>} Returns true if backend responds, false otherwise
+ */
+export const checkBackendConnection = async (): Promise<boolean> => {
+  try {
+    // Use a minimal endpoint like health check that doesn't require auth
+    const response = await fetch(`${API_CONFIG.baseURL}/api/v1/health`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // Short timeout to quickly detect issues
+      signal: AbortSignal.timeout(5000),
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Backend connection check failed:', error);
+    return false;
+  }
 }; 

@@ -1,6 +1,7 @@
 import { apiClient } from '@/lib/api-client';
 import { API_ENDPOINTS } from './api/config';
 
+// Frontend interface for simplified notification preferences display
 export interface NotificationPreferences {
   email_alerts: boolean;
   browser_alerts: boolean;
@@ -12,14 +13,36 @@ export interface NotificationPreferences {
   weekly_summary: boolean;
 }
 
+// This matches the actual backend structure
 export interface UserSettings {
   id: string;
   user_id: string;
-  currency: string;
-  language: string;
   theme: string;
+  language: string;
+  timezone: string;
+  enabled_channels: string[];
+  notification_frequency: {
+    [key: string]: string | { type: string; frequency: string };
+  };
+  time_windows: Record<string, any>;
+  muted_until: string | null;
+  do_not_disturb: boolean;
+  email_digest: boolean;
+  push_enabled: boolean;
+  sms_enabled: boolean;
+  telegram_enabled: boolean;
+  discord_enabled: boolean;
+  minimum_priority: string;
+  deal_alert_settings: Record<string, any>;
+  price_alert_settings: Record<string, any>;
+  email_preferences: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+  
+  // For UI display
+  currency?: string;
   deal_filters?: Record<string, any>;
-  notification_preferences: NotificationPreferences;
+  notification_preferences?: NotificationPreferences;
 }
 
 export interface UserProfile {
@@ -94,8 +117,38 @@ export class UserService {
    */
   async updateSettings(data: Partial<UserSettings>): Promise<UserSettings> {
     try {
+      console.log('Sending settings update request with data:', JSON.stringify(data, null, 2));
+      
+      // Make the API call
       const response = await apiClient.patch(API_ENDPOINTS.USER_SETTINGS, data);
-      return response.data;
+      console.log('Settings update response raw:', response);
+      console.log('Settings update response data:', JSON.stringify(response.data, null, 2));
+      
+      // Get the updated settings from the response
+      const updatedSettings = { ...response.data };
+      
+      // Make sure all required properties are present
+      if (!updatedSettings.enabled_channels) {
+        console.log('Initializing enabled_channels as it was missing');
+        updatedSettings.enabled_channels = [];
+      }
+      
+      if (!updatedSettings.notification_frequency) {
+        console.log('Initializing notification_frequency as it was missing');
+        updatedSettings.notification_frequency = {};
+      }
+      
+      // Ensure we have all key notification types with default values
+      const notificationTypes = ['deal', 'price_alert', 'token', 'market', 'goal', 'security', 'system'];
+      for (const type of notificationTypes) {
+        if (!updatedSettings.notification_frequency[type]) {
+          console.log(`Setting default value for missing notification type: ${type}`);
+          updatedSettings.notification_frequency[type] = type === 'market' ? 'weekly' : 'immediate';
+        }
+      }
+      
+      console.log('Final processed settings update response:', JSON.stringify(updatedSettings, null, 2));
+      return updatedSettings;
     } catch (error) {
       console.error('Error updating user settings:', error);
       throw error;

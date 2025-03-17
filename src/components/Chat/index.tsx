@@ -840,7 +840,7 @@ export default function DealFinder() {
 
   const handleTrackDeal = async (deal: DealSuggestion) => {
     // Check if user is logged in before showing the modal
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     if (!token) {
       toast.error("Please log in to track deals");
       return;
@@ -855,7 +855,7 @@ export default function DealFinder() {
 
     try {
       // Check if user is logged in
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       if (!token) {
         toast.error("Please log in to track deals");
         return;
@@ -1039,6 +1039,10 @@ export default function DealFinder() {
       
       // Clear existing suggestions before fetching new ones
       setSuggestions([]);
+      
+      // Ensure authentication token is used
+      const token = localStorage.getItem('access_token');
+      console.log('Using authentication token:', token ? 'Present' : 'Not found');
       
       // Perform the search
       const response = await dealsService.searchDeals(searchParams);

@@ -203,6 +203,9 @@ export interface DealSearch {
    */
   use_ai_enhanced_search?: boolean;
   
+  /** Whether to perform AI analysis on the search results */
+  perform_ai_analysis?: boolean;
+  
   /** Page number for pagination */
   page?: number;
   /** Number of items per page */
@@ -247,6 +250,9 @@ export interface DealResponse extends DealBase {
     warranty?: string;
   };
   latest_score?: number;
+  score?: number;
+  deal_metadata?: Record<string, any>;
+  price_metadata?: Record<string, any>;
   tags?: string[];
   verified?: boolean;
   featured?: boolean;

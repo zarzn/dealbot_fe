@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
+import { FORCE_LOGOUT_EVENT } from '@/lib/api-client';
 import DropDown from "./DropDown";
 import menuData from "./menuData";
 import ClientLiveNotifications from "../Notifications/ClientLiveNotifications";
@@ -58,13 +59,6 @@ const Header = () => {
       // Check if we have tokens in localStorage
       const accessToken = localStorage.getItem('access_token');
       setHasTokens(!!accessToken);
-      
-      // Log authentication status for debugging
-      console.log("Header auth status:", { 
-        nextAuthStatus: authStatus, 
-        hasLocalTokens: !!accessToken,
-        isAuthenticated: authStatus === 'authenticated' && !!accessToken
-      });
     };
     
     // Initial check
@@ -76,16 +70,15 @@ const Header = () => {
     
     // Listen for forced logout event
     const handleForceLogout = () => {
-      console.log("Force logout event received in Header");
       setHasTokens(false);
     };
     
-    window.addEventListener('force-logout', handleForceLogout);
+    window.addEventListener(FORCE_LOGOUT_EVENT, handleForceLogout);
     
     // Clean up interval and event listener on unmount
     return () => {
       clearInterval(intervalId);
-      window.removeEventListener('force-logout', handleForceLogout);
+      window.removeEventListener(FORCE_LOGOUT_EVENT, handleForceLogout);
     };
   }, [authStatus, session]);
 

@@ -15,7 +15,7 @@ import {
   Tag,
 } from "lucide-react";
 import { marketService, MarketWithStats } from "@/services/markets";
-import { dealsService } from "@/services/api/deals";
+import { dealsService } from "@/services/deals";
 import { DealResponse } from "@/types/deals";
 import { toast } from "sonner";
 
@@ -23,17 +23,17 @@ import { toast } from "sonner";
 interface Deal {
   id: string;
   title: string;
-  price: number;
-  originalPrice: number;
+  price: number | string;
+  originalPrice: number | string;
   source: string;
-  score: number;
+  score?: number;
   url: string;
   imageUrl?: string;
   expiresAt?: string;
   status: string;
   marketId: string;
   sellerRating?: number;
-  priceHistory?: Array<{ date: string; price: number }>;
+  priceHistory?: Array<{ date: string; price: number | string }>;
 }
 
 export default function Markets() {
@@ -43,6 +43,7 @@ export default function Markets() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [selectedMarket, setSelectedMarket] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [marketsLoading, setMarketsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Set mounted state
@@ -58,30 +59,90 @@ export default function Markets() {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setMarketsLoading(true);
         
         // Fetch active markets
         const marketsResponse = await marketService.getActiveMarkets();
         const marketsWithStats = marketService.transformMarketsForUI(marketsResponse);
         setMarkets(marketsWithStats);
+        setMarketsLoading(false);
         
         // Fetch latest deals (limited to 6)
         const dealsResponse = await dealsService.getDeals({}, 1, 6);
         
         // Transform deals to match our UI format
-        const transformedDeals = dealsResponse.map(deal => ({
-          id: deal.id,
-          title: deal.title,
-          price: deal.price,
-          originalPrice: deal.original_price || deal.price * 1.2, // Fallback if no original price
-          source: deal.source || 'Unknown',
-          score: deal.latest_score ? deal.latest_score / 100 : 0.8, // Convert to 0-1 range
-          url: deal.url || '#',
-          imageUrl: deal.image_url,
-          expiresAt: deal.expires_at,
-          status: deal.status || 'active',
-          marketId: deal.market_id || '',
-          sellerRating: deal.seller_info?.rating || 4.5,
-        }));
+        const transformedDeals = dealsResponse.map(deal => {
+          try {
+            // Handle price safely
+            const price = typeof deal.price === 'number' ? 
+              deal.price : 
+              (deal.price ? Number(deal.price) : 0);
+            
+            // Handle original price safely
+            const originalPrice = deal.original_price ? 
+              (typeof deal.original_price === 'number' ? 
+                deal.original_price : 
+                Number(deal.original_price)) 
+              : (price * 1.2); // Fallback
+            
+            // Handle score safely (normalize to 0-1 range)
+            let score = 0.8; // Default
+            if (deal.score) {
+              score = typeof deal.score === 'number' ? 
+                Math.min(deal.score / 100, 1) : 
+                Math.min(Number(deal.score) / 100, 1);
+            } else if (deal.latest_score) {
+              // For backward compatibility
+              score = typeof deal.latest_score === 'number' ? 
+                Math.min(deal.latest_score / 100, 1) : 
+                Math.min(Number(deal.latest_score) / 100, 1);
+            }
+            
+            // Extract vendor from metadata if available
+            let vendor = deal.source || 'Unknown';
+            if (deal.deal_metadata && typeof deal.deal_metadata === 'object' && deal.deal_metadata.vendor) {
+              vendor = deal.deal_metadata.vendor;
+            }
+            
+            // Extract seller rating safely
+            let sellerRating = 4.5; // Default
+            if (deal.seller_info && typeof deal.seller_info === 'object' && deal.seller_info.rating) {
+              sellerRating = typeof deal.seller_info.rating === 'number' ? 
+                deal.seller_info.rating : 
+                Number(deal.seller_info.rating);
+            }
+            
+            return {
+              id: deal.id,
+              title: deal.title,
+              price: price,
+              originalPrice: originalPrice,
+              source: vendor,
+              score: score,
+              url: deal.url || '#',
+              imageUrl: deal.image_url,
+              expiresAt: deal.expires_at,
+              status: deal.status || 'active',
+              marketId: deal.market_id || '',
+              sellerRating: sellerRating,
+            };
+          } catch (err) {
+            console.error(`Error transforming deal ${deal.id}:`, err);
+            // Return a safe default object
+            return {
+              id: deal.id || 'unknown',
+              title: deal.title || 'Unknown Deal',
+              price: 0,
+              originalPrice: 0,
+              source: 'Unknown',
+              score: 0.5,
+              url: '#',
+              status: 'active',
+              marketId: '',
+              sellerRating: 0
+            };
+          }
+        });
         
         setDeals(transformedDeals);
       } catch (err) {
@@ -97,7 +158,22 @@ export default function Markets() {
   }, [isMounted]); // Add isMounted as a dependency
 
   const calculateDiscount = (original: number, current: number) => {
-    return Math.round(((original - current) / original) * 100);
+    try {
+      // Make sure both values are valid numbers
+      if (!original || !current || isNaN(original) || isNaN(current) || original <= 0 || current <= 0) {
+        return 0;
+      }
+      
+      // Make sure original is greater than current
+      if (original <= current) {
+        return 0;
+      }
+      
+      return Math.round(((original - current) / original) * 100);
+    } catch (error) {
+      console.error('Error calculating discount:', error);
+      return 0;
+    }
   };
 
   // Show a loading spinner until client-side rendering is ready
@@ -122,51 +198,58 @@ export default function Markets() {
             <h2 className="mb-5 text-3xl font-bold text-white md:text-4xl">
               Active Markets
             </h2>
-            <div className="grid grid-cols-1 gap-7.5 sm:grid-cols-2 lg:grid-cols-3">
-              {markets.map((market) => (
-                <motion.div
-                  key={market.id}
-                  whileHover={{ scale: 1.02 }}
-                  className={`cursor-pointer rounded-xl bg-gradient-to-br ${
-                    selectedMarket === market.id
-                      ? "from-blue-500/20 to-blue-400/20 ring-2 ring-blue-500"
-                      : "from-dark-6 to-dark-8"
-                  } p-7.5 transition-all duration-300 hover:shadow-lg`}
-                  onClick={() => setSelectedMarket(market.id === selectedMarket ? null : market.id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-semibold text-white">
-                      {market.name}
-                    </h3>
-                    <Store
-                      className={`h-6 w-6 ${
-                        market.status === "active" ? "text-green-500" : "text-red-500"
-                      }`}
-                    />
-                  </div>
-                  <div className="mt-6 grid grid-cols-2 gap-6">
-                    <div className="rounded-lg bg-dark-7 p-4">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-blue-500" />
-                        <span className="text-sm text-dark-3">Success Rate</span>
-                      </div>
-                      <p className="mt-2 text-lg font-medium text-white">
-                        {market.stats.successRate}%
-                      </p>
+            
+            {marketsLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <div className="h-16 w-16 animate-spin rounded-full border-b-2 border-purple"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-7.5 sm:grid-cols-2 lg:grid-cols-3">
+                {markets.map((market) => (
+                  <motion.div
+                    key={market.id}
+                    whileHover={{ scale: 1.02 }}
+                    className={`cursor-pointer rounded-xl bg-gradient-to-br ${
+                      selectedMarket === market.id
+                        ? "from-blue-500/20 to-blue-400/20 ring-2 ring-blue-500"
+                        : "from-dark-6 to-dark-8"
+                    } p-7.5 transition-all duration-300 hover:shadow-lg`}
+                    onClick={() => setSelectedMarket(market.id === selectedMarket ? null : market.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-semibold text-white">
+                        {market.name}
+                      </h3>
+                      <Store
+                        className={`h-6 w-6 ${
+                          market.status === "active" ? "text-green-500" : "text-red-500"
+                        }`}
+                      />
                     </div>
-                    <div className="rounded-lg bg-dark-7 p-4">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-blue-500" />
-                        <span className="text-sm text-dark-3">Response</span>
+                    <div className="mt-6 grid grid-cols-2 gap-6">
+                      <div className="rounded-lg bg-dark-7 p-4">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-blue-500" />
+                          <span className="text-sm text-dark-3">Success Rate</span>
+                        </div>
+                        <p className="mt-2 text-lg font-medium text-white">
+                          {market.stats.successRate}%
+                        </p>
                       </div>
-                      <p className="mt-2 text-lg font-medium text-white">
-                        {market.stats.avgResponseTime}ms
-                      </p>
+                      <div className="rounded-lg bg-dark-7 p-4">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-blue-500" />
+                          <span className="text-sm text-dark-3">Response</span>
+                        </div>
+                        <p className="mt-2 text-lg font-medium text-white">
+                          {market.stats.avgResponseTime}ms
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Deals Section */}
@@ -238,14 +321,17 @@ export default function Markets() {
                       <div className="mb-6 flex items-center justify-between">
                         <div>
                           <p className="text-2xl font-bold text-white">
-                            ${deal.price.toFixed(2)}
+                            ${typeof deal.price === 'number' ? deal.price.toFixed(2) : Number(deal.price).toFixed(2)}
                           </p>
                           <p className="text-sm text-dark-3 line-through mt-1">
-                            ${deal.originalPrice.toFixed(2)}
+                            ${typeof deal.originalPrice === 'number' ? deal.originalPrice.toFixed(2) : Number(deal.originalPrice).toFixed(2)}
                           </p>
                         </div>
                         <div className="rounded-full bg-blue-500/10 px-4 py-2 text-blue-500">
-                          {calculateDiscount(deal.originalPrice, deal.price)}% OFF
+                          {calculateDiscount(
+                            typeof deal.originalPrice === 'number' ? deal.originalPrice : Number(deal.originalPrice), 
+                            typeof deal.price === 'number' ? deal.price : Number(deal.price)
+                          )}% OFF
                         </div>
                       </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { toast } from 'sonner';
-import { dealsService } from '@/services/api/deals';
+import { dealsService } from '@/services/deals';
 import { DealResponse } from '@/types/deals';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';

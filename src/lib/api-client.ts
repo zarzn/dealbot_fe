@@ -1,10 +1,11 @@
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import { API_BASE_URL } from '@/services/api/config';
+import { toast } from 'react-hot-toast';
 
 /**
  * Custom error event for forced logout
  */
-export const FORCE_LOGOUT_EVENT = 'force_logout';
+export const FORCE_LOGOUT_EVENT = 'force-logout';
 
 /**
  * Create and configure the API client instance
@@ -14,24 +15,48 @@ export const apiClient: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 seconds
+  timeout: 30000, // Increase default timeout to 30 seconds
+  withCredentials: true, // Ensure cookies are sent with requests
 });
+
+// Track if we're currently refreshing a token to prevent duplicate refreshes
+let isRefreshing = false;
+let refreshPromise: Promise<string> | null = null;
+
+// Queue of requests to retry after token refresh
+const failedRequestsQueue: { onSuccess: (token: string) => void, onFailure: (err: any) => void }[] = [];
+
+// Process the failed requests queue
+const processQueue = (error: any, token: string | null = null) => {
+  failedRequestsQueue.forEach(request => {
+    if (token) {
+      request.onSuccess(token);
+    } else {
+      request.onFailure(error);
+    }
+  });
+  
+  // Clear the queue
+  failedRequestsQueue.length = 0;
+};
 
 /**
  * Add a request interceptor to inject auth token
  */
 apiClient.interceptors.request.use(
   (config) => {
-    // Get the token from localStorage 
-    const token = typeof window !== 'undefined' 
-      ? localStorage.getItem('token') 
-      : null;
-    
-    // If token exists, add it to the headers
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Skip adding auth token for public endpoints
+    const isPublicEndpoint = config.url?.includes('/public-deals') || 
+                          config.url?.includes('/auth/login') || 
+                          config.url?.includes('/auth/register');
+                          
+    if (!isPublicEndpoint) {
+      // Get token from localStorage
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
-    
     return config;
   },
   (error) => {
@@ -50,88 +75,156 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
     
-    // Log detailed error information
-    if (error.response) {
-      console.error(`API Error ${error.response.status}:`, error.response.data);
+    // Special handling for token expiration errors
+    if (error.response?.data && 
+        typeof error.response.data === 'object' && 
+        'code' in error.response.data && 
+        error.response.data.code === 'token_expired') {
       
-      // Handle specific status codes
-      switch (error.response.status) {
-        case 401: // Unauthorized
-          // Check if it's a refresh token failure
-          if (originalRequest._retry) {
-            // Token refresh failed, force logout
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem('token');
-              localStorage.removeItem('refreshToken');
-              window.dispatchEvent(new Event(FORCE_LOGOUT_EVENT));
-            }
-          } else {
-            // Try to refresh the token
-            try {
-              const refreshToken = localStorage.getItem('refreshToken');
-              
-              if (refreshToken) {
-                originalRequest._retry = true;
-                const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-                  refresh_token: refreshToken
-                });
-                
-                if (response.data.access_token) {
-                  localStorage.setItem('token', response.data.access_token);
-                  apiClient.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
-                  
-                  // Retry the original request with the new token
-                  if (originalRequest.headers) {
-                    originalRequest.headers.Authorization = `Bearer ${response.data.access_token}`;
-                  }
-                  return apiClient(originalRequest);
-                }
-              } else {
-                // No refresh token, force logout
-                if (typeof window !== 'undefined') {
-                  localStorage.removeItem('token');
-                  window.dispatchEvent(new Event(FORCE_LOGOUT_EVENT));
-                }
-              }
-            } catch (refreshError) {
-              console.error('Token refresh failed:', refreshError);
-              // Force logout on refresh failure
-              if (typeof window !== 'undefined') {
-                localStorage.removeItem('token');
-                localStorage.removeItem('refreshToken');
-                window.dispatchEvent(new Event(FORCE_LOGOUT_EVENT));
-              }
-            }
-          }
-          break;
-          
-        case 403: // Forbidden
-          console.error('Access forbidden:', error.response.data);
-          break;
-          
-        case 404: // Not found
-          console.error('Resource not found:', error.response.data);
-          break;
-          
-        case 405: // Method not allowed
-          console.error('Method not allowed. Check API endpoint configuration:', error.response.data);
-          break;
-          
-        case 500: // Server error
-        case 502: // Bad gateway
-        case 503: // Service unavailable
-          console.error('Server error:', error.response.data);
-          break;
-          
-        default:
-          console.error('Unhandled error:', error.response.data);
+      console.error('Token expired, forcing logout');
+      
+      // Clear auth state
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      
+      // Dispatch force logout event
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event(FORCE_LOGOUT_EVENT));
+        // Redirect to login
+        window.location.href = '/auth/signin?reason=session_expired';
       }
-    } else if (error.request) {
-      // Request was made but no response received
-      console.error('API No Response Error:', error.request);
-    } else {
-      // Error in setting up the request
-      console.error('API Configuration Error:', error.message);
+      
+      return Promise.reject(error);
+    }
+    
+    // If in development mode and error is 401/403 related to auth, use mock data
+    if (process.env.NODE_ENV === 'development' && 
+        error.response?.status === 401 || error.response?.status === 403) {
+      console.warn('Auth error in development - this would normally trigger a token refresh');
+      // For some endpoints, we'll just continue with mock data in the services
+      return Promise.reject(error);
+    }
+    
+    // If error is 401 and we haven't tried to refresh the token yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      // If we're already refreshing, wait for that to complete
+      if (isRefreshing) {
+        try {
+          // Wait for the current refresh to complete
+          const newToken = await refreshPromise;
+          // Update the request with the new token
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          // Retry the original request
+          return apiClient(originalRequest);
+        } catch (refreshError) {
+          // Handle token refresh failure
+          console.error('Failed to refresh token:', refreshError);
+          // Clear auth state
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          
+          // Dispatch force logout event
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event(FORCE_LOGOUT_EVENT));
+            // Redirect to login
+            window.location.href = '/auth/signin?reason=session_expired';
+          }
+          
+          return Promise.reject(refreshError);
+        }
+      }
+      
+      // Start token refresh process
+      isRefreshing = true;
+      refreshPromise = new Promise(async (resolve, reject) => {
+        try {
+          // Get refresh token from localStorage
+          const refreshToken = localStorage.getItem('refresh_token');
+          
+          if (!refreshToken) {
+            throw new Error('No refresh token available');
+          }
+          
+          // Call refresh token endpoint
+          const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, {
+            refresh_token: refreshToken
+          });
+          
+          // Get new tokens
+          const { access_token, refresh_token } = response.data;
+          
+          // Update localStorage
+          localStorage.setItem('access_token', access_token);
+          localStorage.setItem('refresh_token', refresh_token);
+          
+          // Update the original request with the new token
+          originalRequest.headers.Authorization = `Bearer ${access_token}`;
+          
+          // Process any queued requests
+          processQueue(null, access_token);
+          
+          // Resolve the promise with the new token
+          resolve(access_token);
+        } catch (refreshError) {
+          // Token refresh failed
+          console.error('Token refresh failed:', refreshError);
+          
+          // Clear auth state
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          
+          // Process the queue with error
+          processQueue(refreshError);
+          
+          // Reject the promise
+          reject(refreshError);
+          
+          // Dispatch force logout event and redirect to login
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event(FORCE_LOGOUT_EVENT));
+            window.location.href = '/auth/signin?reason=session_expired';
+          }
+        } finally {
+          // Reset refresh state
+          isRefreshing = false;
+          refreshPromise = null;
+        }
+      });
+      
+      // Return the retried request
+      try {
+        const newToken = await refreshPromise;
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        // Token refresh failed, reject the original request
+        return Promise.reject(refreshError);
+      }
+    }
+    
+    // For development mode, log additional helpful information
+    if (process.env.NODE_ENV === 'development') {
+      // Log more information about the error for debugging
+      console.error('API Error:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: originalRequest?.url,
+        method: originalRequest?.method,
+      });
+      
+      // Show a more specific error message in development
+      const errorData = error.response?.data as any;
+      if (errorData?.detail) {
+        console.warn(`API Error ${error.response?.status}: ${errorData.detail}`);
+      }
+    }
+    
+    // For server errors in production, show a friendly message
+    if (error.response?.status >= 500 && process.env.NODE_ENV === 'production') {
+      toast.error('Server error. Our team has been notified.');
     }
     
     return Promise.reject(error);

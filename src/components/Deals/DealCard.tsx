@@ -136,9 +136,9 @@ export function DealCard({ deal, onTrack, onFavorite, isFavorite = false, isLoad
               )}
             </div>
             
-            {deal.seller_info?.rating && (
+            {deal.seller_info && typeof deal.seller_info.rating === 'number' && (
               <div className="flex items-center">
-                <Star className="h-3 w-3 text-yellow-500 mr-1" />
+                <Star className="w-3 h-3 text-yellow-400 mr-1" />
                 <span className="text-xs">{deal.seller_info.rating.toFixed(1)}</span>
                 {deal.seller_info.reviews && (
                   <span className="text-xs text-gray-400 ml-1">({deal.seller_info.reviews})</span>
@@ -148,12 +148,17 @@ export function DealCard({ deal, onTrack, onFavorite, isFavorite = false, isLoad
           </div>
           
           <div className="mt-4 flex items-baseline">
-            <span className="text-xl font-bold">${deal.price.toFixed(2)}</span>
-            {deal.original_price && deal.original_price > deal.price && (
-              <>
-                <span className="text-sm text-gray-500 line-through ml-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-bold">${typeof deal.price === 'number' ? deal.price.toFixed(2) : 'N/A'}</span>
+              {deal.original_price && typeof deal.original_price === 'number' && (
+                <span className="text-sm line-through text-white/60">
                   ${deal.original_price.toFixed(2)}
                 </span>
+              )}
+            </div>
+            {deal.original_price && typeof deal.original_price === 'number' && 
+             typeof deal.price === 'number' && deal.original_price > deal.price && (
+              <>
                 <Badge variant="outline" className="ml-2 bg-red-50 text-red-600 border-red-100">
                   {discountPercent}% off
                 </Badge>

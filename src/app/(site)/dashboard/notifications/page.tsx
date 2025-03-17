@@ -123,8 +123,8 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex justify-between items-start">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <PageHeader 
           title="Notifications" 
           description="Manage your notifications and alerts"
@@ -169,9 +169,9 @@ export default function NotificationsPage() {
           <Loader size="lg" />
         </div>
       ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <div className="bg-white/[0.05] border border-white/10 rounded-lg p-6 text-center backdrop-blur-lg">
           <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-red-800 mb-2">
+          <h3 className="text-xl font-semibold text-red-400 mb-2">
             {error}
           </h3>
           <Button onClick={loadNotifications}>
@@ -179,12 +179,12 @@ export default function NotificationsPage() {
           </Button>
         </div>
       ) : notifications.length === 0 ? (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-12 text-center">
-          <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">
+        <div className="bg-white/[0.05] border border-white/10 rounded-lg p-12 text-center backdrop-blur-lg">
+          <Bell className="w-12 h-12 text-white/40 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-white mb-2">
             No Notifications
           </h3>
-          <p className="text-gray-500 max-w-md mx-auto mb-6">
+          <p className="text-white/70 max-w-md mx-auto mb-6">
             You don't have any notifications at the moment. When you receive notifications, they will appear here.
           </p>
         </div>
@@ -193,10 +193,10 @@ export default function NotificationsPage() {
           {notifications.map((notification) => (
             <div 
               key={notification.id}
-              className={`p-4 rounded-lg border ${
+              className={`p-4 rounded-lg border backdrop-blur-lg ${
                 notification.read 
-                  ? 'bg-gray-50 border-gray-200' 
-                  : 'bg-white border-gray-300 shadow-sm'
+                  ? 'bg-white/[0.02] border-white/10' 
+                  : 'bg-white/[0.05] border-white/20 shadow-lg'
               }`}
             >
               <div className="flex items-start gap-4">
@@ -207,17 +207,17 @@ export default function NotificationsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <h4 className={`text-base font-medium ${
-                      notification.read ? 'text-gray-700' : 'text-gray-900'
+                      notification.read ? 'text-white/80' : 'text-white'
                     }`}>
                       {notification.title}
                     </h4>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-white/50">
                       {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                     </span>
                   </div>
                   
                   <p className={`mt-1 ${
-                    notification.read ? 'text-gray-500' : 'text-gray-700'
+                    notification.read ? 'text-white/60' : 'text-white/80'
                   }`}>
                     {notification.message}
                   </p>
@@ -225,7 +225,7 @@ export default function NotificationsPage() {
                   {notification.link && (
                     <a 
                       href={notification.link}
-                      className="text-blue-600 hover:text-blue-800 text-sm mt-2 inline-block"
+                      className="text-blue-400 hover:text-blue-300 text-sm mt-2 inline-block"
                     >
                       View details
                     </a>

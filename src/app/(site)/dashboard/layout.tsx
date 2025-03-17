@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, 
@@ -22,6 +22,8 @@ import UserInfo from '@/components/Dashboard/UserInfo';
 import { Suspense } from 'react';
 import { DashboardSkeleton } from '@/components/Dashboard/DashboardSkeleton';
 import ClientLiveNotifications from '@/components/Notifications/ClientLiveNotifications';
+import { toast } from 'react-hot-toast';
+import { FORCE_LOGOUT_EVENT } from '@/lib/api-client';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -87,6 +89,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   // Check for localStorage tokens
   const [hasLocalTokens, setHasLocalTokens] = useState(false);
@@ -98,29 +101,75 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     setHasLocalTokens(!!accessToken);
     setIsLoading(false);
     
-    console.log("Dashboard authentication status:", {
-      nextAuthStatus: authStatus,
-      hasSession: !!session, 
-      hasLocalTokens: !!accessToken
-    });
-    
     // If no authentication found at all, redirect to login
     if (authStatus === 'unauthenticated' && !accessToken) {
-      console.log("No authentication detected, redirecting to login");
       router.push('/auth/signin');
     }
     
+    // Periodically check token validity (every 5 minutes)
+    const tokenCheckInterval = setInterval(() => {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        try {
+          // Simple JWT expiry check
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const isExpiring = payload.exp && (payload.exp * 1000) - Date.now() < 10 * 60 * 1000; // Less than 10 minutes left
+          
+          // If token is about to expire, try to refresh it proactively
+          if (isExpiring) {
+            console.log('Token is about to expire, refreshing...');
+            const refreshToken = localStorage.getItem('refresh_token');
+            if (refreshToken) {
+              fetch(`${window.location.origin}/api/v1/auth/refresh`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: refreshToken }),
+              })
+              .then(res => res.json())
+              .then(data => {
+                if (data.access_token && data.refresh_token) {
+                  localStorage.setItem('access_token', data.access_token);
+                  localStorage.setItem('refresh_token', data.refresh_token);
+                  console.log('Token refreshed successfully');
+                }
+              })
+              .catch(err => {
+                console.error('Failed to refresh token:', err);
+              });
+            }
+          }
+        } catch (e) {
+          console.error('Error checking token validity:', e);
+        }
+      }
+    }, 5 * 60 * 1000); // Check every 5 minutes
+    
     // Listen for forced logout events (e.g., from token refresh failures)
     const handleForceLogout = () => {
-      console.log("Force logout event detected, redirecting to login");
-      router.push('/auth/signin');
+      // Clear any local tokens for extra safety
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      
+      // Show a toast notification
+      toast.error('Your session has expired. Please sign in again.', {
+        duration: 5000, // Show for 5 seconds
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+      });
+      
+      // Redirect to login page
+      router.push('/auth/signin?reason=session_expired');
     };
     
-    window.addEventListener('force-logout', handleForceLogout);
+    window.addEventListener(FORCE_LOGOUT_EVENT, handleForceLogout);
     
-    // Clean up event listener
+    // Clean up event listener and interval
     return () => {
-      window.removeEventListener('force-logout', handleForceLogout);
+      window.removeEventListener(FORCE_LOGOUT_EVENT, handleForceLogout);
+      clearInterval(tokenCheckInterval);
     };
     
   }, [authStatus, session, router]);

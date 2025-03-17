@@ -1,14 +1,12 @@
-import { X, AlertCircle, Target } from 'lucide-react';
-import Link from 'next/link';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Sparkles } from "lucide-react";
 
 interface GoalCostModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  cost: {
-    tokenCost: number;
-    features: string[];
-  };
+  cost: number;
   balance: number;
 }
 
@@ -19,93 +17,62 @@ export default function GoalCostModal({
   cost,
   balance,
 }: GoalCostModalProps) {
-  if (!isOpen) return null;
-
-  const hasEnoughTokens = balance >= cost.tokenCost;
+  const formattedCost = typeof cost === 'number' ? cost.toFixed(1) : '0.0';
+  const formattedBalance = typeof balance === 'number' ? balance.toFixed(1) : '0.0';
+  const isAffordable = typeof cost === 'number' && typeof balance === 'number' && balance >= cost;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/80"
-        onClick={onClose}
-      />
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Create Goal
+          </DialogTitle>
+          <DialogDescription>
+            You&apos;re about to create a new goal with our AI agents
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* Modal */}
-      <div className="relative bg-gray-900 rounded-xl w-full max-w-md p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Confirm Goal Creation</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/[0.05] rounded-lg transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Cost Information */}
-        <div className="flex items-center gap-3 p-4 bg-white/[0.05] rounded-lg">
-          <div className="p-3 bg-purple/20 rounded-lg">
-            <Target className="w-6 h-6 text-purple" />
-          </div>
-          <div>
-            <div className="font-medium">Cost: {cost.tokenCost} AIDL</div>
-            <div className="text-sm text-white/70">Balance: {balance.toFixed(2)} AIDL</div>
-          </div>
-        </div>
-
-        {/* Features */}
-        <div>
-          <h3 className="text-sm font-medium mb-2">Included Features:</h3>
-          <ul className="space-y-2">
-            {cost.features.map((feature, index) => (
-              <li key={index} className="flex items-center gap-2 text-sm">
-                <div className="w-1.5 h-1.5 rounded-full bg-purple" />
-                {feature}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {!hasEnoughTokens && (
-          <div className="flex items-start gap-3 p-3 bg-red-500/10 text-red-400 rounded-lg text-sm">
-            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium">Insufficient Balance</p>
-              <p className="text-red-400/70 mt-1">
-                You need {(cost.tokenCost - balance).toFixed(2)} more AIDL tokens to create this goal.
-              </p>
+        <div className="py-4">
+          <div className="mb-4 p-4 bg-secondary/20 rounded-lg">
+            <h3 className="font-medium mb-1">Cost Summary</h3>
+            <div className="flex justify-between items-center text-sm">
+              <span>Base cost:</span>
+              <span>5.0 tokens</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span>Priority adjustment:</span>
+              <span>{typeof cost === 'number' ? (cost - 5).toFixed(1) : '0.0'} tokens</span>
+            </div>
+            <div className="h-px bg-muted my-2"></div>
+            <div className="flex justify-between items-center font-medium">
+              <span>Total cost:</span>
+              <span>{formattedCost} tokens</span>
             </div>
           </div>
-        )}
 
-        <div className="flex gap-3">
-          {hasEnoughTokens ? (
-            <>
-              <button
-                onClick={onConfirm}
-                className="flex-1 px-4 py-2 bg-purple rounded-lg text-white hover:bg-purple/80 transition"
-              >
-                Confirm ({cost.tokenCost} AIDL)
-              </button>
-              <button
-                onClick={onClose}
-                className="flex-1 px-4 py-2 bg-white/[0.05] rounded-lg hover:bg-white/[0.1] transition"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <Link
-              href="/dashboard/wallet"
-              className="flex-1 px-4 py-2 bg-purple rounded-lg text-white hover:bg-purple/80 transition text-center"
-            >
-              Add Tokens
-            </Link>
+          <div className="flex justify-between text-sm">
+            <span>Your balance:</span>
+            <span>{formattedBalance} tokens</span>
+          </div>
+
+          {!isAffordable && (
+            <div className="mt-4 p-3 border border-destructive/50 bg-destructive/10 text-destructive rounded text-sm">
+              You don&apos;t have enough tokens. Please add more tokens to your wallet.
+            </div>
           )}
         </div>
-      </div>
-    </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={onConfirm} disabled={!isAffordable}>
+            Confirm ({formattedCost} tokens)
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 } 

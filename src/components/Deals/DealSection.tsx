@@ -7,7 +7,7 @@ import { Loader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { dealsService } from '@/services/api/deals';
+import { dealsService } from '@/services/deals';
 import { AlertCircle } from 'lucide-react';
 
 function DealSection() {
@@ -87,7 +87,7 @@ function DealSection() {
 
   const handleDealCreate = useCallback(() => {
     if (isMounted && typeof window !== 'undefined') {
-      window.location.href = '/deals/create';
+      window.location.href = '/dashboard/goals/create';
     }
   }, [isMounted]);
 
@@ -299,7 +299,7 @@ function DealSection() {
               <>
                 <h3 className="text-lg font-medium text-white mb-2">No Deals Available</h3>
                 <p className="text-white/70 mb-6">
-                  There are no deals in the system yet. Get started by creating your first deal.
+                  There are no deals in the system yet. Deals are created based on your goals. Get started by creating a goal.
                 </p>
               </>
             ) : (
@@ -316,7 +316,7 @@ function DealSection() {
                 Refresh
               </Button>
               <Button onClick={handleDealCreate} className="flex-1">
-                Create New Deal
+                Create New Goal
               </Button>
             </div>
           </div>
@@ -326,9 +326,9 @@ function DealSection() {
           <div className="text-center max-w-md">
             <h3 className="text-lg font-medium text-white mb-2">No Deal Selected</h3>
             <p className="text-white/70 mb-6">
-              Select a deal from the list to view its details, or create a new deal to get started.
+              Select a deal from the list to view its details, or create a goal to find new deals.
             </p>
-            <Button onClick={handleDealCreate}>Create New Deal</Button>
+            <Button onClick={handleDealCreate}>Create New Goal</Button>
           </div>
         </div>
       )}

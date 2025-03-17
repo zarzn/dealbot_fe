@@ -21,7 +21,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // Add request interceptor to include auth token
 dealsApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('access_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -45,6 +45,12 @@ export const searchDeals = async (searchParams: DealSearch & {
       'Content-Type': 'application/json',
       'X-Search-ID': searchId
     };
+    
+    // Add authentication token
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
     
     if (searchParams.scrape) {
       headers['X-Enable-Scraping'] = 'true';
@@ -210,11 +216,30 @@ export class DealsApi {
   private static BASE_URL = `${API_URL}/api/deals`;
 
   /**
+   * Get authorization headers
+   * @returns Object with headers including auth token if available
+   */
+  private static getAuthHeaders() {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
+    
+    return { headers };
+  }
+
+  /**
    * Get all deals
    * @returns Promise with deal list response
    */
   static async getDeals(): Promise<AxiosResponse<Deal[]>> {
-    return axios.get<Deal[]>(this.BASE_URL);
+    return axios.get<Deal[]>(this.BASE_URL, this.getAuthHeaders());
   }
 
   /**
@@ -223,7 +248,7 @@ export class DealsApi {
    * @returns Promise with deal response
    */
   static async getDealById(id: string): Promise<AxiosResponse<Deal>> {
-    return axios.get<Deal>(`${this.BASE_URL}/${id}`);
+    return axios.get<Deal>(`${this.BASE_URL}/${id}`, this.getAuthHeaders());
   }
 
   /**
@@ -232,7 +257,7 @@ export class DealsApi {
    * @returns Promise with the created deal
    */
   static async createDeal(deal: CreateDealRequest): Promise<AxiosResponse<Deal>> {
-    return axios.post<Deal>(this.BASE_URL, deal);
+    return axios.post<Deal>(this.BASE_URL, deal, this.getAuthHeaders());
   }
 
   /**
@@ -242,43 +267,43 @@ export class DealsApi {
    * @returns Promise with the updated deal
    */
   static async updateDeal(id: string, deal: UpdateDealRequest): Promise<AxiosResponse<Deal>> {
-    return axios.put<Deal>(`${this.BASE_URL}/${id}`, deal);
+    return axios.put<Deal>(`${this.BASE_URL}/${id}`, deal, this.getAuthHeaders());
   }
 
   /**
    * Delete a deal
    * @param id Deal ID
-   * @returns Promise with the operation result
+   * @returns Promise with void response
    */
   static async deleteDeal(id: string): Promise<AxiosResponse<void>> {
-    return axios.delete(`${this.BASE_URL}/${id}`);
+    return axios.delete(`${this.BASE_URL}/${id}`, this.getAuthHeaders());
   }
 
   /**
-   * Refresh AI analysis for a deal
+   * Refresh deal analysis
    * @param id Deal ID
    * @returns Promise with the updated deal including fresh analysis
    */
   static async refreshDealAnalysis(id: string): Promise<AxiosResponse<Deal>> {
-    return axios.post<Deal>(`${this.BASE_URL}/${id}/analyze`, {});
+    return axios.post<Deal>(`${this.BASE_URL}/${id}/analyze`, {}, this.getAuthHeaders());
   }
 
   /**
-   * Track a deal to add it to user's watchlist
+   * Track a deal for price updates
    * @param id Deal ID
-   * @returns Promise with the operation result
+   * @returns Promise with void response
    */
   static async trackDeal(id: string): Promise<AxiosResponse<void>> {
-    return axios.post<void>(`${this.BASE_URL}/${id}/track`, {});
+    return axios.post<void>(`${this.BASE_URL}/${id}/track`, {}, this.getAuthHeaders());
   }
 
   /**
-   * Untrack a deal to remove it from user's watchlist
+   * Untrack a deal (stop tracking price updates)
    * @param id Deal ID
-   * @returns Promise with the operation result
+   * @returns Promise with void response
    */
   static async untrackDeal(id: string): Promise<AxiosResponse<void>> {
-    return axios.delete<void>(`${this.BASE_URL}/${id}/track`);
+    return axios.delete<void>(`${this.BASE_URL}/${id}/track`, this.getAuthHeaders());
   }
 }
 

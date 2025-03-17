@@ -462,10 +462,10 @@ export const DealDetail: React.FC<DealDetailProps> = ({
               <div className="mt-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <div className="text-xl font-bold">
-                    ${deal.price.toFixed(2)}
+                    ${typeof deal.price === 'number' ? deal.price.toFixed(2) : 'N/A'}
                   </div>
                   
-                  {deal.original_price && deal.original_price > deal.price && (
+                  {deal.original_price && typeof deal.original_price === 'number' && (
                     <div className="flex items-center">
                       <span className="text-sm text-white/50 line-through mr-2">
                         ${deal.original_price.toFixed(2)}
@@ -521,7 +521,7 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                         <div className="font-medium">Seller</div>
                         <div className="text-sm text-gray-600">
                           {deal.seller_info.name}
-                          {deal.seller_info.rating && (
+                          {deal.seller_info && typeof deal.seller_info.rating === 'number' && (
                             <span className="ml-2 text-amber-500">
                               ★ {deal.seller_info.rating.toFixed(1)}
                             </span>
@@ -538,7 +538,11 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                       <div>
                         <div className="font-medium">Shipping</div>
                         <div className="text-sm text-gray-600">
-                          {deal.shipping_info.free_shipping ? 'Free Shipping' : `$${deal.shipping_info.cost?.toFixed(2) || '?'} shipping`}
+                          {deal.shipping_info.free_shipping 
+                            ? 'Free Shipping' 
+                            : typeof deal.shipping_info.cost === 'number' 
+                              ? `$${deal.shipping_info.cost.toFixed(2)} shipping` 
+                              : 'Shipping cost unavailable'}
                           {deal.shipping_info.estimated_days && (
                             <span className="ml-2">
                               ({deal.shipping_info.estimated_days} days)
@@ -593,7 +597,7 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                           analysis.score >= 6 ? 'bg-amber-500/20 text-amber-400' : 
                           'bg-red-500/20 text-red-400'}
                       `}>
-                        {analysis.score.toFixed(1)}/10
+                        {typeof analysis.score === 'number' ? analysis.score.toFixed(1) : 'N/A'}/10
                       </Badge>
                     </div>
                     

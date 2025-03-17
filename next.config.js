@@ -40,7 +40,10 @@ const nextConfig = {
   
   // This will ensure only /auth/* API routes are included in the build
   // and other dynamic API routes are excluded
-  distDir: '.next'
+  distDir: '.next',
+  
+  // Ignore the favicon.ico page route
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js', 'md', 'mdx'],
 };
 
 // Only use 'export' output for production builds (when not in development mode)

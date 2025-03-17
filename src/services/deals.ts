@@ -1,6 +1,9 @@
 import { apiClient } from '@/lib/api-client';
-import type { DealSuggestion, AIAnalysis, PriceHistory, DealSearch, DealResponse } from '@/types/deals';
+import type { DealSuggestion, AIAnalysis, PriceHistory, DealSearch, DealResponse, CreateDealRequest, UpdateDealRequest } from '@/types/deals';
 
+/**
+ * Interface for search response from the deals API
+ */
 export interface SearchResponse {
   deals: DealResponse[];
   total?: number;
@@ -18,16 +21,44 @@ export interface SearchResponse {
   };
 }
 
+/**
+ * Service for interacting with the deals API endpoints
+ */
 export class DealsService {
+  private readonly BASE_URL = '/api/v1/deals';
+
+  /**
+   * Search for deals based on query criteria
+   * @param query The search parameters
+   * @returns Promise with search results
+   */
   async searchDeals(query: DealSearch): Promise<SearchResponse> {
     try {
-      // Log the full URL that will be used
-      const fullEndpoint = `${apiClient.defaults.baseURL}/api/v1/deals/search`;
-      console.log('Making DealsService.searchDeals request to:', fullEndpoint);
-      console.log('Using apiClient with baseURL:', apiClient.defaults.baseURL);
-      console.log('Query parameters:', query);
+      // Log the request details in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Making DealsService.searchDeals request to:', `${this.BASE_URL}/search`);
+        console.log('Using apiClient with baseURL:', apiClient.defaults.baseURL);
+        console.log('Query parameters:', query);
+      }
       
-      const response = await apiClient.post(`/api/v1/deals/search`, query);
+      // Support both GET and POST search patterns
+      let response;
+      if (query.query || query.perform_ai_analysis) {
+        // Use POST for more complex searches
+        response = await apiClient.post(`${this.BASE_URL}/search`, query);
+      } else {
+        // Use GET with query params for simple searches
+        const queryParams = new URLSearchParams();
+        if (query.category) queryParams.append('category', query.category);
+        if (query.min_price) queryParams.append('min_price', query.min_price.toString());
+        if (query.max_price) queryParams.append('max_price', query.max_price.toString());
+        if (query.sort_by) queryParams.append('sort_by', query.sort_by);
+        if (query.page) queryParams.append('page', query.page.toString());
+        if (query.limit) queryParams.append('limit', query.limit.toString());
+        
+        response = await apiClient.get(`${this.BASE_URL}/search?${queryParams.toString()}`);
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Error searching deals:', error);
@@ -35,87 +66,57 @@ export class DealsService {
     }
   }
 
-  async getDealDetails(dealId: string): Promise<DealResponse> {
+  /**
+   * Get similar deals based on a deal ID
+   * @param dealId The ID of the deal to find similar deals for
+   * @returns Promise with similar deals
+   */
+  async getSimilarDeals(dealId: string): Promise<DealResponse[]> {
     try {
-      const response = await apiClient.get(`/api/v1/deals/${dealId}`);
+      const response = await apiClient.get(`${this.BASE_URL}/${dealId}/similar`);
       return response.data;
     } catch (error) {
-      console.error(`Error getting deal details for ${dealId}:`, error);
+      console.error('Error fetching similar deals:', error);
       throw error;
     }
   }
 
-  async getAIAnalysis(dealId: string): Promise<AIAnalysis> {
+  /**
+   * Get price history for a deal
+   * @param dealId Deal ID
+   * @param timeRange Optional time range (e.g., '30d', '90d')
+   * @returns Promise with price history data
+   */
+  async getDealPriceHistory(dealId: string, timeRange: string = '30d'): Promise<PriceHistory> {
     try {
-      const response = await apiClient.get(`/api/v1/deals/analysis/${dealId}`);
+      const response = await apiClient.get(`${this.BASE_URL}/${dealId}/price-history?time_range=${timeRange}`);
       return response.data;
     } catch (error) {
-      console.error(`Error getting AI analysis for ${dealId}:`, error);
+      console.error(`Error getting price history for deal ${dealId}:`, error);
       throw error;
     }
   }
 
-  async getPriceHistory(dealId: string): Promise<PriceHistory[]> {
-    try {
-      const response = await apiClient.get(`/api/v1/deals/${dealId}/price-history`);
-      return response.data.prices || [];
-    } catch (error) {
-      console.error(`Error getting price history for ${dealId}:`, error);
-      throw error;
-    }
+  /**
+   * Alias for getDealPriceHistory to maintain compatibility with existing code
+   * @param dealId Deal ID
+   * @param timeRange Optional time range (e.g., '30d', '90d')
+   * @returns Promise with price history data
+   */
+  async getPriceHistory(dealId: string, timeRange: string = '30d'): Promise<PriceHistory> {
+    return this.getDealPriceHistory(dealId, timeRange);
   }
 
-  async trackDeal(dealId: string): Promise<void> {
-    try {
-      await apiClient.post(`/api/v1/deals/${dealId}/track`);
-    } catch (error) {
-      console.error(`Error tracking deal ${dealId}:`, error);
-      throw error;
-    }
-  }
-
-  async untrackDeal(dealId: string): Promise<void> {
-    try {
-      await apiClient.delete(`/api/v1/deals/${dealId}/track`);
-    } catch (error) {
-      console.error(`Error untracking deal ${dealId}:`, error);
-      throw error;
-    }
-  }
-
-  async validateDeal(dealId: string): Promise<{is_valid: boolean; validation_details: any}> {
-    try {
-      const response = await apiClient.post(`/api/v1/deals/${dealId}/validate`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error validating deal ${dealId}:`, error);
-      throw error;
-    }
-  }
-
-  async refreshDeal(dealId: string): Promise<DealResponse> {
-    try {
-      const response = await apiClient.post(`/api/v1/deals/${dealId}/refresh`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error refreshing deal ${dealId}:`, error);
-      throw error;
-    }
-  }
-
-  async getSimilarDeals(dealId: string, limit: number = 10): Promise<DealResponse[]> {
-    try {
-      const response = await apiClient.get(`/api/v1/deals/${dealId}/similar?limit=${limit}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error getting similar deals for ${dealId}:`, error);
-      throw error;
-    }
-  }
-
+  /**
+   * Get all deals with optional filtering
+   * @param filters Optional filters for the deals
+   * @param page Page number
+   * @param pageSize Items per page
+   * @returns Promise with deals list
+   */
   async getDeals(
-    filters: any = {},
-    page: number = 1,
+    filters: any = {}, 
+    page: number = 1, 
     pageSize: number = 20
   ): Promise<DealResponse[]> {
     try {
@@ -131,7 +132,13 @@ export class DealsService {
       if (filters.price_max) queryParams.append('price_max', filters.price_max.toString());
       if (filters.sort_by) queryParams.append('sort_by', filters.sort_by);
       
-      const response = await apiClient.get(`/api/v1/deals?${queryParams.toString()}`);
+      // Check if user is authenticated by looking for token
+      const hasAuthToken = typeof window !== 'undefined' && !!localStorage.getItem('access_token');
+      
+      // Use the new public endpoint when not authenticated
+      const endpoint = hasAuthToken ? `${this.BASE_URL}` : `/api/v1/public-deals`;
+      
+      const response = await apiClient.get(`${endpoint}?${queryParams.toString()}`);
       return response.data;
     } catch (error) {
       console.error('Error getting deals:', error);
@@ -139,10 +146,39 @@ export class DealsService {
     }
   }
 
-  async createDeal(dealData: any): Promise<DealResponse> {
+  /**
+   * Get a specific deal by ID
+   * @param dealId The ID of the deal
+   * @returns Promise with the deal
+   */
+  async getDealById(dealId: string): Promise<DealResponse> {
+    try {
+      const response = await apiClient.get(`${this.BASE_URL}/${dealId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error getting deal ${dealId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Alias for getDealById to maintain compatibility with existing code
+   * @param dealId The ID of the deal
+   * @returns Promise with the deal
+   */
+  async getDealDetails(dealId: string): Promise<DealResponse> {
+    return this.getDealById(dealId);
+  }
+
+  /**
+   * Create a new deal
+   * @param dealData The deal data to create
+   * @returns Promise with the created deal
+   */
+  async createDeal(dealData: CreateDealRequest): Promise<DealResponse> {
     try {
       console.log('Creating new deal with data:', dealData);
-      const response = await apiClient.post('/api/v1/deals', dealData);
+      const response = await apiClient.post(`${this.BASE_URL}`, dealData);
       return response.data;
     } catch (error) {
       console.error('Error creating deal:', error);
@@ -150,10 +186,16 @@ export class DealsService {
     }
   }
 
-  async updateDeal(dealId: string, dealData: any): Promise<DealResponse> {
+  /**
+   * Update an existing deal
+   * @param dealId The ID of the deal to update
+   * @param dealData The updated deal data
+   * @returns Promise with the updated deal
+   */
+  async updateDeal(dealId: string, dealData: UpdateDealRequest): Promise<DealResponse> {
     try {
       console.log(`Updating deal ${dealId} with data:`, dealData);
-      const response = await apiClient.put(`/api/v1/deals/${dealId}`, dealData);
+      const response = await apiClient.put(`${this.BASE_URL}/${dealId}`, dealData);
       return response.data;
     } catch (error) {
       console.error(`Error updating deal ${dealId}:`, error);
@@ -161,15 +203,105 @@ export class DealsService {
     }
   }
 
+  /**
+   * Delete a deal
+   * @param dealId The ID of the deal to delete
+   */
   async deleteDeal(dealId: string): Promise<void> {
     try {
-      console.log(`Deleting deal ${dealId}`);
-      await apiClient.delete(`/api/v1/deals/${dealId}`);
+      await apiClient.delete(`${this.BASE_URL}/${dealId}`);
     } catch (error) {
       console.error(`Error deleting deal ${dealId}:`, error);
       throw error;
     }
   }
+  
+  /**
+   * Get AI analysis for a deal
+   * @param dealId Deal ID
+   * @returns Promise with AI analysis data
+   */
+  async getDealAnalysis(dealId: string): Promise<AIAnalysis> {
+    try {
+      const response = await apiClient.get(`${this.BASE_URL}/analysis/${dealId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error getting analysis for deal ${dealId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Refresh a deal's information from its source
+   * @param dealId Deal ID
+   * @returns Promise with the updated deal
+   */
+  async refreshDeal(dealId: string): Promise<DealResponse> {
+    try {
+      const response = await apiClient.post(`${this.BASE_URL}/${dealId}/refresh`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error refreshing deal ${dealId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Refresh AI analysis for a deal
+   * @param dealId Deal ID
+   * @returns Promise with the updated deal including fresh analysis
+   */
+  async refreshDealAnalysis(dealId: string): Promise<DealResponse> {
+    try {
+      const response = await apiClient.post(`${this.BASE_URL}/${dealId}/analyze`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error refreshing analysis for deal ${dealId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Validate a deal
+   * @param dealId Deal ID
+   * @returns Promise with validation result
+   */
+  async validateDeal(dealId: string): Promise<{is_valid: boolean; validation_details: any}> {
+    try {
+      const response = await apiClient.post(`${this.BASE_URL}/${dealId}/validate`, {});
+      return response.data;
+    } catch (error) {
+      console.error(`Error validating deal ${dealId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Track a deal (start monitoring)
+   * @param dealId Deal ID
+   */
+  async trackDeal(dealId: string): Promise<void> {
+    try {
+      await apiClient.post(`${this.BASE_URL}/${dealId}/track`);
+    } catch (error) {
+      console.error(`Error tracking deal ${dealId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Untrack a deal (stop monitoring)
+   * @param dealId Deal ID
+   */
+  async untrackDeal(dealId: string): Promise<void> {
+    try {
+      await apiClient.delete(`${this.BASE_URL}/${dealId}/track`);
+    } catch (error) {
+      console.error(`Error untracking deal ${dealId}:`, error);
+      throw error;
+    }
+  }
 }
 
+// Export a singleton instance for use across the app
 export const dealsService = new DealsService(); 

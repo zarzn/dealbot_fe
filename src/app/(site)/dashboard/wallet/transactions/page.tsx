@@ -20,79 +20,13 @@ import {
 type FilterOption = 'all' | 'credit' | 'debit';
 type SortOption = 'newest' | 'oldest' | 'amount-high' | 'amount-low';
 
-// Mockup data
-const mockTransactions: TokenTransaction[] = [
-  {
-    id: '1',
-    type: 'credit',
-    amount: 100,
-    description: 'Referral Bonus',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
-    status: 'completed',
-    metadata: { source: 'referral', referredUser: 'john.doe@example.com' }
-  },
-  {
-    id: '2',
-    type: 'debit',
-    amount: 25,
-    description: 'Deal Search - Electronics',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-    status: 'completed',
-    metadata: { searchId: '123', category: 'Electronics' }
-  },
-  {
-    id: '3',
-    type: 'credit',
-    amount: 50,
-    description: 'Purchase Tokens',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-    status: 'completed',
-    txHash: '0x123...abc'
-  },
-  {
-    id: '4',
-    type: 'debit',
-    amount: 15,
-    description: 'Goal Creation - Gaming Monitor',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
-    status: 'completed',
-    metadata: { goalId: '456', goalType: 'price_tracking' }
-  },
-  {
-    id: '5',
-    type: 'credit',
-    amount: 200,
-    description: 'Achievement Reward - Deal Hunter',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(), // 3 days ago
-    status: 'completed',
-    metadata: { achievement: 'deal_hunter_lvl1' }
-  },
-  {
-    id: '6',
-    type: 'debit',
-    amount: 30,
-    description: 'AI Analysis - Market Research',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString(), // 4 days ago
-    status: 'completed',
-    metadata: { analysisType: 'market_research', category: 'Laptops' }
-  },
-  {
-    id: '7',
-    type: 'credit',
-    amount: 75,
-    description: 'Purchase Tokens',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(), // 5 days ago
-    status: 'completed',
-    txHash: '0x456...def'
-  }
-];
-
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<TokenTransaction[]>(mockTransactions);
+  const [transactions, setTransactions] = useState<TokenTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<FilterOption>('all');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadTransactions();
@@ -100,18 +34,26 @@ export default function TransactionsPage() {
 
   const loadTransactions = async () => {
     try {
-      // In production, this would fetch from the API
-      // const data = await walletService.getTransactions();
-      // setTransactions(data);
-      setTransactions(mockTransactions);
+      setIsLoading(true);
+      setError(null);
+      // Use the wallet service to fetch real transaction data
+      const data = await walletService.getTransactions();
+      // Ensure we always have an array of transactions
+      setTransactions(Array.isArray(data) ? data : []);
     } catch (error) {
+      console.error('Failed to load transactions:', error);
+      setError('Unable to load transactions. Please try again later.');
+      setTransactions([]);
       toast.error('Failed to load transactions');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filteredTransactions = transactions
+  // Ensure transactions is always an array
+  const safeTransactions = transactions || [];
+
+  const filteredTransactions = safeTransactions
     .filter(transaction => {
       // Status filter
       if (filterStatus !== 'all') {

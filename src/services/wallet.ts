@@ -12,41 +12,6 @@ interface PurchaseRequest {
   priceInSOL: number;
 }
 
-// Mock data to use when backend fails
-const MOCK_BALANCE = 500;
-const MOCK_TRANSACTIONS: TokenTransaction[] = [
-  {
-    id: '1',
-    amount: 100,
-    type: 'credit',
-    description: 'Welcome bonus',
-    timestamp: new Date().toISOString(),
-    status: 'completed'
-  },
-  {
-    id: '2',
-    amount: 50,
-    type: 'debit',
-    description: 'Used for deal search',
-    timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-    status: 'completed'
-  }
-];
-
-const MOCK_WALLET_INFO: WalletInfo = {
-  balance: MOCK_BALANCE,
-  address: '',
-  isConnected: false,
-  network: 'testnet'
-};
-
-const MOCK_TOKEN_STATS: TokenStats = {
-  totalSpent: 250,
-  totalReceived: 750,
-  activeGoals: 12,
-  lastRefresh: new Date().toISOString()
-};
-
 class WalletService {
   async getBalance(): Promise<number> {
     try {
@@ -55,12 +20,7 @@ class WalletService {
       return typeof data.data === 'number' ? data.data : parseFloat(data.data) || 0;
     } catch (error: any) {
       console.error('Error fetching token balance:', error);
-      // If we're in development, log detailed error
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Using mock balance due to error:', error.message);
-      }
-      // Return mock balance for development
-      return MOCK_BALANCE;
+      throw error;
     }
   }
 
@@ -70,10 +30,7 @@ class WalletService {
       return data.data;
     } catch (error: any) {
       console.error('Error fetching token transactions:', error);
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Using mock transactions due to error:', error.message);
-      }
-      return MOCK_TRANSACTIONS;
+      throw error;
     }
   }
 
@@ -83,25 +40,7 @@ class WalletService {
       return data.data;
     } catch (error: any) {
       console.error('Error fetching wallet info:', error);
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Using mock wallet info due to error:', error.message);
-      }
-      
-      // Attempt to get real balance and transactions separately
-      let balance = MOCK_BALANCE;
-      
-      try {
-        balance = await this.getBalance();
-      } catch (balanceError) {
-        console.error('Failed to get fallback balance:', balanceError);
-      }
-      
-      return {
-        balance,
-        address: '',
-        isConnected: false,
-        network: 'testnet'
-      };
+      throw error;
     }
   }
 
@@ -111,15 +50,6 @@ class WalletService {
       return data.data;
     } catch (error: any) {
       console.error('Error connecting wallet:', error);
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Using mock wallet info for development');
-        // In development, simulate success even if backend fails
-        return {
-          ...MOCK_WALLET_INFO,
-          address,
-          isConnected: true
-        };
-      }
       throw error;
     }
   }
@@ -129,10 +59,7 @@ class WalletService {
       await apiClient.post('/api/v1/token/disconnect-wallet');
     } catch (error: any) {
       console.error('Error disconnecting wallet:', error);
-      // In development, ignore errors
-      if (process.env.NODE_ENV !== 'development') {
-        throw error;
-      }
+      throw error;
     }
   }
 
@@ -142,10 +69,7 @@ class WalletService {
       return data.data;
     } catch (error: any) {
       console.error('Error fetching token stats:', error);
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Using mock token stats due to error:', error.message);
-      }
-      return MOCK_TOKEN_STATS;
+      throw error;
     }
   }
 
@@ -155,13 +79,7 @@ class WalletService {
       return data.data;
     } catch (error: any) {
       console.error('Error fetching token price:', error);
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Using mock token price due to error:', error.message);
-      }
-      return {
-        usd: 0.10,
-        lastUpdated: new Date().toISOString()
-      };
+      throw error;
     }
   }
 

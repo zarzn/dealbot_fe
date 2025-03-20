@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { dealsService } from '@/services/deals';
 import { DealResponse, AIAnalysis, PriceHistory, Deal } from '@/types/deals';
@@ -11,17 +11,20 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { 
-  BarChart, 
-  Calendar, 
-  Clock, 
-  DollarSign, 
-  ShoppingBag, 
-  Tag, 
-  Truck, 
+import {
+  BarChart,
+  Calendar,
+  Clock,
+  ExternalLink,
+  Loader2,
+  ShoppingBag,
+  Tag,
+  Truck,
   User,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Star,
+  ShoppingCart
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 
@@ -44,7 +47,7 @@ interface DealDetailProps {
   onDelete?: () => void;
   onUpdate?: (updatedDeal: Deal) => void;
   onBack?: () => void;
-  onRefresh?: () => void;
+  onRefresh?: (updatedDeal: Deal) => void;
   isLoading?: boolean;
 }
 
@@ -126,7 +129,7 @@ export const DealDetailError: React.FC<{
             </Button>
           )}
           {dealId && (
-            <Link href={`/deals/${dealId}/edit`} passHref>
+            <Link href={`/dashboard/deals/edit/${dealId}`} passHref>
               <Button variant="outline">
                 View in Editor
               </Button>
@@ -149,7 +152,7 @@ export const DealDetail: React.FC<DealDetailProps> = ({
   const router = useRouter();
   const [deal, setDeal] = useState<DealResponse | null>(null);
   const [analysis, setAnalysis] = useState<AIAnalysis | null>(null);
-  const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([]);
+  const [priceHistory, setPriceHistory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -183,21 +186,16 @@ export const DealDetail: React.FC<DealDetailProps> = ({
       
       // Try to fetch AI analysis if available
       try {
-        const analysisData = await dealsService.getAIAnalysis(dealId);
+        const analysisData = await dealsService.getDealAnalysis(dealId);
         setAnalysis(analysisData);
       } catch (analysisError) {
         console.warn("Could not fetch AI analysis:", analysisError);
         // Non-critical error, don't show to user
       }
       
-      // Try to fetch price history if available
-      try {
-        const historyData = await dealsService.getPriceHistory(dealId);
-        setPriceHistory(historyData);
-      } catch (historyError) {
-        console.warn("Could not fetch price history:", historyError);
-        // Non-critical error, don't show to user
-      }
+      // Try to fetch price history if available - simplified for now
+      setPriceHistory([]);
+      
     } catch (err) {
       console.error("Error fetching deal data:", err);
       setError("Failed to load deal information. Please try again.");
@@ -208,35 +206,31 @@ export const DealDetail: React.FC<DealDetailProps> = ({
   };
 
   const handleRefreshDeal = async () => {
-    if (isRefreshing || isParentLoading) return;
+    if (isRefreshing) return;
     
     setIsRefreshing(true);
     try {
-      // Use the parent onRefresh callback if provided
-      if (onRefresh) {
-        onRefresh();
-        return;
+      // If parent component provides a refresh handler, use that
+      if (onRefresh && deal) {
+        const refreshedDeal = await dealsService.refreshDeal(deal.id);
+        onRefresh(refreshedDeal as Deal);
+        toast.success("Deal refreshed successfully");
+      } else {
+        // Fallback to local refresh
+        await fetchDealData();
+        toast.success("Deal refreshed successfully");
       }
-      
-      // Otherwise, handle refresh locally
-      const refreshedDeal = await dealsService.refreshDeal(dealId);
-      setDeal(refreshedDeal);
-      
-      if (onUpdate) {
-        onUpdate(refreshedDeal as unknown as Deal);
-      }
-      
-      toast.success("Deal refreshed successfully");
-    } catch (err) {
-      console.error("Error refreshing deal:", err);
-      toast.error("Failed to refresh deal");
+    } catch (error) {
+      console.error("Error refreshing deal:", error);
+      toast.error("Could not refresh deal");
     } finally {
       setIsRefreshing(false);
     }
   };
 
   const handleEditDeal = () => {
-    router.push(`/deals/edit/${dealId}`);
+    // Using the correct navigation method for the App Router
+    router.push(`/dashboard/deals/edit/${dealId}`);
   };
 
   const handleDeleteDeal = async () => {
@@ -247,7 +241,8 @@ export const DealDetail: React.FC<DealDetailProps> = ({
       if (onDelete) {
         onDelete();
       } else {
-        router.push('/deals');
+        // Using the correct navigation method for the App Router
+        router.push('/dashboard/deals');
       }
     } catch (err) {
       console.error("Error deleting deal:", err);
@@ -325,7 +320,7 @@ export const DealDetail: React.FC<DealDetailProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-white">
       {/* Back button (mobile only) */}
       {onBack && (
         <Button 
@@ -338,13 +333,13 @@ export const DealDetail: React.FC<DealDetailProps> = ({
       )}
       
       {/* Main deal card */}
-      <Card>
+      <Card className="bg-white/[0.05] border border-white/10">
         <CardHeader className="pb-3">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold">{deal.title}</h2>
+              <h2 className="text-2xl font-bold text-white">{deal?.title}</h2>
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                {deal.category && (
+                {deal?.category && (
                   <Badge variant="outline" className="flex items-center gap-1">
                     <Tag className="w-3 h-3" />
                     {deal.category}
@@ -353,11 +348,12 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                 
                 {deal.status && (
                   <Badge 
-                    className={`flex items-center gap-1 ${
-                      deal.status === 'active' ? 'bg-green-100 text-green-800 hover:bg-green-200' : 
-                      deal.status === 'expired' ? 'bg-red-100 text-red-800 hover:bg-red-200' :
-                      'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                    }`}
+                    className={`
+                      flex items-center gap-1
+                      ${deal.status === 'active' ? 'bg-green-500/20 text-green-400' : 
+                      deal.status === 'expired' ? 'bg-red-500/20 text-red-400' :
+                      'bg-yellow-500/20 text-yellow-400'}
+                    `}
                   >
                     {deal.status === 'active' ? 
                       <FiCheckCircle className="w-3 h-3" /> : 
@@ -368,14 +364,21 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                 )}
                 
                 {deal.featured && (
-                  <Badge variant="secondary" className="flex items-center gap-1">
+                  <Badge className="bg-purple/20 text-purple flex items-center gap-1">
                     <FiStar className="w-3 h-3" />
                     Featured
                   </Badge>
                 )}
                 
+                {deal.verified && (
+                  <Badge className="bg-blue-500/20 text-blue-400 flex items-center gap-1">
+                    <FiCheckCircle className="w-3 h-3" />
+                    Verified
+                  </Badge>
+                )}
+                
                 {deal.created_at && (
-                  <span className="text-sm text-gray-500 flex items-center">
+                  <span className="text-sm text-white/60 flex items-center">
                     <Clock className="w-3 h-3 mr-1 inline" />
                     {timeAgo(deal.created_at)}
                   </span>
@@ -389,6 +392,7 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                 size="sm" 
                 onClick={handleRefreshDeal}
                 disabled={isRefreshing}
+                className="bg-white/[0.05] border border-white/10 hover:bg-white/[0.1]"
               >
                 <FiRefreshCw className={`mr-1 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 Refresh
@@ -398,6 +402,7 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                 variant="outline" 
                 size="sm" 
                 onClick={handleEditDeal}
+                className="bg-white/[0.05] border border-white/10 hover:bg-white/[0.1]"
               >
                 <FiEdit2 className="mr-1 h-4 w-4" />
                 Edit
@@ -408,13 +413,13 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
+                    className="bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
                   >
                     <FiTrash2 className="mr-1 h-4 w-4" />
                     Delete
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="bg-white/[0.05] border border-white/10">
                   <DialogHeader>
                     <DialogTitle>Confirm Deletion</DialogTitle>
                     <DialogDescription>
@@ -444,13 +449,17 @@ export const DealDetail: React.FC<DealDetailProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Left column - Image */}
             <div className="md:col-span-1">
-              <div className="relative aspect-video md:aspect-square rounded-md overflow-hidden bg-white/[0.05]">
-                {deal.image_url ? (
+              <div className="relative aspect-video md:aspect-square rounded-md overflow-hidden bg-white/[0.05] transition-all hover:bg-white/[0.08] duration-300">
+                {deal?.image_url ? (
                   <Image
                     src={deal.image_url}
-                    alt={deal.title}
+                    alt={deal.title || 'Deal Image'}
                     fill
-                    className="object-cover"
+                    className="object-contain hover:scale-105 transition-transform duration-300"
+                    onError={(e) => {
+                      // Set fallback image to our SVG placeholder
+                      e.currentTarget.src = '/placeholder-deal.svg';
+                    }}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -461,43 +470,69 @@ export const DealDetail: React.FC<DealDetailProps> = ({
               
               <div className="mt-4 space-y-3">
                 <div className="flex justify-between items-center">
-                  <div className="text-xl font-bold">
-                    ${typeof deal.price === 'number' ? deal.price.toFixed(2) : 'N/A'}
+                  <div className="text-2xl font-bold text-white">
+                    ${typeof deal?.price === 'number' ? deal.price.toFixed(2) : parseFloat(deal?.price || '0').toFixed(2)}
                   </div>
                   
-                  {deal.original_price && typeof deal.original_price === 'number' && (
-                    <div className="flex items-center">
-                      <span className="text-sm text-white/50 line-through mr-2">
-                        ${deal.original_price.toFixed(2)}
+                  {deal?.original_price && (
+                    <div className="flex flex-col items-end">
+                      <span className="text-sm text-white/50 line-through mb-1">
+                        ${typeof deal.original_price === 'number' 
+                          ? deal.original_price.toFixed(2) 
+                          : parseFloat(deal.original_price || '0').toFixed(2)}
                       </span>
-                      <Badge className="bg-red-500 text-white">
-                        {Math.round(100 - (deal.price / deal.original_price) * 100)}% OFF
+                      <Badge className="bg-green-500/20 text-green-400">
+                        {Math.round(100 - ((typeof deal.price === 'number' ? deal.price : parseFloat(deal.price || '0')) / 
+                          (typeof deal.original_price === 'number' ? deal.original_price : parseFloat(deal.original_price || '0'))) * 100)}% OFF
                       </Badge>
                     </div>
                   )}
                 </div>
+
+                {/* Source of the deal */}
+                {deal?.source && (
+                  <div className="flex items-center text-sm text-white/60 mt-2">
+                    <span>Source: {deal.source}</span>
+                  </div>
+                )}
                 
-                <div className="flex gap-2">
+                <div className="flex gap-2 mt-4">
                   <Button 
-                    className="flex-1" 
+                    className={`flex-1 ${isTracking ? 'bg-purple/20 text-purple border border-purple/20' : ''}`} 
                     onClick={handleTrackDeal}
                   >
                     <FiBookmark className="mr-2 h-4 w-4" />
                     {isTracking ? 'Untrack' : 'Track Deal'}
                   </Button>
                   
-                  {deal.url && (
+                  {deal?.url && (
                     <Button
                       variant="outline"
-                      className="flex items-center gap-1"
+                      className="flex items-center gap-1 bg-white/[0.05] border border-white/10 hover:bg-white/[0.1]"
                     >
-                      <Link href={deal.url || "#"} target="_blank" rel="noopener noreferrer" className="flex items-center">
+                      <Link href={deal.url || "#"} target="_blank" rel="noopener noreferrer" className="flex items-center text-white">
                         <FiExternalLink size={16} className="mr-2" />
                         Visit Deal
                       </Link>
                     </Button>
                   )}
                 </div>
+
+                {/* AI Score if available */}
+                {deal?.ai_analysis?.score !== undefined && (
+                  <div className="bg-white/[0.05] border border-white/10 rounded-lg p-3 mt-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-white">AI Score</span>
+                      <span className={`text-lg font-bold ${
+                        deal.ai_analysis.score >= 8 ? 'text-green-500' : 
+                        deal.ai_analysis.score >= 6 ? 'text-yellow-500' : 
+                        'text-red-500'
+                      }`}>
+                        {deal.ai_analysis.score.toFixed(1)}/10
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -505,25 +540,29 @@ export const DealDetail: React.FC<DealDetailProps> = ({
             <div className="md:col-span-2 space-y-6">
               {/* Description */}
               <div>
-                <h3 className="text-lg font-semibold mb-2">Description</h3>
-                <p className="text-gray-700">{deal.description}</p>
+                <h3 className="text-lg font-semibold mb-2 text-white">Description</h3>
+                <p className="text-white/70">{deal?.description}</p>
               </div>
               
               {/* Deal Information */}
               <div>
-                <h3 className="text-lg font-semibold mb-3">Deal Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <h3 className="text-lg font-semibold mb-3 text-white">Deal Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/[0.02] rounded-lg p-4">
                   {/* Seller Info */}
-                  {deal.seller_info && (
+                  {deal?.seller_info && (
                     <div className="flex items-start gap-2">
-                      <User className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <User className="h-5 w-5 text-white/50 mt-0.5" />
                       <div>
-                        <div className="font-medium">Seller</div>
-                        <div className="text-sm text-gray-600">
+                        <div className="font-medium text-white">Seller</div>
+                        <div className="text-sm text-white/70">
                           {deal.seller_info.name}
                           {deal.seller_info && typeof deal.seller_info.rating === 'number' && (
-                            <span className="ml-2 text-amber-500">
-                              ★ {deal.seller_info.rating.toFixed(1)}
+                            <span className="ml-2 text-yellow-500 flex items-center gap-1 mt-1">
+                              <Star className="h-3 w-3" />
+                              {deal.seller_info.rating.toFixed(1)}
+                              {deal.seller_info.reviews && (
+                                <span className="text-white/50">({deal.seller_info.reviews})</span>
+                              )}
                             </span>
                           )}
                         </div>
@@ -534,19 +573,19 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                   {/* Shipping Info */}
                   {deal.shipping_info && (
                     <div className="flex items-start gap-2">
-                      <Truck className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <Truck className="h-5 w-5 text-white/50 mt-0.5" />
                       <div>
-                        <div className="font-medium">Shipping</div>
-                        <div className="text-sm text-gray-600">
+                        <div className="font-medium text-white">Shipping</div>
+                        <div className="text-sm text-white/70">
                           {deal.shipping_info.free_shipping 
                             ? 'Free Shipping' 
                             : typeof deal.shipping_info.cost === 'number' 
                               ? `$${deal.shipping_info.cost.toFixed(2)} shipping` 
                               : 'Shipping cost unavailable'}
                           {deal.shipping_info.estimated_days && (
-                            <span className="ml-2">
-                              ({deal.shipping_info.estimated_days} days)
-                            </span>
+                            <div className="mt-1 text-white/50">
+                              Estimated delivery: {deal.shipping_info.estimated_days} days
+                            </div>
                           )}
                         </div>
                       </div>
@@ -558,7 +597,7 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                     <div className="flex items-start gap-2">
                       <Calendar className="h-5 w-5 text-white/50 mt-0.5" />
                       <div>
-                        <div className="font-medium">Posted On</div>
+                        <div className="font-medium text-white">Posted On</div>
                         <div className="text-sm text-white/70">
                           {formatDate(deal.created_at)}
                         </div>
@@ -571,9 +610,39 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                     <div className="flex items-start gap-2">
                       <Clock className="h-5 w-5 text-white/50 mt-0.5" />
                       <div>
-                        <div className="font-medium">Expires</div>
+                        <div className="font-medium text-white">Expires</div>
                         <div className="text-sm text-white/70">
                           {formatDate(deal.expires_at)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Availability */}
+                  {deal.availability && (
+                    <div className="flex items-start gap-2">
+                      <ShoppingBag className="h-5 w-5 text-white/50 mt-0.5" />
+                      <div>
+                        <div className="font-medium text-white">Availability</div>
+                        <div className="text-sm text-white/70">
+                          {deal.availability.in_stock 
+                            ? (deal.availability.quantity 
+                                ? `${deal.availability.quantity} in stock` 
+                                : 'In Stock') 
+                            : 'Out of Stock'}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Market */}
+                  {deal.market_id && (
+                    <div className="flex items-start gap-2">
+                      <ShoppingCart className="h-5 w-5 text-white/50 mt-0.5" />
+                      <div>
+                        <div className="font-medium text-white">Market</div>
+                        <div className="text-sm text-white/70">
+                          {deal.market_id}
                         </div>
                       </div>
                     </div>
@@ -584,18 +653,19 @@ export const DealDetail: React.FC<DealDetailProps> = ({
               {/* AI Analysis (if available) */}
               {analysis && (
                 <div>
-                  <h3 className="text-lg font-semibold mb-3">Deal Analysis</h3>
+                  <h3 className="text-lg font-semibold mb-3 text-white">Deal Analysis</h3>
                   
                   <div className="bg-white/[0.05] border border-white/10 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center">
-                        <BarChart className="h-5 w-5 text-blue-500 mr-2" />
-                        <span className="font-medium">Deal Score</span>
+                        <BarChart className="h-5 w-5 text-purple mr-2" />
+                        <span className="font-medium text-white">Deal Score</span>
                       </div>
                       <Badge className={`
                         ${analysis.score >= 8 ? 'bg-green-500/20 text-green-400' : 
                           analysis.score >= 6 ? 'bg-amber-500/20 text-amber-400' : 
                           'bg-red-500/20 text-red-400'}
+                        text-white px-3 py-1 text-sm
                       `}>
                         {typeof analysis.score === 'number' ? analysis.score.toFixed(1) : 'N/A'}/10
                       </Badge>
@@ -610,8 +680,8 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
                         {/* Pros */}
                         {analysis.pros?.length > 0 && (
-                          <div>
-                            <div className="font-medium text-green-400 mb-1">Pros</div>
+                          <div className="bg-white/[0.02] p-3 rounded-lg">
+                            <div className="font-medium text-green-400 mb-2">Pros</div>
                             <ul className="list-disc list-inside text-sm text-white/70 space-y-1">
                               {analysis.pros.map((pro, index) => (
                                 <li key={index}>{pro}</li>
@@ -622,8 +692,8 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                         
                         {/* Cons */}
                         {analysis.cons?.length > 0 && (
-                          <div>
-                            <div className="font-medium text-red-400 mb-1">Cons</div>
+                          <div className="bg-white/[0.02] p-3 rounded-lg">
+                            <div className="font-medium text-red-400 mb-2">Cons</div>
                             <ul className="list-disc list-inside text-sm text-white/70 space-y-1">
                               {analysis.cons.map((con, index) => (
                                 <li key={index}>{con}</li>
@@ -636,13 +706,13 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                     
                     {/* Recommendations */}
                     {analysis.recommendations?.length > 0 && (
-                      <div className="mt-3">
-                        <div className="font-medium mb-1">Recommendations</div>
+                      <div className="mt-3 bg-white/[0.02] p-3 rounded-lg">
+                        <div className="font-medium text-purple mb-2">Recommendations</div>
                         <ul className="text-sm space-y-1">
                           {analysis.recommendations.map((rec, index) => (
                             <li key={index} className="flex items-start">
-                              <span className="text-blue-500 mr-2">•</span> 
-                              {rec}
+                              <span className="text-purple mr-2">•</span> 
+                              <span className="text-white/70">{rec}</span>
                             </li>
                           ))}
                         </ul>
@@ -653,13 +723,12 @@ export const DealDetail: React.FC<DealDetailProps> = ({
               )}
               
               {/* Tags */}
-              {deal.tags && deal.tags.length > 0 && (
+              {deal?.tags && deal.tags.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">Tags</h3>
+                  <h3 className="text-lg font-semibold mb-2 text-white">Tags</h3>
                   <div className="flex flex-wrap gap-2">
                     {deal.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="flex items-center gap-1">
-                        <Tag className="h-3 w-3" />
+                      <Badge key={tag} variant="outline" className="bg-white/[0.05] border border-white/10 text-white/70">
                         {tag}
                       </Badge>
                     ))}

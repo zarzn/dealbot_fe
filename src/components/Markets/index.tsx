@@ -70,32 +70,54 @@ export default function Markets() {
         // Fetch latest deals (limited to 6)
         const dealsResponse = await dealsService.getDeals({}, 1, 6);
         
+        console.log('Deals response:', dealsResponse);
+        
+        // Handle different response formats
+        let dealsArray: any[] = [];
+        if (Array.isArray(dealsResponse)) {
+          dealsArray = dealsResponse;
+        } else if (dealsResponse && typeof dealsResponse === 'object') {
+          // Handle {deals: [...]} format
+          const responseObj = dealsResponse as Record<string, any>;
+          if (responseObj.deals && Array.isArray(responseObj.deals)) {
+            dealsArray = responseObj.deals;
+          } else if (responseObj.data && Array.isArray(responseObj.data)) {
+            dealsArray = responseObj.data;
+          } else if (responseObj.data && typeof responseObj.data === 'object' && responseObj.data.deals && Array.isArray(responseObj.data.deals)) {
+            dealsArray = responseObj.data.deals;
+          }
+        }
+        
+        console.log('Deals array extracted:', dealsArray);
+        
         // Transform deals to match our UI format
-        const transformedDeals = dealsResponse.map(deal => {
+        const transformedDeals = dealsArray.map(deal => {
           try {
+            console.log('Processing deal:', deal); // Add debug logging
+            
             // Handle price safely
             const price = typeof deal.price === 'number' ? 
               deal.price : 
-              (deal.price ? Number(deal.price) : 0);
+              (deal.price ? parseFloat(String(deal.price)) : 0);
             
             // Handle original price safely
             const originalPrice = deal.original_price ? 
               (typeof deal.original_price === 'number' ? 
                 deal.original_price : 
-                Number(deal.original_price)) 
+                parseFloat(String(deal.original_price))) 
               : (price * 1.2); // Fallback
             
             // Handle score safely (normalize to 0-1 range)
             let score = 0.8; // Default
-            if (deal.score) {
+            if (deal.score !== undefined && deal.score !== null) {
               score = typeof deal.score === 'number' ? 
                 Math.min(deal.score / 100, 1) : 
-                Math.min(Number(deal.score) / 100, 1);
-            } else if (deal.latest_score) {
+                Math.min(parseFloat(String(deal.score)) / 100, 1);
+            } else if (deal.latest_score !== undefined && deal.latest_score !== null) {
               // For backward compatibility
               score = typeof deal.latest_score === 'number' ? 
                 Math.min(deal.latest_score / 100, 1) : 
-                Math.min(Number(deal.latest_score) / 100, 1);
+                Math.min(parseFloat(String(deal.latest_score)) / 100, 1);
             }
             
             // Extract vendor from metadata if available
@@ -109,7 +131,7 @@ export default function Markets() {
             if (deal.seller_info && typeof deal.seller_info === 'object' && deal.seller_info.rating) {
               sellerRating = typeof deal.seller_info.rating === 'number' ? 
                 deal.seller_info.rating : 
-                Number(deal.seller_info.rating);
+                parseFloat(String(deal.seller_info.rating));
             }
             
             return {
@@ -173,6 +195,19 @@ export default function Markets() {
     } catch (error) {
       console.error('Error calculating discount:', error);
       return 0;
+    }
+  };
+
+  // Helper function to safely format price values
+  const formatPrice = (price: number | string | null | undefined): string => {
+    if (price === null || price === undefined) return '0.00';
+    
+    try {
+      const numPrice = typeof price === 'number' ? price : parseFloat(String(price));
+      return isNaN(numPrice) ? '0.00' : numPrice.toFixed(2);
+    } catch (error) {
+      console.error('Error formatting price:', error);
+      return '0.00';
     }
   };
 
@@ -286,7 +321,7 @@ export default function Markets() {
                 {deals
                   .filter(
                     (deal) =>
-                      !selectedMarket || deal.marketId === selectedMarket
+                      !selectedMarket || deal.marketId === selectedMarket || !deal.marketId
                   )
                   .map((deal) => (
                     <motion.div
@@ -321,16 +356,16 @@ export default function Markets() {
                       <div className="mb-6 flex items-center justify-between">
                         <div>
                           <p className="text-2xl font-bold text-white">
-                            ${typeof deal.price === 'number' ? deal.price.toFixed(2) : Number(deal.price).toFixed(2)}
+                            ${formatPrice(deal.price)}
                           </p>
                           <p className="text-sm text-dark-3 line-through mt-1">
-                            ${typeof deal.originalPrice === 'number' ? deal.originalPrice.toFixed(2) : Number(deal.originalPrice).toFixed(2)}
+                            ${formatPrice(deal.originalPrice)}
                           </p>
                         </div>
                         <div className="rounded-full bg-blue-500/10 px-4 py-2 text-blue-500">
                           {calculateDiscount(
-                            typeof deal.originalPrice === 'number' ? deal.originalPrice : Number(deal.originalPrice), 
-                            typeof deal.price === 'number' ? deal.price : Number(deal.price)
+                            typeof deal.originalPrice === 'number' ? deal.originalPrice : parseFloat(String(deal.originalPrice) || "0"), 
+                            typeof deal.price === 'number' ? deal.price : parseFloat(String(deal.price) || "0")
                           )}% OFF
                         </div>
                       </div>
@@ -345,7 +380,7 @@ export default function Markets() {
                         <div className="flex items-center gap-2">
                           <BarChart3 className="h-4 w-4 text-blue-500" />
                           <span className="text-sm text-white">
-                            Score: {Math.round(deal.score * 100)}
+                            Score: {deal.score ? Math.round(deal.score * 100) : "N/A"}
                           </span>
                         </div>
                       </div>

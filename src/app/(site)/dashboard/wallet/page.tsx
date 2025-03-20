@@ -23,13 +23,21 @@ export default function WalletPage() {
 
   const fetchWalletData = async () => {
     try {
-      const [balanceData, transactionsData] = await Promise.all([
-        walletService.getBalance(),
-        walletService.getTransactions(),
-      ]);
+      setIsLoading(true);
+      const balanceData = await walletService.getBalance();
       setBalance(balanceData);
-      setTransactions(transactionsData);
+      
+      try {
+        const transactionsData = await walletService.getTransactions();
+        // Make sure we always have an array, even if the API returns undefined or null
+        setTransactions(Array.isArray(transactionsData) ? transactionsData : []);
+      } catch (txError) {
+        console.error('Failed to fetch transactions:', txError);
+        setTransactions([]);
+        toast.error('Failed to load transaction history');
+      }
     } catch (error: any) {
+      console.error('Failed to fetch wallet data:', error);
       toast.error(error.message || 'Failed to fetch wallet data');
     } finally {
       setIsLoading(false);
@@ -59,6 +67,9 @@ export default function WalletPage() {
       </div>
     );
   }
+
+  // Ensure transactions is always an array
+  const safeTransactions = transactions || [];
 
   return (
     <div className="space-y-8">
@@ -120,7 +131,7 @@ export default function WalletPage() {
           <div className="bg-white/[0.05] rounded-xl p-6 backdrop-blur-lg">
             <h2 className="text-lg font-semibold mb-4">Token Usage</h2>
             <div className="h-[300px]">
-              <TokenUsageChart data={transactions} />
+              <TokenUsageChart data={safeTransactions} />
             </div>
           </div>
         </div>
@@ -130,10 +141,10 @@ export default function WalletPage() {
           <div className="bg-white/[0.05] rounded-xl p-6 backdrop-blur-lg">
             <h2 className="text-lg font-semibold mb-4">Recent Transactions</h2>
             <div className="space-y-4">
-              {transactions.length === 0 ? (
+              {safeTransactions.length === 0 ? (
                 <p className="text-white/70 text-center py-4">No transactions yet</p>
               ) : (
-                transactions.slice(0, 5).map((tx) => (
+                safeTransactions.slice(0, 5).map((tx) => (
                   <div
                     key={tx.id}
                     className="flex items-center gap-3 p-3 bg-white/[0.02] rounded-lg"
@@ -164,7 +175,7 @@ export default function WalletPage() {
                 ))
               )}
             </div>
-            {transactions.length > 5 && (
+            {safeTransactions.length > 5 && (
               <button className="w-full mt-4 px-4 py-2 bg-white/[0.05] rounded-lg hover:bg-white/[0.1] transition text-sm">
                 View All Transactions
               </button>
@@ -178,7 +189,7 @@ export default function WalletPage() {
               <div>
                 <div className="text-white/70 text-sm">Total Spent</div>
                 <div className="text-lg font-medium">
-                  {transactions
+                  {safeTransactions
                     .filter(tx => tx.type === 'debit')
                     .reduce((sum, tx) => sum + tx.amount, 0)
                     .toFixed(2)} AIDL
@@ -187,7 +198,7 @@ export default function WalletPage() {
               <div>
                 <div className="text-white/70 text-sm">Total Received</div>
                 <div className="text-lg font-medium">
-                  {transactions
+                  {safeTransactions
                     .filter(tx => tx.type === 'credit')
                     .reduce((sum, tx) => sum + tx.amount, 0)
                     .toFixed(2)} AIDL

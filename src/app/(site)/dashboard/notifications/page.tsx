@@ -17,6 +17,7 @@ import {
   CheckCircle,
   Info
 } from 'lucide-react';
+import { getNotificationIcon } from '@/components/Notifications/NotificationBell';
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -65,7 +66,7 @@ export default function NotificationsPage() {
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      await notificationService.markAsRead(id);
+      const updatedNotification = await notificationService.markAsRead(id);
       
       // Update local state
       setNotifications(prev => 
@@ -81,9 +82,9 @@ export default function NotificationsPage() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      await notificationService.markAllAsRead();
+      const updatedNotifications = await notificationService.markAllAsRead();
       
-      // Update local state
+      // Update local state with updated notifications
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       
       toast.success('All notifications marked as read');
@@ -104,21 +105,6 @@ export default function NotificationsPage() {
     } catch (err) {
       console.error('Error clearing notifications:', err);
       toast.error('Failed to clear notifications');
-    }
-  };
-
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'info':
-        return <Info className="h-5 w-5 text-blue-500" />;
-      case 'success':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-amber-500" />;
-      case 'error':
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
-      default:
-        return <Bell className="h-5 w-5 text-gray-500" />;
     }
   };
 

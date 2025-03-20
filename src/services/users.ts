@@ -63,22 +63,70 @@ export interface UserProfile {
   email_verified: boolean;
 }
 
+// Cache interface
+interface CacheItem<T> {
+  data: T;
+  timestamp: number;
+  expiresAt: number;
+}
+
 /**
  * User service for managing user data and settings
  */
 export class UserService {
+  private profileCache: CacheItem<UserProfile> | null = null;
+  private settingsCache: CacheItem<UserSettings> | null = null;
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+  private profilePromise: Promise<UserProfile> | null = null;
+  private settingsPromise: Promise<UserSettings> | null = null;
+
   /**
-   * Get user profile
+   * Get user profile with caching
+   * @param {boolean} forceRefresh - Force refresh from API ignoring cache
    * @returns {Promise<UserProfile>} - User profile
    */
-  async getProfile(): Promise<UserProfile> {
-    try {
-      const response = await apiClient.get(API_ENDPOINTS.USER_PROFILE);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      throw error;
+  async getProfile(forceRefresh = false): Promise<UserProfile> {
+    // Check if we have a valid cached profile and not forcing refresh
+    const now = Date.now();
+    if (!forceRefresh && this.profileCache && this.profileCache.expiresAt > now) {
+      console.log('Using cached profile data');
+      return this.profileCache.data;
     }
+
+    // If we're already fetching the profile, reuse that promise
+    if (this.profilePromise) {
+      console.log('Reusing in-flight profile request');
+      return this.profilePromise;
+    }
+
+    // Otherwise, fetch from API
+    console.log('Fetching fresh profile data from API');
+    this.profilePromise = apiClient.get(API_ENDPOINTS.USER_PROFILE)
+      .then(response => {
+        const profile = response.data;
+        
+        // Cache the profile
+        this.profileCache = {
+          data: profile,
+          timestamp: now,
+          expiresAt: now + this.CACHE_DURATION
+        };
+        
+        // Return the profile data
+        return profile;
+      })
+      .catch(error => {
+        console.error('Error fetching user profile:', error);
+        throw error;
+      })
+      .finally(() => {
+        // Clear the promise after it's done
+        setTimeout(() => {
+          this.profilePromise = null;
+        }, 100);
+      });
+    
+    return this.profilePromise;
   }
 
   /**
@@ -88,7 +136,16 @@ export class UserService {
    */
   async updateProfile(data: Partial<UserProfile>): Promise<UserProfile> {
     try {
-      const response = await apiClient.patch(API_ENDPOINTS.USER_PROFILE, data);
+      const response = await apiClient.put(API_ENDPOINTS.USER_PROFILE, data);
+      
+      // Update cache with the new profile data
+      const now = Date.now();
+      this.profileCache = {
+        data: response.data,
+        timestamp: now,
+        expiresAt: now + this.CACHE_DURATION
+      };
+      
       return response.data;
     } catch (error) {
       console.error('Error updating user profile:', error);
@@ -97,17 +154,52 @@ export class UserService {
   }
 
   /**
-   * Get user settings
+   * Get user settings with caching
+   * @param {boolean} forceRefresh - Force refresh from API ignoring cache
    * @returns {Promise<UserSettings>} - User settings
    */
-  async getSettings(): Promise<UserSettings> {
-    try {
-      const response = await apiClient.get(API_ENDPOINTS.USER_SETTINGS);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching user settings:', error);
-      throw error;
+  async getSettings(forceRefresh = false): Promise<UserSettings> {
+    // Check if we have a valid cached settings and not forcing refresh
+    const now = Date.now();
+    if (!forceRefresh && this.settingsCache && this.settingsCache.expiresAt > now) {
+      console.log('Using cached settings data');
+      return this.settingsCache.data;
     }
+
+    // If we're already fetching the settings, reuse that promise
+    if (this.settingsPromise) {
+      console.log('Reusing in-flight settings request');
+      return this.settingsPromise;
+    }
+
+    // Otherwise, fetch from API
+    console.log('Fetching fresh settings data from API');
+    this.settingsPromise = apiClient.get(API_ENDPOINTS.USER_SETTINGS)
+      .then(response => {
+        const settings = response.data;
+        
+        // Cache the settings
+        this.settingsCache = {
+          data: settings,
+          timestamp: now,
+          expiresAt: now + this.CACHE_DURATION
+        };
+        
+        // Return the settings data
+        return settings;
+      })
+      .catch(error => {
+        console.error('Error fetching user settings:', error);
+        throw error;
+      })
+      .finally(() => {
+        // Clear the promise after it's done
+        setTimeout(() => {
+          this.settingsPromise = null;
+        }, 100);
+      });
+    
+    return this.settingsPromise;
   }
 
   /**
@@ -147,6 +239,14 @@ export class UserService {
         }
       }
       
+      // Update cache with the new settings data
+      const now = Date.now();
+      this.settingsCache = {
+        data: updatedSettings,
+        timestamp: now,
+        expiresAt: now + this.CACHE_DURATION
+      };
+      
       console.log('Final processed settings update response:', JSON.stringify(updatedSettings, null, 2));
       return updatedSettings;
     } catch (error) {
@@ -167,6 +267,18 @@ export class UserService {
       console.error('Error fetching token balance:', error);
       throw error;
     }
+  }
+
+  /**
+   * Clear all caches
+   * Used when logging out or when cache data is known to be invalid
+   */
+  clearCaches(): void {
+    this.profileCache = null;
+    this.settingsCache = null;
+    this.profilePromise = null;
+    this.settingsPromise = null;
+    console.log('User service caches cleared');
   }
 }
 

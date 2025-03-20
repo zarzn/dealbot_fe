@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { DealCard } from './DealCard';
 import { DealFiltersState } from './DealFilters';
 import { dealsService } from '@/services/deals';
-import type { DealResponse, DealSearch, Deal } from '@/types/deals';
+import type { DealResponse, DealSearch, Deal as BaseDeal } from '@/types/deals';
 import { 
   Plus, 
   Search, 
@@ -12,7 +12,12 @@ import {
   Check, 
   Calendar, 
   DollarSign,
-  Tag 
+  Tag,
+  Package,
+  Star,
+  Truck,
+  Clock,
+  BarChart2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
@@ -43,6 +48,17 @@ interface DealsListProps {
   isLoading?: boolean;
 }
 
+// Extended Deal interface with additional properties needed for our cards
+interface Deal extends BaseDeal {
+  is_favorite?: boolean;
+  score?: number;
+  features?: string[];
+  ai_analysis?: any;
+  market_id?: string;
+  goal_id?: string;
+  user_id?: string;
+}
+
 export const DealsList: React.FC<DealsListProps> = ({
   initialDeals = [],
   initialFilters = {},
@@ -58,6 +74,7 @@ export const DealsList: React.FC<DealsListProps> = ({
   const [isMounted, setIsMounted] = useState(false);
   const [deals, setDeals] = useState<DealResponse[]>(initialDeals);
   const [searchQuery, setSearchQuery] = useState('');
+  const [pendingSearchQuery, setPendingSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<CategoryOption>('all');
   const [filterStatus, setFilterStatus] = useState<FilterOption>('all');
   const [priceRange, setPriceRange] = useState<PriceRange>('all');
@@ -124,6 +141,31 @@ export const DealsList: React.FC<DealsListProps> = ({
     };
   }, [searchQuery, page, sortBy, filterCategory, filterStatus, priceRange]);
 
+  // Handle search input change
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPendingSearchQuery(e.target.value);
+  };
+
+  // Handle search form submission
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery !== pendingSearchQuery) {
+      setSearchQuery(pendingSearchQuery);
+      setPage(1); // Reset to first page when search changes
+    }
+  };
+
+  // Handle Enter key press in search input
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (searchQuery !== pendingSearchQuery) {
+        setSearchQuery(pendingSearchQuery);
+        setPage(1);
+      }
+    }
+  };
+
   // Load deals based on current filters
   const loadDeals = useCallback(async () => {
     if (!isMounted) return;
@@ -187,7 +229,7 @@ export const DealsList: React.FC<DealsListProps> = ({
     if (onDealSelect) {
       onDealSelect(dealId);
     } else {
-      router.push(`/deals/${dealId}`);
+      router.push(`/dashboard/deals/${dealId}`);
     }
   }, [isMounted, onDealSelect, router]);
 
@@ -202,45 +244,82 @@ export const DealsList: React.FC<DealsListProps> = ({
     }
   }, [isMounted, onCreateDeal, router]);
 
-  // Get price range from deal
-  const getPriceRangeLabel = (price: number) => {
-    if (price < 50) return 'Under $50';
-    if (price < 100) return '$50 - $100';
-    if (price < 500) return '$100 - $500';
-    return 'Over $500';
-  };
-
-  // Convert DealResponse to Deal type for DealCard compatibility
-  const adaptDealToDealCard = useCallback((dealResponse: DealResponse): Deal => {
+  // Function to convert DealResponse to the improved card format
+  const adaptDealToDealCard = (dealResponse: DealResponse): Deal => {
+    // Try to extract features from tags
+    const extractedFeatures = extractFeaturesFromTags(dealResponse.tags || []);
+    
+    // Create a safe shipping info object
+    const safeShippingInfo = dealResponse.shipping_info ? {
+      cost: dealResponse.shipping_info.cost !== undefined ? dealResponse.shipping_info.cost : 0,
+      free_shipping: dealResponse.shipping_info.free_shipping || false,
+      estimated_days: dealResponse.shipping_info.estimated_days
+    } : undefined;
+    
     return {
       id: dealResponse.id,
       title: dealResponse.title,
-      description: dealResponse.description,
-      price: dealResponse.price,
-      original_price: dealResponse.original_price,
-      url: dealResponse.url,
-      image_url: dealResponse.image_url,
-      category: dealResponse.category,
-      source: dealResponse.source,
-      created_at: dealResponse.created_at,
-      expires_at: dealResponse.expires_at,
-      is_tracked: dealResponse.is_tracked,
-      status: dealResponse.status,
-      tags: dealResponse.tags,
-      verified: dealResponse.verified,
-      featured: dealResponse.featured,
-      seller_info: dealResponse.seller_info,
-      shipping_info: dealResponse.shipping_info ? {
-        cost: dealResponse.shipping_info.cost || 0,
-        free_shipping: dealResponse.shipping_info.free_shipping || false,
-        estimated_days: dealResponse.shipping_info.estimated_days,
-      } : undefined,
-      availability: dealResponse.availability,
+      description: dealResponse.description || '',
+      status: dealResponse.status || 'unknown',
+      price: typeof dealResponse.price === 'number' ? dealResponse.price : parseFloat(dealResponse.price || '0'),
+      original_price: dealResponse.original_price || undefined,
+      image_url: dealResponse.image_url || '',
+      category: dealResponse.category || 'Uncategorized',
+      created_at: dealResponse.created_at || new Date().toISOString(),
+      updated_at: dealResponse.updated_at || new Date().toISOString(),
+      expires_at: dealResponse.expires_at || undefined,
+      is_tracked: dealResponse.is_tracked || false,
+      is_favorite: false, // Default value since property may not exist
+      featured: dealResponse.featured || false,
+      verified: dealResponse.verified || false,
+      seller_info: dealResponse.seller_info || undefined,
+      shipping_info: safeShippingInfo,
+      ai_analysis: dealResponse.ai_analysis || undefined,
+      tags: dealResponse.tags || [],
+      url: dealResponse.url || `#`,
+      source: dealResponse.source || 'Unknown',
+      score: dealResponse.latest_score || (dealResponse.ai_analysis ? dealResponse.ai_analysis.score : undefined),
+      features: extractedFeatures,
+      // Add required properties from BaseDeal
       market_id: dealResponse.market_id,
       goal_id: dealResponse.goal_id,
-      user_id: dealResponse.user_id,
+      user_id: dealResponse.user_id
     };
-  }, []);
+  };
+
+  // Extract features from tags
+  const extractFeaturesFromTags = (tags: string[]): string[] => {
+    if (!tags || tags.length === 0) return [];
+    return tags.slice(0, 5); // Limit to 5 features
+  };
+
+  // Helper function to get score color
+  const getScoreColor = (score: number): string => {
+    if (score >= 8) return 'text-green-500';
+    if (score >= 6) return 'text-yellow-500';
+    if (score >= 4) return 'text-orange-500';
+    return 'text-red-500';
+  };
+
+  // Helper function to format price
+  const formatPrice = (price: number | string | null | undefined) => {
+    if (price === null || price === undefined) return '0.00';
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    return numPrice.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  // Helper function to calculate discount percentage
+  const calculateDiscount = (original: number | string | null | undefined, current: number | string) => {
+    if (!original) return null;
+    const originalNum = typeof original === 'string' ? parseFloat(original) : original;
+    const currentNum = typeof current === 'string' ? parseFloat(current) : current;
+    
+    if (!originalNum || originalNum <= currentNum) return null;
+    return Math.round(((originalNum - currentNum) / originalNum) * 100);
+  };
 
   // If not mounted yet (during SSR), return null or a loading placeholder
   if (!isMounted) {
@@ -326,16 +405,28 @@ export const DealsList: React.FC<DealsListProps> = ({
       
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/50" />
-          <input
-            type="text"
-            placeholder="Search deals..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white/[0.05] border border-white/10 rounded-lg focus:outline-none focus:border-purple"
-          />
-        </div>
+        <form onSubmit={handleSearchSubmit} className="flex-1 flex gap-2">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/50" />
+            <input
+              type="text"
+              placeholder="Search deals..."
+              value={pendingSearchQuery}
+              onChange={handleSearchInputChange}
+              onKeyDown={handleKeyDown}
+              className="w-full pl-10 pr-4 py-2 bg-white/[0.05] border border-white/10 rounded-lg focus:outline-none focus:border-purple"
+            />
+          </div>
+          <Button 
+            type="submit" 
+            variant="secondary" 
+            className="px-4 py-2"
+            disabled={isLoading}
+          >
+            {isLoading ? <Loader size="sm" className="mr-2" /> : <Search className="w-4 h-4 mr-2" />}
+            Search
+          </Button>
+        </form>
         
         {/* Filter Dropdown */}
         <DropdownMenu>
@@ -443,13 +534,18 @@ export const DealsList: React.FC<DealsListProps> = ({
       ) : error ? (
         <div className="text-center p-4 text-red-500">{error}</div>
       ) : filteredDeals.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="bg-white/[0.05] border border-white/10 rounded-lg p-8 flex flex-col items-center justify-center text-center">
           <Search className="w-12 h-12 mx-auto mb-4 text-white/30" />
-          <h3 className="text-lg font-semibold mb-2">No matching deals</h3>
-          <p className="text-white/70 mb-6">Try adjusting your filters or search query</p>
+          <h3 className="text-xl font-semibold mb-2">No matching deals</h3>
+          <p className="text-white/70 mb-6 max-w-md">
+            {searchQuery || filterCategory !== 'all' || filterStatus !== 'all' || priceRange !== 'all'
+              ? "Try adjusting your filters or search query to see more results."
+              : "We couldn't find any deals. Deals are created based on your goals."}
+          </p>
           {showCreateButton && (
-            <Button onClick={handleCreateClick}>
-              Create New Deal
+            <Button onClick={handleCreateClick} className="px-4 py-2">
+              <Plus className="mr-2 h-4 w-4" />
+              Create New Goal for Deals
             </Button>
           )}
         </div>
@@ -462,57 +558,154 @@ export const DealsList: React.FC<DealsListProps> = ({
               <div 
                 key={deal.id} 
                 onClick={() => handleDealClick(deal.id)} 
-                className="cursor-pointer block p-7.5 bg-white/[0.05] border border-white/10 rounded-xl hover:bg-white/[0.1] transition"
+                className="cursor-pointer bg-white/[0.05] border border-white/10 rounded-xl hover:bg-white/[0.1] transition overflow-hidden flex flex-col"
               >
-                <div className="flex justify-between items-start mb-6">
-                  <div className="flex flex-col">
-                    <h3 className="font-semibold text-lg mb-1 line-clamp-1">{deal.title}</h3>
-                    <p className="text-white/70 text-sm">{deal.category || 'Uncategorized'}</p>
-                  </div>
+                {/* Image header */}
+                <div className="relative w-full h-40 bg-white/[0.02] flex items-center justify-center overflow-hidden">
+                  {deal.image_url ? (
+                    <img
+                      src={deal.image_url}
+                      alt={deal.title}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        // Set fallback image to our SVG placeholder
+                        e.currentTarget.src = '/placeholder-deal.svg';
+                      }}
+                    />
+                  ) : (
+                    <Package className="h-16 w-16 text-white/20" />
+                  )}
                   
-                  {/* Deal badges */}
-                  <div className="flex gap-1">
+                  {/* Status badges - top right */}
+                  <div className="absolute top-2 right-2 flex gap-1">
                     {deal.verified && (
-                      <span className="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400">
+                      <span className="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400 backdrop-blur-sm">
                         Verified
                       </span>
                     )}
                     {deal.featured && (
-                      <span className="px-2 py-1 rounded-full text-xs bg-purple-500/20 text-purple-400">
+                      <span className="px-2 py-1 rounded-full text-xs bg-purple-500/20 text-purple-400 backdrop-blur-sm">
                         Featured
+                      </span>
+                    )}
+                    {deal.status && deal.status !== 'unknown' && (
+                      <span className={`px-2 py-1 rounded-full text-xs backdrop-blur-sm ${
+                        deal.status === 'active' ? 'bg-blue-500/20 text-blue-400' : 
+                        deal.status === 'expired' ? 'bg-red-500/20 text-red-400' : 
+                        'bg-yellow-500/20 text-yellow-400'
+                      }`}>
+                        {deal.status.charAt(0).toUpperCase() + deal.status.slice(1)}
                       </span>
                     )}
                   </div>
                 </div>
                 
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-white/50" />
-                    <span>
-                      {typeof deal.price === 'number' 
-                        ? `$${deal.price.toFixed(2)}` 
-                        : 'N/A'}
-                      {deal.original_price && typeof deal.original_price === 'number' && (
-                        <span className="text-white/50 line-through ml-2">
-                          ${deal.original_price.toFixed(2)}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Tag className="w-4 h-4 text-white/50" />
-                    <span>
-                      {deal.source || 'Unknown source'}
-                    </span>
-                  </div>
-                  {deal.expires_at && (
+                {/* Content section */}
+                <div className="p-5 flex-1 flex flex-col">
+                  {/* Header with source/category and rating */}
+                  <div className="flex justify-between items-center mb-2">
                     <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-white/50" />
-                      <span>
-                        Expires: {new Date(deal.expires_at).toLocaleDateString()}
+                      <span className="text-xs text-white/50">
+                        {deal.source || 'Unknown'}
+                      </span>
+                      <span className="text-xs text-white/50">•</span>
+                      <span className="text-xs text-white/50">
+                        {deal.category || 'Uncategorized'}
                       </span>
                     </div>
+                    
+                    {deal.seller_info && typeof deal.seller_info.rating === 'number' && (
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3 h-3 text-yellow-500" />
+                        <span className="text-xs text-white">
+                          {deal.seller_info.rating.toFixed(1)}
+                          {deal.seller_info.reviews && (
+                            <span className="text-white/50"> ({deal.seller_info.reviews})</span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Title */}
+                  <h3 className="font-semibold text-lg mb-2 line-clamp-2">{deal.title}</h3>
+                  
+                  {/* Price section */}
+                  <div className="flex items-center gap-4 mb-3">
+                    <div>
+                      <p className="text-xl font-bold">
+                        ${formatPrice(deal.price)}
+                      </p>
+                      {deal.original_price && (
+                        <>
+                          <p className="text-xs text-white/50 line-through">
+                            ${formatPrice(deal.original_price)}
+                          </p>
+                          {calculateDiscount(deal.original_price, deal.price) && (
+                            <p className="text-xs font-semibold text-green-500">
+                              Save {calculateDiscount(deal.original_price, deal.price)}%
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* AI Score */}
+                    {deal.score && (
+                      <div className="rounded bg-purple/10 px-2 py-1">
+                        <div className="flex items-center gap-1">
+                          <BarChart2 className="h-4 w-4 text-purple" />
+                          <span className={`text-xs font-semibold ${getScoreColor(deal.score)}`}>
+                            AI Score: {typeof deal.score === 'number' ? deal.score.toFixed(1) : deal.score}/10
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Description - short version */}
+                  <p className="text-sm text-white/70 mb-3 line-clamp-2">
+                    {deal.description}
+                  </p>
+                  
+                  {/* Features */}
+                  {deal.features && deal.features.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {deal.features.slice(0, 3).map((feature, index) => (
+                        <span
+                          key={index}
+                          className="rounded-full bg-white/[0.05] px-2 py-0.5 text-xs text-white/70"
+                        >
+                          {feature}
+                        </span>
+                      ))}
+                      {deal.features.length > 3 && (
+                        <span className="text-xs text-white/50">+{deal.features.length - 3} more</span>
+                      )}
+                    </div>
                   )}
+                  
+                  {/* Additional info row */}
+                  <div className="grid grid-cols-2 gap-2 mt-auto">
+                    {deal.shipping_info && (
+                      <div className="flex items-center gap-1">
+                        <Truck className="h-3 w-3 text-purple" />
+                        <span className="text-xs text-white/60">
+                          {deal.shipping_info.free_shipping ? "Free Shipping" : 
+                            deal.shipping_info.cost ? `$${deal.shipping_info.cost} shipping` : "Shipping info unavailable"}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {deal.created_at && (
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-white/50" />
+                        <span className="text-xs text-white/60">
+                          {new Date(deal.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );

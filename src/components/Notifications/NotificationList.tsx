@@ -3,6 +3,7 @@ import { Notification } from '@/services/notifications';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { getNotificationIcon } from './NotificationBell';
 
 export interface NotificationListProps {
   notifications: Notification[];
@@ -87,15 +88,22 @@ export function NotificationList({
               }`}
               onClick={() => !notification.read && onMarkAsRead(notification.id)}
             >
-              <h4 className="text-sm font-medium">{notification.title}</h4>
-              <p className="text-sm text-muted-foreground mt-1">
-                {notification.message}
-              </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                {formatDistanceToNow(new Date(notification.created_at), {
-                  addSuffix: true,
-                })}
-              </p>
+              <div className="flex items-start gap-2">
+                <div className="mt-1">
+                  {getNotificationIcon(notification.type)}
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium">{notification.title}</h4>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {notification.message}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {formatDistanceToNow(new Date(notification.created_at), {
+                      addSuffix: true,
+                    })}
+                  </p>
+                </div>
+              </div>
             </div>
           ))}
         </div>

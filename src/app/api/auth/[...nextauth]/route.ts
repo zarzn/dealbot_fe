@@ -71,16 +71,18 @@ const getNextAuthUrl = () => {
   return getBaseUrl();
 };
 
-// Always log configuration to help with debugging
-console.log('NextAuth Configuration:', {
-  baseUrl: getBaseUrl(),
-  nextAuthUrl: getNextAuthUrl(),
-  isLocalhost,
-  isBrowser,
-  isDevelopment,
-  hostname: isBrowser ? window.location.hostname : 'not in browser',
-  NODE_ENV: process.env.NODE_ENV
-});
+// Only log configuration in development mode
+if (isDevelopment) {
+  console.log('NextAuth Configuration:', {
+    baseUrl: getBaseUrl(),
+    nextAuthUrl: getNextAuthUrl(),
+    isLocalhost,
+    isBrowser,
+    isDevelopment,
+    hostname: isBrowser ? window.location.hostname : 'not in browser',
+    NODE_ENV: process.env.NODE_ENV
+  });
+}
 
 // Define NextAuth options
 export const authOptions: NextAuthOptions = {
@@ -147,18 +149,23 @@ export const authOptions: NextAuthOptions = {
         // Always use our determined base URL
         const effectiveBaseUrl = getBaseUrl();
         
-        console.log('NextAuth Redirect:', {
-          url,
-          baseUrl,
-          effectiveBaseUrl,
-          environment: process.env.NODE_ENV
-        });
+        // Only log in development mode
+        if (isDevelopment) {
+          console.log('NextAuth Redirect:', {
+            url,
+            baseUrl,
+            effectiveBaseUrl,
+            environment: process.env.NODE_ENV
+          });
+        }
         
         // Skip NextAuth redirection entirely when using credentials provider
         // This allows our custom redirect logic in SignIn component to take over
         if (url.includes('/api/auth/signin/credentials') || 
             url.includes('/api/auth/callback/credentials')) {
-          console.log('Using custom redirect logic for credentials provider');
+          if (isDevelopment) {
+            console.log('Using custom redirect logic for credentials provider');
+          }
           return `${effectiveBaseUrl}/dashboard`;
         }
         
@@ -171,13 +178,17 @@ export const authOptions: NextAuthOptions = {
         if (url.startsWith('/')) {
           // Special case for dashboard redirect
           if (url === '/dashboard' || url.startsWith('/auth/signin')) {
-            console.log('Redirecting to dashboard after sign-in');
+            if (isDevelopment) {
+              console.log('Redirecting to dashboard after sign-in');
+            }
             return `${effectiveBaseUrl}/dashboard`;
           }
           
           // Special case for sign out - redirect to home
           if (url === '/signout' || url.startsWith('/auth/signout')) {
-            console.log('Redirecting to home after sign-out');
+            if (isDevelopment) {
+              console.log('Redirecting to home after sign-out');
+            }
             return effectiveBaseUrl;
           }
           
@@ -202,7 +213,9 @@ export const authOptions: NextAuthOptions = {
           return effectiveBaseUrl;
         }
         
-        console.log('Default redirect to dashboard');
+        if (isDevelopment) {
+          console.log('Default redirect to dashboard');
+        }
         return `${effectiveBaseUrl}/dashboard`;
       } catch (error) {
         console.error("Redirect callback error:", error);

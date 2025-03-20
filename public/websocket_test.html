@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Notification Tester</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .panel {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .log-panel {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .notifications-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .notification-card {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            background-color: white;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            position: relative;
+        }
+        .notification-card.deal-match {
+            border-left: 4px solid #4CAF50;
+        }
+        .notification-card.price-update {
+            border-left: 4px solid #2196F3;
+        }
+        .notification-card.goal-completed {
+            border-left: 4px solid #FF9800;
+        }
+        .notification-card.system-alert {
+            border-left: 4px solid #F44336;
+        }
+        .notification-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+        .notification-message {
+            margin-bottom: 8px;
+        }
+        .notification-meta {
+            font-size: 12px;
+            color: #777;
+            display: flex;
+            justify-content: space-between;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select, button {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status.connected {
+            background-color: #4CAF50;
+        }
+        .status.disconnected {
+            background-color: #F44336;
+        }
+        .status.connecting {
+            background-color: #FFC107;
+        }
+        .connection-status {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .error {
+            color: #F44336;
+            margin-top: 10px;
+        }
+        .timestamp {
+            font-size: 11px;
+            color: #999;
+        }
+        .clear-btn {
+            background-color: #f44336;
+            margin-top: 10px;
+        }
+        .clear-btn:hover {
+            background-color: #e53935;
+        }
+        .badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+        }
+        .badge.deal-match {
+            background-color: #4CAF50;
+        }
+        .badge.price-update {
+            background-color: #2196F3;
+        }
+        .badge.goal-completed {
+            background-color: #FF9800;
+        }
+        .badge.system-alert {
+            background-color: #F44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Notification Tester</h1>
+    
+    <div class="container">
+        <div class="panel">
+            <div class="control-panel">
+                <div class="connection-status">
+                    <div class="status disconnected" id="statusIndicator"></div>
+                    <span id="connectionStatus">Disconnected</span>
+                </div>
+                
+                <label for="tokenInput">WebSocket Token:</label>
+                <input type="text" id="tokenInput" value="test_websocket_token_test" placeholder="Enter WebSocket token">
+                
+                <label for="serverInput">WebSocket Server:</label>
+                <input type="text" id="serverInput" value="ws://localhost:8000/api/v1/notifications/ws" placeholder="WebSocket server URL">
+                
+                <button id="connectBtn">Connect</button>
+                <button id="disconnectBtn" disabled>Disconnect</button>
+                
+                <div id="errorMsg" class="error"></div>
+                
+                <label for="notificationTypeSelect">Send Test Notification:</label>
+                <select id="notificationTypeSelect">
+                    <option value="deal_match">Deal Match</option>
+                    <option value="price_update">Price Update</option>
+                    <option value="goal_completed">Goal Completed</option>
+                    <option value="system_alert">System Alert</option>
+                </select>
+                
+                <button id="sendNotificationBtn" disabled>Send Test Notification</button>
+                <button id="clearLogsBtn" class="clear-btn">Clear Logs</button>
+                <button id="clearNotificationsBtn" class="clear-btn">Clear Notifications</button>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h3>Connection Logs</h3>
+            <div class="log-panel" id="logsPanel"></div>
+        </div>
+        
+        <div class="panel">
+            <h3>Notifications</h3>
+            <div class="notifications-panel" id="notificationsPanel"></div>
+        </div>
+    </div>
+
+    <script>
+        // Elements
+        const statusIndicator = document.getElementById('statusIndicator');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const tokenInput = document.getElementById('tokenInput');
+        const serverInput = document.getElementById('serverInput');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        const logsPanel = document.getElementById('logsPanel');
+        const notificationsPanel = document.getElementById('notificationsPanel');
+        const notificationTypeSelect = document.getElementById('notificationTypeSelect');
+        const sendNotificationBtn = document.getElementById('sendNotificationBtn');
+        const clearLogsBtn = document.getElementById('clearLogsBtn');
+        const clearNotificationsBtn = document.getElementById('clearNotificationsBtn');
+        
+        // Variables
+        let websocket = null;
+        
+        // Helper Functions
+        function log(message, type = 'info') {
+            const timestamp = new Date().toISOString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.innerHTML = `<span class="timestamp">${timestamp}</span> ${message}`;
+            logsPanel.appendChild(logEntry);
+            logsPanel.scrollTop = logsPanel.scrollHeight;
+        }
+        
+        function addNotification(notification) {
+            const notificationCard = document.createElement('div');
+            const notificationType = notification.notification_type || 'system-alert';
+            notificationCard.className = `notification-card ${notificationType}`;
+            
+            const timestamp = new Date(notification.timestamp || Date.now()).toLocaleTimeString();
+            
+            let content = `
+                <div class="badge ${notificationType}">${notificationType}</div>
+                <div class="notification-title">${notification.title || 'Notification'}</div>
+                <div class="notification-message">${notification.message || 'No message content'}</div>
+                <div class="notification-meta">
+                    <span>ID: ${notification.id || 'N/A'}</span>
+                    <span>${timestamp}</span>
+                </div>
+            `;
+            
+            // Additional fields based on notification type
+            if (notificationType === 'deal_match') {
+                content += `
+                    <div class="notification-meta">
+                        <span>Deal ID: ${notification.deal_id || 'N/A'}</span>
+                        <span>Goal ID: ${notification.goal_id || 'N/A'}</span>
+                    </div>
+                `;
+            } else if (notificationType === 'price_update') {
+                content += `
+                    <div class="notification-meta">
+                        <span>Deal ID: ${notification.deal_id || 'N/A'}</span>
+                        <span>Old Price: $${notification.old_price || 'N/A'}</span>
+                        <span>New Price: $${notification.new_price || 'N/A'}</span>
+                    </div>
+                `;
+            } else if (notificationType === 'goal_completed') {
+                content += `
+                    <div class="notification-meta">
+                        <span>Goal ID: ${notification.goal_id || 'N/A'}</span>
+                    </div>
+                `;
+            }
+            
+            notificationCard.innerHTML = content;
+            notificationsPanel.prepend(notificationCard);
+        }
+        
+        function updateConnectionStatus(status) {
+            statusIndicator.className = `status ${status}`;
+            connectionStatus.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+            
+            if (status === 'connected') {
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                sendNotificationBtn.disabled = false;
+                errorMsg.textContent = '';
+            } else {
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                sendNotificationBtn.disabled = true;
+                
+                if (status === 'connecting') {
+                    connectBtn.disabled = true;
+                }
+            }
+        }
+        
+        // WebSocket Functions
+        function connectWebSocket() {
+            const token = tokenInput.value.trim();
+            const server = serverInput.value.trim();
+            
+            if (!token) {
+                errorMsg.textContent = 'Please enter a token';
+                return;
+            }
+            
+            if (!server) {
+                errorMsg.textContent = 'Please enter a server URL';
+                return;
+            }
+            
+            try {
+                updateConnectionStatus('connecting');
+                log(`Connecting to ${server}?token=${token.substring(0, 3)}...${token.substring(token.length - 3)}`);
+                
+                // Close existing connection if any
+                if (websocket) {
+                    websocket.close();
+                }
+                
+                // Create new connection
+                websocket = new WebSocket(`${server}?token=${token}`);
+                
+                websocket.onopen = (event) => {
+                    updateConnectionStatus('connected');
+                    log('WebSocket connection established');
+                };
+                
+                websocket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        log(`Received message: ${JSON.stringify(data)}`);
+                        
+                        if (data.type === 'notification') {
+                            // Handle notification data structure variants
+                            if (data.notification) {
+                                addNotification(data.notification);
+                            } else {
+                                addNotification(data);
+                            }
+                        }
+                    } catch (error) {
+                        log(`Error parsing message: ${error.message}`, 'error');
+                    }
+                };
+                
+                websocket.onclose = (event) => {
+                    updateConnectionStatus('disconnected');
+                    log(`WebSocket connection closed: Code ${event.code}${event.reason ? `, Reason: ${event.reason}` : ''}`);
+                };
+                
+                websocket.onerror = (error) => {
+                    updateConnectionStatus('disconnected');
+                    log(`WebSocket error: ${error}`, 'error');
+                    errorMsg.textContent = 'Connection error';
+                };
+                
+            } catch (error) {
+                updateConnectionStatus('disconnected');
+                log(`Connection error: ${error.message}`, 'error');
+                errorMsg.textContent = `Connection error: ${error.message}`;
+            }
+        }
+        
+        function disconnectWebSocket() {
+            if (websocket) {
+                log('Closing WebSocket connection...');
+                websocket.close();
+                websocket = null;
+            }
+        }
+        
+        function sendTestNotification() {
+            if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+                errorMsg.textContent = 'Not connected to WebSocket';
+                return;
+            }
+            
+            const notificationType = notificationTypeSelect.value;
+            
+            // Generate test notification data
+            const notification = {
+                type: 'notification',
+                notification_type: notificationType,
+                id: generateUUID(),
+                title: getRandomTitle(notificationType),
+                message: getRandomMessage(notificationType),
+                timestamp: new Date().toISOString() + 'Z'
+            };
+            
+            // Add type-specific fields
+            if (notificationType === 'deal_match') {
+                notification.deal_id = generateUUID();
+                notification.goal_id = generateUUID();
+                notification.product = 'Test Product';
+            } else if (notificationType === 'price_update') {
+                notification.deal_id = generateUUID();
+                notification.old_price = '99.99';
+                notification.new_price = '79.99';
+                notification.product = 'Test Product';
+            } else if (notificationType === 'goal_completed') {
+                notification.goal_id = generateUUID();
+                notification.product = 'Test Product';
+            }
+            
+            log(`Sending test notification: ${JSON.stringify(notification)}`);
+            websocket.send(JSON.stringify(notification));
+        }
+        
+        // Utility Functions
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        
+        function getRandomTitle(type) {
+            const titles = {
+                'deal_match': [
+                    'New Deal Match Found',
+                    'Deal Alert: Match for Your Goal',
+                    'We Found a Deal You Might Like'
+                ],
+                'price_update': [
+                    'Price Drop Alert',
+                    'Price Changed on Tracked Item',
+                    'Price Update Notification'
+                ],
+                'goal_completed': [
+                    'Goal Completed',
+                    'Achievement Unlocked',
+                    'Goal Target Reached'
+                ],
+                'system_alert': [
+                    'System Notification',
+                    'Important Information',
+                    'Agentic Deals Update'
+                ]
+            };
+            
+            const options = titles[type] || titles.system_alert;
+            return options[Math.floor(Math.random() * options.length)];
+        }
+        
+        function getRandomMessage(type) {
+            const messages = {
+                'deal_match': [
+                    'We found a deal matching your criteria for Test Product',
+                    'Your goal for Test Product has a new matching deal',
+                    'Check out this deal for Test Product we found for you'
+                ],
+                'price_update': [
+                    'The price of Test Product has dropped from $99.99 to $79.99',
+                    'Good news! Test Product is now $79.99 (was $99.99)',
+                    'Price alert: Test Product is now available for $79.99'
+                ],
+                'goal_completed': [
+                    'Your goal for Test Product has been marked as completed',
+                    'Congratulations! You\'ve reached your goal for Test Product',
+                    'Goal completed: Your target for Test Product has been achieved'
+                ],
+                'system_alert': [
+                    'Your account has been successfully updated',
+                    'New feature alert: We\'ve added new capabilities to your account',
+                    'Maintenance complete: All systems are functioning normally'
+                ]
+            };
+            
+            const options = messages[type] || messages.system_alert;
+            return options[Math.floor(Math.random() * options.length)];
+        }
+        
+        // Event Listeners
+        connectBtn.addEventListener('click', connectWebSocket);
+        disconnectBtn.addEventListener('click', disconnectWebSocket);
+        sendNotificationBtn.addEventListener('click', sendTestNotification);
+        
+        clearLogsBtn.addEventListener('click', () => {
+            logsPanel.innerHTML = '';
+            log('Logs cleared');
+        });
+        
+        clearNotificationsBtn.addEventListener('click', () => {
+            notificationsPanel.innerHTML = '';
+            log('Notifications cleared');
+        });
+        
+        // Initialize
+        window.addEventListener('load', () => {
+            log('WebSocket Notification Tester loaded');
+        });
+    </script>
+</body>
+</html> 

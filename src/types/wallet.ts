@@ -1,10 +1,10 @@
 export interface TokenTransaction {
   id: string;
-  type: 'credit' | 'debit';
+  type: 'credit' | 'debit' | 'reward' | 'refund' | 'deduction' | 'payment' | 'search_payment' | 'search_refund' | 'outgoing' | 'incoming';
   amount: number;
   description: string;
   timestamp: string;
-  status: 'pending' | 'completed' | 'failed';
+  status: 'pending' | 'completed' | 'failed' | 'cancelled';
   txHash?: string;
   metadata?: Record<string, any>;
 }

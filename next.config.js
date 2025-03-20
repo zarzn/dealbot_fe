@@ -44,6 +44,17 @@ const nextConfig = {
   
   // Ignore the favicon.ico page route
   pageExtensions: ['tsx', 'ts', 'jsx', 'js', 'md', 'mdx'],
+  
+  // Proxy both HTTP and WebSocket connections
+  async rewrites() {
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: 'http://localhost:8000/api/v1/:path*',
+        basePath: false,
+      }
+    ];
+  },
 };
 
 // Only use 'export' output for production builds (when not in development mode)

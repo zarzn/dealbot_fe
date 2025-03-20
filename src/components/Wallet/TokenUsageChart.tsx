@@ -16,6 +16,13 @@ interface TokenUsageChartProps {
 
 export default function TokenUsageChart({ data }: TokenUsageChartProps) {
   const chartData = useMemo(() => {
+    // Handle empty or undefined data
+    if (!data || data.length === 0) {
+      // Return some dummy data for empty state
+      const today = new Date().toLocaleDateString();
+      return [{ date: today, amount: 0 }];
+    }
+    
     // Group transactions by date and calculate daily balance
     const dailyData = data.reduce((acc: Record<string, number>, tx) => {
       const date = new Date(tx.timestamp).toLocaleDateString();
@@ -42,6 +49,15 @@ export default function TokenUsageChart({ data }: TokenUsageChartProps) {
     }
     return null;
   };
+
+  // Show empty state message if there's no data
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center text-white/50">
+        <p>No transaction data available</p>
+      </div>
+    );
+  }
 
   return (
     <ResponsiveContainer width="100%" height="100%">

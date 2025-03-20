@@ -2,7 +2,8 @@ import axios from 'axios';
 import { signIn } from 'next-auth/react';
 import { API_CONFIG } from './api/config';
 import { apiClient } from '@/lib/api-client';
-import { UserService } from './users';
+import { UserService, userService } from '@/services/users';
+import { FORCE_LOGOUT_EVENT } from '@/lib/api-client';
 
 export interface LoginRequest {
   email: string;
@@ -170,13 +171,23 @@ export const authService = {
       const response = await apiClient.post('/api/v1/auth/refresh', {
         refresh_token: refreshToken
       });
-      console.log('Token refresh successful');
+      
+      // Store the new tokens
       this.setTokens(response.data);
       return response.data;
     } catch (error: any) {
       console.error('Token refresh error:', error);
-      const message = error.response?.data?.detail || 'Token refresh failed';
-      throw new Error(message);
+      
+      // On refresh failure, clear tokens and user caches
+      this.clearTokens();
+      userService.clearCaches();
+      
+      // Dispatch the force logout event
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event(FORCE_LOGOUT_EVENT));
+      }
+      
+      throw new Error('Failed to refresh token');
     }
   },
 
@@ -217,37 +228,15 @@ export const authService = {
   },
 
   clearTokens(): void {
-    console.log('Clearing tokens from localStorage and API headers');
-    
-    // Clear token from localStorage
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    
-    // Clear API authorization header
-    delete api.defaults.headers.common['Authorization'];
-    
-    // Also clear any custom headers that might have auth tokens
-    if (api.defaults.headers.common) {
-      delete api.defaults.headers.common['Authorization'];
-      delete api.defaults.headers.common['x-access-token'];
-    }
-    
-    // Attempt to call the signout API to clear server-side cookies
-    try {
-      const signoutUrl = `${API_CONFIG.baseURL}/api/v1/auth/logout`;
-      console.log('Making logout request to:', signoutUrl);
+    console.log('Clearing authentication tokens');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user_data');
       
-      fetch(signoutUrl, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      }).catch(e => console.error('Error calling logout API:', e));
-    } catch (e) {
-      // Ignore errors in this background process
-      console.error('Failed to call logout API:', e);
+      // Clear user service caches to ensure fresh data on next login
+      userService.clearCaches();
     }
-    
-    console.log('Token cleanup complete');
   },
 
   /**
@@ -258,7 +247,6 @@ export const authService = {
     try {
       console.log('Requesting email verification');
       // Get user profile to access the email
-      const userService = new UserService();
       const profile = await userService.getProfile();
       
       // Send verification request with the user's email
@@ -287,8 +275,7 @@ export const authService = {
           
           // Try to refresh the user profile in the background
           try {
-            const userService = new UserService();
-            await userService.getProfile();
+            await userService.getProfile(true); // Force refresh
           } catch (refreshError) {
             console.error('Failed to refresh profile after discovering email is verified:', refreshError);
           }

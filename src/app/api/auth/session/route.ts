@@ -25,18 +25,15 @@ export async function GET(request: Request) {
         cookiesList.has('app-access-token') || 
         cookiesList.has('has_access_token');
       
-      console.log("SESSION API ROUTE: Auth cookie check:", { 
-        hasNextAuthCookie, 
-        hasCustomAuthCookie,
-        cookieCount 
-      });
+      // Removed log to reduce console spam
     } catch (cookieError) {
+      // Only log actual errors
       console.error("SESSION API ROUTE: Cookie error:", cookieError);
     }
     
     // If we have either a NextAuth session cookie or our custom auth cookie, return a session
     if (hasNextAuthCookie || hasCustomAuthCookie) {
-      console.log("SESSION API ROUTE: Auth cookies found, returning session");
+      // Removed log to reduce console spam
       
       return NextResponse.json({
         user: {
@@ -48,7 +45,7 @@ export async function GET(request: Request) {
       });
     }
     
-    console.log("SESSION API ROUTE: No auth cookies found, returning empty session");
+    // Removed log to reduce console spam
     
     // Return an empty session that NextAuth client can work with
     return NextResponse.json({
@@ -56,6 +53,7 @@ export async function GET(request: Request) {
       expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
     });
   } catch (error) {
+    // Keep error logging for troubleshooting
     console.error("Error in session API route:", error);
     
     // Return an empty session on error to prevent infinite retries

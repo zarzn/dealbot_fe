@@ -21,7 +21,6 @@ import { PageTransition } from '@/components/ui/page-transition';
 import UserInfo from '@/components/Dashboard/UserInfo';
 import { Suspense } from 'react';
 import { DashboardSkeleton } from '@/components/Dashboard/DashboardSkeleton';
-import ClientLiveNotifications from '@/components/Notifications/ClientLiveNotifications';
 import { toast } from 'react-hot-toast';
 import { FORCE_LOGOUT_EVENT } from '@/lib/api-client';
 
@@ -106,14 +105,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       router.push('/auth/signin');
     }
     
-    // Periodically check token validity (every 5 minutes)
+    // Periodically check token validity (every 10 minutes instead of 5)
     const tokenCheckInterval = setInterval(() => {
       const token = localStorage.getItem('access_token');
       if (token) {
         try {
           // Simple JWT expiry check
           const payload = JSON.parse(atob(token.split('.')[1]));
-          const isExpiring = payload.exp && (payload.exp * 1000) - Date.now() < 10 * 60 * 1000; // Less than 10 minutes left
+          const isExpiring = payload.exp && (payload.exp * 1000) - Date.now() < 15 * 60 * 1000; // Less than 15 minutes left
           
           // If token is about to expire, try to refresh it proactively
           if (isExpiring) {
@@ -135,6 +134,21 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               })
               .catch(err => {
                 console.error('Failed to refresh token:', err);
+                // On refresh failure, clear all authentication
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                
+                // Clear user service caches
+                if (typeof window !== 'undefined') {
+                  try {
+                    // Access userService through a dynamic import to avoid circular dependencies
+                    import('@/services/users').then(({ userService }) => {
+                      userService.clearCaches();
+                    }).catch(e => console.error('Failed to import userService:', e));
+                  } catch (e) {
+                    console.error('Failed to clear user caches:', e);
+                  }
+                }
               });
             }
           }
@@ -142,13 +156,25 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           console.error('Error checking token validity:', e);
         }
       }
-    }, 5 * 60 * 1000); // Check every 5 minutes
+    }, 10 * 60 * 1000); // Check every 10 minutes instead of 5
     
     // Listen for forced logout events (e.g., from token refresh failures)
     const handleForceLogout = () => {
       // Clear any local tokens for extra safety
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      
+      // Clear user service caches
+      if (typeof window !== 'undefined') {
+        try {
+          // Access userService through a dynamic import to avoid circular dependencies
+          import('@/services/users').then(({ userService }) => {
+            userService.clearCaches();
+          }).catch(e => console.error('Failed to import userService:', e));
+        } catch (e) {
+          console.error('Failed to clear user caches:', e);
+        }
+      }
       
       // Show a toast notification
       toast.error('Your session has expired. Please sign in again.', {
@@ -289,7 +315,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </button>
           <div className="text-xl font-semibold text-white/80">Dashboard</div>
           <div className="flex items-center">
-            <ClientLiveNotifications />
+            {/* Notification bell removed from here */}
           </div>
         </div>
 
@@ -297,7 +323,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex flex-1 flex-col lg:pl-72">
           {/* Desktop top bar with notifications */}
           <div className="sticky top-0 z-30 hidden lg:flex justify-end items-center px-8 py-4">
-            <ClientLiveNotifications />
+            {/* Notification bell removed from here */}
           </div>
           
           <main className="flex-1 py-6 px-4 sm:px-6 lg:px-8 mt-[100px] lg:mt-[60px]">

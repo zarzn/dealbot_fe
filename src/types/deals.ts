@@ -2,8 +2,8 @@ export interface Deal {
   id: string;
   title: string;
   description?: string;
-  price: number;
-  original_price?: number;
+  price: number | string;
+  original_price?: number | string | null;
   url?: string;
   image_url?: string;
   seller_info?: {
@@ -33,7 +33,7 @@ export interface Deal {
   updated_at?: string;
   features?: string[];
   is_tracked?: boolean;
-  latest_score?: number;
+  latest_score?: number | null;
   deal_metadata?: Record<string, any>;
   price_metadata?: Record<string, any>;
   tags?: string[];

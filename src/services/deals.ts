@@ -34,6 +34,15 @@ export class DealsService {
    */
   async searchDeals(query: DealSearch): Promise<SearchResponse> {
     try {
+      // Enhanced debug logging
+      console.log('🔍 [DealsService] searchDeals called with:', {
+        query: query.query,
+        category: query.category,
+        page: query.page,
+        pageSize: query.page_size || query.limit,
+        filters: query.filters
+      });
+      
       // Log the request details in development mode
       if (process.env.NODE_ENV === 'development') {
         console.log('Making DealsService.searchDeals request to:', `${this.BASE_URL}/search`);
@@ -45,6 +54,7 @@ export class DealsService {
       let response;
       if (query.query || query.perform_ai_analysis) {
         // Use POST for more complex searches
+        console.log('🔍 [DealsService] Using POST method for search');
         response = await apiClient.post(`${this.BASE_URL}/search`, query);
       } else {
         // Use GET with query params for simple searches
@@ -55,9 +65,18 @@ export class DealsService {
         if (query.sort_by) queryParams.append('sort_by', query.sort_by);
         if (query.page) queryParams.append('page', query.page.toString());
         if (query.limit) queryParams.append('limit', query.limit.toString());
+        if (query.page_size) queryParams.append('page_size', query.page_size.toString());
         
+        console.log('🔍 [DealsService] Using GET method for search with params:', queryParams.toString());
         response = await apiClient.get(`${this.BASE_URL}/search?${queryParams.toString()}`);
       }
+      
+      // Log the response for debugging
+      console.log('🔍 [DealsService] Search response received:', {
+        totalDeals: response.data.deals?.length,
+        totalCount: response.data.total,
+        page: query.page
+      });
       
       return response.data;
     } catch (error) {
@@ -223,10 +242,26 @@ export class DealsService {
    */
   async getDealAnalysis(dealId: string): Promise<AIAnalysis> {
     try {
-      const response = await apiClient.get(`${this.BASE_URL}/analysis/${dealId}`);
+      const response = await apiClient.get(`${this.BASE_URL}/${dealId}/analysis`);
       return response.data;
     } catch (error) {
       console.error(`Error getting analysis for deal ${dealId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Request a new AI analysis for a deal
+   * This is a premium feature that consumes tokens, with the first analysis being free
+   * @param dealId Deal ID
+   * @returns Promise with AI analysis request status
+   */
+  async analyzeDeal(dealId: string): Promise<AIAnalysis> {
+    try {
+      const response = await apiClient.post(`${this.BASE_URL}/${dealId}/analyze`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error requesting analysis for deal ${dealId}:`, error);
       throw error;
     }
   }

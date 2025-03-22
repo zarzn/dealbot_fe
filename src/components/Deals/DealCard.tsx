@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Star, Tag, Clock, Truck, ShoppingBag, ThumbsUp, BarChart2, Package, Shield, FileCheck } from 'lucide-react';
-import { FiHeart, FiEye, FiStar, FiCheckCircle } from 'react-icons/fi';
+import { Star, Tag, Clock, Truck, ShoppingBag, ThumbsUp, BarChart2, Package, Shield, FileCheck, Share } from 'lucide-react';
+import { FiHeart, FiEye, FiStar, FiCheckCircle, FiShare2 } from 'react-icons/fi';
 import { Deal, DealSuggestion } from '@/types/deals';
 import { calculateDiscount } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
+import ShareButton from './ShareButton';
 
 interface DealCardProps {
   deal: Deal;
@@ -17,9 +18,18 @@ interface DealCardProps {
   isFavorite?: boolean;
   isLoading?: boolean;
   isSelected?: boolean;
+  showActions?: boolean;
 }
 
-export function DealCard({ deal, onTrack, onFavorite, isFavorite = false, isLoading = false, isSelected = false }: DealCardProps) {
+export function DealCard({ 
+  deal, 
+  onTrack, 
+  onFavorite, 
+  isFavorite = false, 
+  isLoading = false, 
+  isSelected = false,
+  showActions = true
+}: DealCardProps) {
   // Debug logging to track what data is being received
   useEffect(() => {
     console.log("Deal card data:", deal);
@@ -120,20 +130,41 @@ export function DealCard({ deal, onTrack, onFavorite, isFavorite = false, isLoad
             )}
           </div>
          
-          {/* Favorite button */}
-          {onFavorite && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleFavoriteClick}
-              className="absolute top-2 right-2 bg-white/10 hover:bg-white/20 text-white rounded-full w-8 h-8 p-1 backdrop-blur-sm"
-              disabled={isLoading}
-            >
-              <FiHeart 
-                size={18} 
-                className={isFavorite ? "fill-purple text-purple" : "text-white"} 
-              />
-            </Button>
+          {/* Action buttons */}
+          {showActions && (
+            <div className="absolute top-2 right-2 flex flex-col gap-2">
+              {/* Favorite button */}
+              {onFavorite && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleFavoriteClick}
+                  className="bg-white/10 hover:bg-white/20 text-white rounded-full w-8 h-8 p-1 backdrop-blur-sm"
+                  disabled={isLoading}
+                >
+                  <FiHeart 
+                    size={18} 
+                    className={isFavorite ? "fill-purple text-purple" : "text-white"} 
+                  />
+                </Button>
+              )}
+              
+              {/* Share button */}
+              <div 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                className="z-10"
+              >
+                <ShareButton
+                  deal={deal}
+                  variant="ghost"
+                  size="icon"
+                  className="bg-white/10 hover:bg-white/20 text-white rounded-full w-8 h-8 p-1 backdrop-blur-sm"
+                />
+              </div>
+            </div>
           )}
 
           {/* AI Score badge if available */}
@@ -233,7 +264,7 @@ export function DealCard({ deal, onTrack, onFavorite, isFavorite = false, isLoad
               </div>
             )}
             
-            {onTrack && (
+            {showActions && onTrack && (
               <Button size="sm" variant={deal.is_tracked ? "default" : "outline"} 
                 onClick={handleTrackClick}
                 className={`mt-2 w-full ${deal.is_tracked ? 'bg-purple hover:bg-purple/90' : 'border-white/20 hover:bg-white/10'}`}>

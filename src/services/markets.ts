@@ -99,8 +99,15 @@ class MarketApiService {
     return markets.map(market => {
       // Calculate or use defaults for stats
       const stats: MarketStats = {
-        successRate: market.success_rate || 95,
-        avgResponseTime: market.avg_response_time || 150,
+        // Convert decimal success_rate to percentage and ensure it's within valid range (0-100)
+        // Round to 2 decimal places maximum for display
+        successRate: market.success_rate !== undefined && market.success_rate !== null
+          ? parseFloat((Math.max(0, Math.min(1, parseFloat(market.success_rate.toString()))) * 100).toFixed(2))
+          : 95,
+        // Round response time to 2 decimal places for consistent display
+        avgResponseTime: market.avg_response_time !== undefined && market.avg_response_time !== null
+          ? parseFloat(parseFloat(market.avg_response_time.toString()).toFixed(2))
+          : 150,
         totalDeals: 500 // Default value as this may not be in the API response
       };
 

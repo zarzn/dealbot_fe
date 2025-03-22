@@ -268,7 +268,9 @@ export default function Markets() {
                           <span className="text-sm text-dark-3">Success Rate</span>
                         </div>
                         <p className="mt-2 text-lg font-medium text-white">
-                          {market.stats.successRate}%
+                          {typeof market.stats.successRate === 'number' 
+                            ? parseFloat(Math.min(100, Math.max(0, market.stats.successRate)).toFixed(2))
+                            : 0}%
                         </p>
                       </div>
                       <div className="rounded-lg bg-dark-7 p-4">
@@ -277,7 +279,9 @@ export default function Markets() {
                           <span className="text-sm text-dark-3">Response</span>
                         </div>
                         <p className="mt-2 text-lg font-medium text-white">
-                          {market.stats.avgResponseTime}ms
+                          {typeof market.stats.avgResponseTime === 'number'
+                            ? parseFloat(market.stats.avgResponseTime.toFixed(2))
+                            : 0}ms
                         </p>
                       </div>
                     </div>

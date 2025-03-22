@@ -105,25 +105,20 @@ export interface PriceHistory {
   meta_data?: Record<string, any>;
 }
 
+/**
+ * AI Analysis response for a deal
+ */
 export interface AIAnalysis {
-  deal_id: string;
-  score: number;
-  confidence: number;
-  price_analysis: {
-    discount_percentage?: number;
-    is_good_deal?: boolean;
-    price_trend?: string;
+  status: 'completed' | 'pending' | 'error' | 'not_found';
+  message: string;
+  token_cost: number;
+  request_time: string;
+  analysis?: {
+    score?: number;
+    price_analysis?: Record<string, string | number>;
+    market_analysis?: Record<string, string | number>;
+    recommendations?: string[];
   };
-  market_analysis: {
-    competition?: string;
-    availability?: string;
-  };
-  recommendations: string[];
-  analysis_date: string;
-  expiration_analysis?: string;
-  summary?: string;
-  pros?: string[];
-  cons?: string[];
 }
 
 export interface DealTrend {

@@ -205,10 +205,10 @@ function normalizeScore(score: number | undefined): number {
 
 // Get color based on score value
 function getScoreColor(score: number): string {
-  if (score >= 8) return 'text-green-500';
-  if (score >= 6) return 'text-yellow-500';
-  if (score >= 4) return 'text-orange-500';
-  return 'text-red-500';
+  if (score >= 8) return 'text-green-500 preserve-color';
+  if (score >= 6) return 'text-yellow-500 preserve-color';
+  if (score >= 4) return 'text-orange-500 preserve-color';
+  return 'text-red-500 preserve-color';
 }
 
 // Update the CustomDealResponse interface to include the missing fields

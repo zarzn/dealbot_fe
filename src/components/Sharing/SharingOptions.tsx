@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Copy, Share, Twitter, Facebook, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Switch } from '@/components/ui/switch';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -91,67 +91,102 @@ export const SharingOptions: React.FC<SharingOptionsProps> = ({
       </div>
       
       <div className="flex flex-wrap gap-2">
-        <Tooltip content="Copy deal link to clipboard">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center space-x-1"
-            onClick={handleCopyLink}
-          >
-            <Copy className="h-4 w-4" />
-            <span>{copied ? 'Copied!' : 'Copy Link'}</span>
-          </Button>
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center space-x-1"
+                onClick={handleCopyLink}
+              >
+                <Copy className="h-4 w-4" />
+                <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Copy deal link to clipboard</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         {navigator.share && (
-          <Tooltip content="Share using device sharing options">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="flex items-center space-x-1"
-              onClick={handleShare}
-            >
-              <Share className="h-4 w-4" />
-              <span>Share</span>
-            </Button>
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center space-x-1"
+                  onClick={handleShare}
+                >
+                  <Share className="h-4 w-4" />
+                  <span>Share</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Share using device sharing options</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
         
-        <Tooltip content="Share on Twitter">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center space-x-1"
-            onClick={() => window.open(twitterShareUrl, '_blank')}
-          >
-            <Twitter className="h-4 w-4" />
-            <span>Twitter</span>
-          </Button>
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center space-x-1"
+                onClick={() => window.open(twitterShareUrl, '_blank')}
+              >
+                <Twitter className="h-4 w-4" />
+                <span>Twitter</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Share on Twitter</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         
-        <Tooltip content="Share on Facebook">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center space-x-1"
-            onClick={() => window.open(facebookShareUrl, '_blank')}
-          >
-            <Facebook className="h-4 w-4" />
-            <span>Facebook</span>
-          </Button>
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center space-x-1"
+                onClick={() => window.open(facebookShareUrl, '_blank')}
+              >
+                <Facebook className="h-4 w-4" />
+                <span>Facebook</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Share on Facebook</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         
-        <Tooltip content="Share via Email">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center space-x-1"
-            onClick={() => window.open(emailShareUrl, '_blank')}
-          >
-            <Mail className="h-4 w-4" />
-            <span>Email</span>
-          </Button>
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center space-x-1"
+                onClick={() => window.open(emailShareUrl, '_blank')}
+              >
+                <Mail className="h-4 w-4" />
+                <span>Email</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Share via Email</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );

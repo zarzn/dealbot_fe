@@ -5,20 +5,39 @@ import { Target, Clock, AlertCircle, RefreshCw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 interface Goal {
   id: string;
   title: string;
-  progress: number;
   deadline: string;
-  status: 'active' | 'paused' | 'completed';
-  priority: 'low' | 'medium' | 'high';
+  status: 'active' | 'paused' | 'completed' | 'expired';
+  priority: number; // Backend returns priority as a number (1, 2, 3)
+  constraints: {
+    price_range?: {
+      min: number;
+      max: number;
+    };
+    max_price?: number;
+    min_price?: number;
+  };
+  last_checked_at: string | null;
+  matches_found: number;
+  deals_processed: number;
+  tokens_spent: number;
+  best_match_score: number | null;
+  average_match_score: number | null;
+  active_deals_count: number;
+  success_rate: number;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Goals service function to get active goals
-const getActiveGoals = async (): Promise<{ goals: Goal[] }> => {
+const getActiveGoals = async (): Promise<Goal[]> => {
   const response = await apiClient.get('/api/v1/goals?status=active');
-  return response.data;
+  return response.data; // Backend returns array directly, not { goals: [] }
 };
 
 const ActiveGoals = () => {
@@ -35,8 +54,16 @@ const ActiveGoals = () => {
     retry: 1,
   });
   
-  // Get goals from response data
-  const goals = data?.goals || [];
+  // Get goals from response data and filter out expired goals
+  const allGoals = data || []; 
+  const goals = allGoals.filter(goal => {
+    // If the goal has a deadline and it's in the past, consider it expired
+    // even if the backend hasn't updated its status yet
+    if (goal.deadline && new Date(goal.deadline) < new Date()) {
+      return false;
+    }
+    return true;
+  });
   
   // Handle errors with useEffect
   useEffect(() => {
@@ -45,11 +72,24 @@ const ActiveGoals = () => {
     }
   }, [error]);
 
+  // Calculate goal progress based on matches found and best match score
+  const calculateProgress = (goal: Goal): number => {
+    if (goal.best_match_score) {
+      // If we have a best match score, use it as a percentage
+      return Math.round(goal.best_match_score * 100);
+    } else if (goal.matches_found > 0) {
+      // If we have matches but no best score, show some progress
+      return Math.min(50, goal.matches_found * 10);
+    }
+    // Default to 0% if no matches or scores
+    return 0;
+  };
+
   const getPriorityColor = (priority: Goal['priority']) => {
     switch (priority) {
-      case 'high':
+      case 1:
         return 'text-red-400';
-      case 'medium':
+      case 2:
         return 'text-yellow-400';
       default:
         return 'text-green-400';
@@ -96,45 +136,70 @@ const ActiveGoals = () => {
     );
   }
 
+  // Calculate the actual match rate across all truly active goals
+  const calculateMatchRate = () => {
+    if (goals.length === 0) return 0;
+    
+    const goalsWithMatches = goals.filter(goal => goal.matches_found > 0);
+    return Math.round((goalsWithMatches.length / goals.length) * 100);
+  };
+
   return (
     <div className="space-y-4">
-      {goals.map((goal) => (
-        <div 
-          key={goal.id}
-          className="bg-white/[0.03] rounded-lg p-4 hover:bg-white/[0.05] transition cursor-pointer"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <h4 className="font-semibold mb-1">{goal.title}</h4>
-              <div className="flex items-center space-x-4 text-sm text-white/70">
-                <div className="flex items-center">
-                  <Clock className="w-4 h-4 mr-1" />
-                  {new Date(goal.deadline).toLocaleDateString()}
-                </div>
-                <div className={`flex items-center ${getPriorityColor(goal.priority)}`}>
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {goal.priority.charAt(0).toUpperCase() + goal.priority.slice(1)} Priority
-                </div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-lg font-semibold text-purple">
-                {goal.progress}%
-              </div>
-              <div className="text-sm text-white/70">
-                Complete
-              </div>
-            </div>
-          </div>
-
-          {/* Progress bar */}
-          <div className="mt-4 h-2 bg-white/[0.1] rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-purple transition-all duration-500 ease-out rounded-full"
-              style={{ width: `${goal.progress}%` }}
-            />
-          </div>
+      {allGoals.length !== goals.length && (
+        <div className="mb-4 text-sm text-amber-400">
+          Showing {goals.length} active goals ({allGoals.length - goals.length} have expired)
         </div>
+      )}
+      
+      {goals.length > 0 && (
+        <div className="mb-4 text-sm text-white/70">
+          Match rate: {calculateMatchRate()}%
+        </div>
+      )}
+      
+      {goals.map((goal) => (
+        <Link 
+          key={goal.id}
+          href={`/dashboard/goals/${goal.id}`}
+          className="block"
+        >
+          <div 
+            className="bg-white/[0.03] rounded-lg p-4 hover:bg-white/[0.05] transition cursor-pointer"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <h4 className="font-semibold mb-1">{goal.title}</h4>
+                <div className="flex items-center space-x-4 text-sm text-white/70">
+                  <div className="flex items-center">
+                    <Clock className="w-4 h-4 mr-1" />
+                    {goal.deadline ? new Date(goal.deadline).toLocaleDateString() : 'No deadline'}
+                  </div>
+                  <div className={`flex items-center ${getPriorityColor(goal.priority)}`}>
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    {goal.priority === 1 ? 'High' : goal.priority === 2 ? 'Medium' : 'Low'} Priority
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-lg font-semibold text-purple">
+                  {calculateProgress(goal)}%
+                </div>
+                <div className="text-sm text-white/70">
+                  Complete
+                </div>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="mt-4 h-2 bg-white/[0.1] rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-purple transition-all duration-500 ease-out rounded-full"
+                style={{ width: `${calculateProgress(goal)}%` }}
+              />
+            </div>
+          </div>
+        </Link>
       ))}
     </div>
   );

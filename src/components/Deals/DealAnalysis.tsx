@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { dealsService } from '@/services/deals';
-import { AIAnalysis } from '@/types/deals';
+import { AIAnalysis as BaseAIAnalysis } from '@/types/deals';
 import { 
   Card, 
   CardContent, 
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, AlertTriangle, CheckCircle, Brain, Star, DollarSign, Clock, TrendingUp } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle, Brain, Star, DollarSign, Clock, TrendingUp, RefreshCw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import TokenCostModal from './TokenCostModal';
 
@@ -21,9 +21,24 @@ interface DealAnalysisProps {
   dealId: string;
 }
 
+// Extended interface for AIAnalysis with completeness info
+interface ExtendedAIAnalysis extends BaseAIAnalysis {
+  completenessInfo?: {
+    label: string;
+    color: string;
+    ratio: string;
+  };
+}
+
+// Prevent click event propagation to avoid navigation when clicking on interactive elements
+const stopPropagation = (e: React.MouseEvent) => {
+  e.preventDefault();
+  e.stopPropagation();
+};
+
 export const DealAnalysisLoading: React.FC = () => {
   return (
-    <Card className="w-full mt-4 bg-background/60 backdrop-blur-sm border">
+    <Card className="w-full mt-4 bg-white/[0.05] backdrop-blur-sm border border-white/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Loader2 className="h-5 w-5 animate-spin" />
@@ -47,7 +62,7 @@ export const DealAnalysisLoading: React.FC = () => {
 
 export const DealAnalysisError: React.FC<{error: string; onRetry: () => void}> = ({ error, onRetry }) => {
   return (
-    <Card className="w-full mt-4 bg-background/60 backdrop-blur-sm border border-destructive/20">
+    <Card className="w-full mt-4 bg-white/[0.05] backdrop-blur-sm border border-destructive/20">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-destructive">
           <AlertTriangle className="h-5 w-5" />
@@ -88,7 +103,7 @@ export const DealAnalysisRequestView: React.FC<{
   };
   
   return (
-    <Card className="w-full mt-4 bg-background/60 backdrop-blur-sm border">
+    <Card className="w-full mt-4 bg-white/[0.05] backdrop-blur-sm border border-white/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Brain className="h-5 w-5" />
@@ -100,32 +115,32 @@ export const DealAnalysisRequestView: React.FC<{
       </CardHeader>
       <CardContent>
         <div className="text-center p-4">
-          <Brain className="h-16 w-16 mx-auto mb-6 text-primary/60" />
+          <Brain className="h-16 w-16 mx-auto mb-6 text-white" />
           
           <h3 className="text-lg font-medium mb-2">
             {isFirstAnalysis ? "Your First Analysis is Free!" : "Premium Feature"}
           </h3>
           
-          <p className="text-muted-foreground mb-6">
+          <p className="text-white mb-6">
             {isFirstAnalysis 
               ? "Try out our AI deal analysis for free! Get detailed insights about price fairness, market comparison, and personalized recommendations."
               : "Unlock deep insights with our AI analysis. Understand if this is truly a good deal with data-driven recommendations."}
           </p>
           
           <div className="flex flex-wrap gap-3 justify-center mb-6">
-            <Badge variant="outline" className="text-xs py-2 px-3">
+            <Badge variant="outline" className="text-xs py-2 px-3 preserve-color">
               <DollarSign className="h-3 w-3 mr-1" />
               Price Analysis
             </Badge>
-            <Badge variant="outline" className="text-xs py-2 px-3">
+            <Badge variant="outline" className="text-xs py-2 px-3 preserve-color">
               <TrendingUp className="h-3 w-3 mr-1" />
               Market Comparison
             </Badge>
-            <Badge variant="outline" className="text-xs py-2 px-3">
+            <Badge variant="outline" className="text-xs py-2 px-3 preserve-color">
               <Star className="h-3 w-3 mr-1" />
               Deal Score
             </Badge>
-            <Badge variant="outline" className="text-xs py-2 px-3">
+            <Badge variant="outline" className="text-xs py-2 px-3 preserve-color">
               <Clock className="h-3 w-3 mr-1" />
               Timing Advice
             </Badge>
@@ -170,7 +185,7 @@ export const DealAnalysisRequestView: React.FC<{
 
 export const DealAnalysisPending: React.FC = () => {
   return (
-    <Card className="w-full mt-4 bg-background/60 backdrop-blur-sm border">
+    <Card className="w-full mt-4 bg-white/[0.05] backdrop-blur-sm border border-white/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Loader2 className="h-5 w-5 animate-spin" />
@@ -197,10 +212,21 @@ export const DealAnalysisPending: React.FC = () => {
 };
 
 export const DealAnalysisResult: React.FC<{
-  analysis: AIAnalysis;
+  analysis: ExtendedAIAnalysis;
   onRefresh: () => void;
 }> = ({ analysis, onRefresh }) => {
+  // Move useState to the top level of the component to fix linter error
+  const [openAccordion, setOpenAccordion] = useState<string | null>(null);
+  
+  // Add useEffect for debugging the openAccordion state changes
+  useEffect(() => {
+    console.log(`[DealAnalysisResult] Current open accordion: ${openAccordion}`);
+  }, [openAccordion]);
+  
   if (!analysis) return null;
+  
+  // Debug log to help identify structure issues
+  console.log("[DealAnalysisResult] Analysis data received:", JSON.stringify(analysis, null, 2));
   
   // Format the analysis data for display
   const formatDate = (dateString?: string) => {
@@ -208,16 +234,69 @@ export const DealAnalysisResult: React.FC<{
     return new Date(dateString).toLocaleString();
   };
   
+  // Improved function to handle accordion toggle with better logging
+  const handleAccordionToggle = (value: string) => {
+    console.log(`[DealAnalysisResult] Toggling accordion: ${value}, current state:`, openAccordion === value ? 'open → closing' : 'closed → opening');
+    setOpenAccordion(prev => prev === value ? null : value);
+  };
+
+  // Helper function to format complex values for display
+  const formatValue = (value: any): string => {
+    if (value === null || value === undefined) return '-';
+    
+    if (typeof value === 'object') {
+      if (Array.isArray(value)) {
+        // Format arrays
+        if (value.length === 0) return '[]';
+        return value.map(item => formatValue(item)).join(', ');
+      } else if (value !== null) {
+        // Format objects
+        try {
+          return JSON.stringify(value, null, 2);
+        } catch (e) {
+          return '[Complex Object]';
+        }
+      }
+    }
+    
+    // Handle basic types
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'number') {
+      // Check if it looks like a percentage
+      if (value >= 0 && value <= 1 && value.toString().includes('.')) {
+        return `${(value * 100).toFixed(1)}%`;
+      }
+      // Check if it looks like a price
+      if (value > 1) {
+        return `$${value.toFixed(2)}`;
+      }
+      return value.toString();
+    }
+    
+    return String(value);
+  };
+  
   const renderAnalysisContent = () => {
     if (!analysis.analysis) {
+      console.log("[DealAnalysisResult] No analysis object found in:", analysis);
       return (
-        <div className="text-center p-4">
-          <AlertTriangle className="h-10 w-10 text-yellow-500 mx-auto mb-4" />
-          <p className="text-muted-foreground">No analysis data available</p>
+        <div className="text-center p-6">
+          <AlertTriangle className="h-12 w-12 text-amber-400/70 mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">Analysis Data Incomplete</h3>
+          <p className="text-white/60 mb-4">The AI analysis didn&apos;t return complete data for this deal</p>
+          <div className="p-4 bg-white/[0.03] rounded-md border border-white/10 text-sm text-white/50">
+            <p>This can happen when:</p>
+            <ul className="list-disc pl-5 mt-2 space-y-1">
+              <li>The deal has limited information</li>
+              <li>No comparable products were found</li>
+              <li>The analysis service encountered an issue</li>
+            </ul>
+          </div>
         </div>
       );
     }
     
+    // Extract data with robust fallbacks
     const { 
       price_analysis = {}, 
       market_analysis = {}, 
@@ -225,123 +304,446 @@ export const DealAnalysisResult: React.FC<{
       score = 0
     } = analysis.analysis;
     
+    // Calculate completeness for visualization
+    const sections = [
+      Object.keys(price_analysis).length > 0,
+      Object.keys(market_analysis).length > 0,
+      recommendations && recommendations.length > 0
+    ];
+    const completedSections = sections.filter(Boolean).length;
+    const completeness = completedSections / sections.length;
+    
+    // Define completeness label and color
+    let completenessLabel = '';
+    let completenessColor = '';
+    
+    if (completeness === 1) {
+      completenessLabel = 'Complete';
+      completenessColor = 'text-green-400';
+    } else if (completeness >= 0.66) {
+      completenessLabel = 'Mostly Complete';
+      completenessColor = 'text-amber-400';
+    } else if (completeness >= 0.33) {
+      completenessLabel = 'Partial';
+      completenessColor = 'text-amber-500';
+    } else {
+      completenessLabel = 'Limited';
+      completenessColor = 'text-red-400';
+    }
+    
+    // Store these in the analysis object for use in the card header
+    analysis.completenessInfo = {
+      label: completenessLabel,
+      color: completenessColor,
+      ratio: `${completedSections}/${sections.length}`
+    };
+    
+    // More detailed logging
+    console.log("[DealAnalysisResult] Extracted analysis data:", {
+      price_analysis: typeof price_analysis === 'object' ? Object.keys(price_analysis) : 'not an object',
+      market_analysis: typeof market_analysis === 'object' ? Object.keys(market_analysis) : 'not an object',
+      recommendations: Array.isArray(recommendations) ? recommendations.length : 'not an array',
+      score: typeof score === 'number' ? score : 'not a number',
+      completeness: {
+        label: completenessLabel,
+        ratio: `${completedSections}/${sections.length}`
+      }
+    });
+    
     return (
       <div className="space-y-6">
-        {/* Deal Score */}
-        <div className="flex flex-col items-center justify-center p-4 border rounded-lg bg-background/40">
-          <h3 className="text-lg font-medium mb-2">Deal Score</h3>
-          <div className="relative w-24 h-24 mb-2">
-            <div className="absolute inset-0 rounded-full border-4 border-muted"></div>
-            <div 
-              className="absolute inset-0 rounded-full border-4 border-primary" 
-              style={{ 
-                clipPath: `polygon(0 0, 100% 0, 100% 100%, 0 100%)`,
-                opacity: 0.7,
-                transform: `rotate(${(score / 100) * 360}deg)`
-              }}
-            ></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-2xl font-bold">{score ? Math.round(score * 100) : '?'}</span>
+        {/* Deal Score - Updated to match the first block's style */}
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-sm font-medium text-white/80">Overall Score</span>
+          <div className="flex items-center">
+            <div className="w-16 h-16 relative">
+              <div className="absolute inset-0 rounded-full border-4 border-white/10"></div>
+              <div 
+                className="absolute inset-0 rounded-full border-4" 
+                style={{ 
+                  borderColor: score >= 0.8 ? 'rgba(34, 197, 94, 0.7)' : 
+                              score >= 0.6 ? 'rgba(234, 179, 8, 0.7)' : 
+                              'rgba(239, 68, 68, 0.7)',
+                  clipPath: `inset(0 0 ${100 - (score * 100)}%)`
+                }}
+              ></div>
+              <div className="absolute inset-0 flex items-center justify-center font-bold text-lg">
+                {Math.round(score * 10)}
+              </div>
+            </div>
+            <div className="ml-4">
+              <div className="text-sm font-semibold">
+                {score >= 0.7 ? 'Excellent Deal!' : score >= 0.5 ? 'Good Deal' : score > 0.3 ? 'Fair Deal' : 'Poor Deal'}
+              </div>
+              <div className="text-xs text-white/60">Based on AI analysis</div>
             </div>
           </div>
-          <div className="text-sm text-center text-muted-foreground">
-            {score > 0.7 ? 'Excellent Deal!' : score > 0.5 ? 'Good Deal' : score > 0.3 ? 'Fair Deal' : 'Poor Deal'}
-          </div>
         </div>
         
-        {/* Price Analysis */}
-        <div>
-          <h3 className="text-lg font-medium mb-3 flex items-center">
-            <DollarSign className="h-5 w-5 mr-1" />
-            Price Analysis
-          </h3>
-          <div className="space-y-2 text-sm">
-            {Object.entries(price_analysis).map(([key, value]) => (
-              <div key={key} className="flex justify-between border-b border-muted pb-2">
-                <span className="capitalize">{key.replace(/_/g, ' ')}</span>
-                <span className="font-medium">{value}</span>
-              </div>
-            ))}
+        {/* Improved Custom Accordion Implementation */}
+        <div className="w-full border rounded-md border-white/10 overflow-hidden">
+          {/* Price Analysis */}
+          {Object.keys(price_analysis).length > 0 ? (
+            <div className="border-b border-white/10">
+              <button
+                type="button"
+                className={`flex w-full items-center justify-between p-3 text-sm font-medium ${
+                  openAccordion === 'price_analysis' ? 'bg-white/[0.08]' : ''
+                }`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleAccordionToggle('price_analysis');
+                }}
+              >
+                <span className="flex items-center">
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  <div className="relative text-left">
+                    <div className="absolute -left-1 top-1 w-2 h-2 bg-green-400 rounded-full" aria-hidden="true"></div>
+                    <span className="pl-2">Price Analysis</span>
+                    <p className="text-xs font-normal text-white/50 mt-0.5 pl-2">Evaluation of price fairness and value</p>
+                  </div>
+                </span>
+                <div className={`transform transition-transform ${
+                  openAccordion === 'price_analysis' ? 'rotate-180' : ''
+                }`}>
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="24" 
+                    height="24" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className="h-4 w-4"
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </div>
+              </button>
+              
+              {openAccordion === 'price_analysis' && (
+                <div className="p-3 border-t border-white/10 bg-white/[0.03]">
+                  {Object.keys(price_analysis).length > 0 ? (
+                    <div className="space-y-2 text-sm">
+                      {Object.entries(price_analysis).map(([key, value], index) => (
+                        <div key={`price-${key}-${index}`} className="flex justify-between border-b border-muted pb-2">
+                          <span className="capitalize">{key.replace(/_/g, ' ')}</span>
+                          <span className="font-medium">
+                            {formatValue(value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-sm text-white/60">
+                      <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-amber-400/70" />
+                      <p className="font-medium mb-1">No price analysis data available</p>
+                      <p className="text-xs text-white/40">The AI analysis didn&apos;t generate price evaluation data for this deal</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="border-b border-white/10">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between p-3 text-sm font-medium opacity-70"
+                disabled
+              >
+                <span className="flex items-center">
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  <div className="relative text-left">
+                    <div className="absolute -left-1 top-1 w-2 h-2 bg-red-400/60 rounded-full" aria-hidden="true"></div>
+                    <span className="pl-2">Price Analysis</span>
+                    <p className="text-xs font-normal text-white/40 mt-0.5 pl-2">Evaluation of price fairness and value</p>
+                  </div>
+                </span>
+                <div className="flex items-center text-xs text-white/50">
+                  <AlertTriangle className="h-3 w-3 mr-1 text-amber-400/70" />
+                  No price data
+                </div>
+              </button>
+            </div>
+          )}
+          
+          {/* Market Analysis */}
+          {Object.keys(market_analysis).length > 0 ? (
+            <div className="border-b border-white/10">
+              <button
+                type="button"
+                className={`flex w-full items-center justify-between p-3 text-sm font-medium ${
+                  openAccordion === 'market_analysis' ? 'bg-white/[0.08]' : ''
+                }`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleAccordionToggle('market_analysis');
+                }}
+              >
+                <span className="flex items-center">
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  <div className="relative text-left">
+                    <div className="absolute -left-1 top-1 w-2 h-2 bg-blue-400 rounded-full" aria-hidden="true"></div>
+                    <span className="pl-2">Market Comparison</span>
+                    <p className="text-xs font-normal text-white/50 mt-0.5 pl-2">Comparison with similar products</p>
+                  </div>
+                </span>
+                <div className={`transform transition-transform ${
+                  openAccordion === 'market_analysis' ? 'rotate-180' : ''
+                }`}>
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="24" 
+                    height="24" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className="h-4 w-4"
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </div>
+              </button>
+              
+              {openAccordion === 'market_analysis' && (
+                <div className="p-3 border-t border-white/10 bg-white/[0.03]">
+                  {Object.keys(market_analysis).length > 0 ? (
+                    <div className="space-y-2 text-sm">
+                      {Object.entries(market_analysis).map(([key, value], index) => (
+                        <div key={`market-${key}-${index}`} className="flex justify-between border-b border-muted pb-2">
+                          <span className="capitalize">{key.replace(/_/g, ' ')}</span>
+                          <span className="font-medium">
+                            {formatValue(value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-sm text-white/60">
+                      <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-amber-400/70" />
+                      <p className="font-medium mb-1">No market comparison data available</p>
+                      <p className="text-xs text-white/40">The AI analysis couldn&apos;t find comparable products or market data</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="border-b border-white/10">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between p-3 text-sm font-medium opacity-70"
+                disabled
+              >
+                <span className="flex items-center">
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  <div className="relative text-left">
+                    <div className="absolute -left-1 top-1 w-2 h-2 bg-red-400/60 rounded-full" aria-hidden="true"></div>
+                    <span className="pl-2">Market Comparison</span>
+                    <p className="text-xs font-normal text-white/40 mt-0.5 pl-2">Comparison with similar products</p>
+                  </div>
+                </span>
+                <div className="flex items-center text-xs text-white/50">
+                  <AlertTriangle className="h-3 w-3 mr-1 text-amber-400/70" />
+                  No market data
+                </div>
+              </button>
+            </div>
+          )}
+          
+          {/* Recommendations */}
+          {recommendations && recommendations.length > 0 ? (
+            <div className="border-b border-white/10">
+              <button
+                type="button"
+                className={`flex w-full items-center justify-between p-3 text-sm font-medium ${
+                  openAccordion === 'recommendations' ? 'bg-white/[0.08]' : ''
+                }`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleAccordionToggle('recommendations');
+                }}
+              >
+                <span className="flex items-center">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <div className="relative text-left">
+                    <div className="absolute -left-1 top-1 w-2 h-2 bg-amber-400 rounded-full" aria-hidden="true"></div>
+                    <span className="pl-2">Recommendations</span>
+                    <p className="text-xs font-normal text-white/50 mt-0.5 pl-2">Advice and insights for this deal</p>
+                  </div>
+                </span>
+                <div className={`transform transition-transform ${
+                  openAccordion === 'recommendations' ? 'rotate-180' : ''
+                }`}>
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="24" 
+                    height="24" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className="h-4 w-4"
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </div>
+              </button>
+              
+              {openAccordion === 'recommendations' && (
+                <div className="p-3 border-t border-white/10 bg-white/[0.03]">
+                  {recommendations.length > 0 ? (
+                    <ul className="space-y-2 list-disc pl-5">
+                      {recommendations.map((rec, index) => (
+                        <li key={`rec-${index}`} className="text-sm">{rec}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-center py-4 text-sm text-white/60">
+                      <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-amber-400/70" />
+                      <p className="font-medium mb-1">No recommendations available</p>
+                      <p className="text-xs text-white/40">The AI analysis didn&apos;t generate specific recommendations for this deal</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="border-b border-white/10">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between p-3 text-sm font-medium opacity-70"
+                disabled
+              >
+                <span className="flex items-center">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <div className="relative text-left">
+                    <div className="absolute -left-1 top-1 w-2 h-2 bg-red-400/60 rounded-full" aria-hidden="true"></div>
+                    <span className="pl-2">Recommendations</span>
+                    <p className="text-xs font-normal text-white/40 mt-0.5 pl-2">Advice and insights for this deal</p>
+                  </div>
+                </span>
+                <div className="flex items-center text-xs text-white/50">
+                  <AlertTriangle className="h-3 w-3 mr-1 text-amber-400/70" />
+                  No recommendations
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Add a helper message when minimal data is available */}
+        {(!Object.keys(price_analysis).length && !Object.keys(market_analysis).length && (!recommendations || !recommendations.length)) && (
+          <div className="mt-6 p-4 bg-white/[0.03] rounded-md border border-white/10 text-sm">
+            <p className="flex items-center text-amber-400/80 mb-2">
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              <span className="font-medium">Limited Analysis Data Available</span>
+            </p>
+            <p className="text-white/60 mb-3">
+              The AI analysis couldn&apos;t generate detailed information for this deal, which can happen for several reasons:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 text-white/50">
+              <li>Deal description may be too brief or generic</li>
+              <li>Product may be unique with few comparable items</li>
+              <li>Limited market data available for this type of product</li>
+            </ul>
+            <div className="mt-4 pt-3 border-t border-white/10">
+              <p className="text-white/60 text-xs">
+                Try refreshing the analysis or adding more deal details for better results
+              </p>
+            </div>
           </div>
-        </div>
-        
-        {/* Market Analysis */}
-        <div>
-          <h3 className="text-lg font-medium mb-3 flex items-center">
-            <TrendingUp className="h-5 w-5 mr-1" />
-            Market Comparison
-          </h3>
-          <div className="space-y-2 text-sm">
-            {Object.entries(market_analysis).map(([key, value]) => (
-              <div key={key} className="flex justify-between border-b border-muted pb-2">
-                <span className="capitalize">{key.replace(/_/g, ' ')}</span>
-                <span className="font-medium">{value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        {/* Recommendations */}
-        <div>
-          <h3 className="text-lg font-medium mb-3 flex items-center">
-            <Star className="h-5 w-5 mr-1" />
-            Recommendations
-          </h3>
-          <ul className="space-y-2 list-disc pl-5">
-            {recommendations.length > 0 ? (
-              recommendations.map((rec, index) => (
-                <li key={index} className="text-sm">{rec}</li>
-              ))
-            ) : (
-              <li className="text-sm text-muted-foreground">No recommendations available</li>
-            )}
-          </ul>
-        </div>
+        )}
       </div>
     );
   };
-  
+
+  // Render based on the analysis status
   return (
-    <Card className="w-full mt-4 bg-background/60 backdrop-blur-sm border">
+    <Card className="w-full mt-4 bg-white/[0.05] backdrop-blur-sm border border-white/10">
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5" />
-              <span>AI Deal Analysis</span>
-            </CardTitle>
-            <CardDescription>
-              Insights and recommendations for this deal
-            </CardDescription>
-          </div>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="h-5 w-5" />
+            <span>AI Deal Analysis</span>
+          </CardTitle>
           
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center gap-1" 
-            onClick={onRefresh}
-          >
-            <Loader2 className="h-4 w-4" />
-            Refresh
-          </Button>
+          {analysis.completenessInfo && (
+            <div className="flex items-center">
+              <span className={`text-xs ${analysis.completenessInfo.color} mr-2`}>
+                {analysis.completenessInfo.label}
+              </span>
+              <span className="text-xs bg-white/10 px-2 py-1 rounded">
+                {analysis.completenessInfo.ratio} sections
+              </span>
+            </div>
+          )}
         </div>
+        <CardDescription>
+          {analysis.status === 'completed' 
+            ? 'Analysis completed at ' + formatDate(analysis.request_time)
+            : analysis.status === 'pending'
+              ? 'Analysis is being processed...'
+              : analysis.status === 'error'
+                ? 'Analysis failed: ' + analysis.message
+                : 'Analysis status: ' + analysis.status
+          }
+        </CardDescription>
       </CardHeader>
-      
       <CardContent>
-        {renderAnalysisContent()}
+        {analysis.status === 'completed' ? (
+          renderAnalysisContent()
+        ) : analysis.status === 'pending' ? (
+          <div className="h-40 flex items-center justify-center">
+            <div className="text-center">
+              <div className="relative mx-auto mb-6 w-16 h-16">
+                <Brain className="absolute inset-0 w-16 h-16 text-primary/30" />
+                <Loader2 className="absolute inset-0 w-16 h-16 animate-spin text-primary" />
+              </div>
+              <p className="text-muted-foreground mb-2">Analysis is being generated</p>
+              <p className="text-xs text-muted-foreground">This usually takes 15-30 seconds</p>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center p-4">
+            <AlertTriangle className="h-10 w-10 text-destructive mx-auto mb-4" />
+            <p className="text-muted-foreground mb-4">{analysis.message || 'An error occurred while analyzing this deal'}</p>
+            <Button onClick={onRefresh} variant="outline">
+              Try Again
+            </Button>
+          </div>
+        )}
       </CardContent>
-      
-      <CardFooter className="flex flex-col items-start text-xs text-muted-foreground space-y-1 pt-2">
-        <div>Analysis requested: {formatDate(analysis.request_time)}</div>
-        <div>Token cost: {analysis.token_cost}</div>
-        <div>Status: {analysis.status}</div>
-      </CardFooter>
+      {analysis.status === 'completed' && (
+        <CardFooter className="border-t border-white/10 pt-4 flex justify-between">
+          <div className="text-xs text-muted-foreground">
+            {analysis.token_cost > 0
+              ? `This analysis cost ${analysis.token_cost} tokens`
+              : 'Free analysis'
+            }
+          </div>
+          <Button variant="ghost" size="sm" onClick={onRefresh} className="text-xs">
+            <RefreshCw className="h-3 w-3 mr-1" />
+            Refresh Analysis
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 };
 
 const DealAnalysis: React.FC<DealAnalysisProps> = ({ dealId }) => {
-  const [analysis, setAnalysis] = useState<AIAnalysis | null>(null);
+  const [analysis, setAnalysis] = useState<ExtendedAIAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
@@ -362,8 +764,24 @@ const DealAnalysis: React.FC<DealAnalysisProps> = ({ dealId }) => {
       setLoading(true);
       setError(null);
       
+      // First check if there's a cached analysis
+      const cachedAnalysis = dealsService.getCachedAnalysis(dealId);
+      if (cachedAnalysis && cachedAnalysis.status === 'completed') {
+        console.log("Using cached analysis from dealsService:", cachedAnalysis);
+        setAnalysis(cachedAnalysis as ExtendedAIAnalysis);
+        setLoading(false);
+        
+        // Update first-time user status
+        if (cachedAnalysis.status === 'completed') {
+          localStorage.setItem('has_used_analysis_feature', 'true');
+          setIsFirstTimeUser(false);
+        }
+        return;
+      }
+      
+      // If no cache hit, fetch from API
       const data = await dealsService.getDealAnalysis(dealId);
-      setAnalysis(data);
+      setAnalysis(data as ExtendedAIAnalysis);
       
       // Update first-time user status if this is a valid analysis
       if (data && data.status === 'completed') {
@@ -391,7 +809,7 @@ const DealAnalysis: React.FC<DealAnalysisProps> = ({ dealId }) => {
       setError(null);
       
       const response = await dealsService.analyzeDeal(dealId);
-      setAnalysis(response);
+      setAnalysis(response as ExtendedAIAnalysis);
       
       toast.success('Analysis requested successfully!');
       
@@ -421,7 +839,7 @@ const DealAnalysis: React.FC<DealAnalysisProps> = ({ dealId }) => {
     const pollInterval = setInterval(async () => {
       try {
         const data = await dealsService.getDealAnalysis(dealId);
-        setAnalysis(data);
+        setAnalysis(data as ExtendedAIAnalysis);
         
         // If the analysis is completed or failed, stop polling
         if (data.status !== 'pending') {

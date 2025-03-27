@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import FooterLinkList from "./FooterLinkList";
@@ -9,7 +10,7 @@ import { companiesLink, productsLink, supportsLink } from "./linksData";
 const Logo = ({ linkWrapper = false }) => {
   const logoContent = (
     <motion.div 
-      className="flex items-center gap-2"
+      className="flex items-center"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{
@@ -17,12 +18,13 @@ const Logo = ({ linkWrapper = false }) => {
         ease: "easeOut"
       }}
     >
-      <div className="p-2 bg-blue-500/10 rounded-xl">
-        <Sparkles className="w-6 h-6 text-blue" />
-      </div>
-      <span className="text-xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400">
-        REBATON
-      </span>
+      <Image 
+        src="/images/logo/logo.png" 
+        alt="Agentic Deals Logo" 
+        width={168} 
+        height={48} 
+        className="h-12 w-auto"
+      />
     </motion.div>
   );
 
@@ -45,7 +47,7 @@ const Footer = () => {
               </Link>
 
               <p className="mb-12 xl:w-4/5 text-white/70">
-                The AI Agentic Deals System helps you discover, track, and manage the best opportunities across markets with intelligent price monitoring, trend prediction, and personalized alerts for optimal decision-making.
+                Agentic Deals leverages advanced AI to help you find the best deals across multiple marketplaces like Amazon, Walmart, eBay, and Google Shopping. Our system monitors prices, predicts trends, and sends personalized alerts when deals match your criteria, saving you time and money.
               </p>
 
               <div className="flex items-center gap-5">
@@ -88,9 +90,11 @@ const Footer = () => {
                 </a>
 
                 <a
-                  href="#"
+                  href="https://github.com/agentic-deals"
                   aria-label="github"
                   className="duration-300 ease-in hover:text-white text-white/60"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   <svg
                     className="fill-current"
@@ -115,14 +119,14 @@ const Footer = () => {
               </div>
 
               <p className="mt-5 text-sm text-white/50">
-                © 2024 REBATON. All rights reserved.
+                © 2024 Agentic Deals. All rights reserved.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-12">
-              <FooterLinkList title="Products" links={productsLink} />
+              <FooterLinkList title="Features" links={productsLink} />
               <FooterLinkList title="Company" links={companiesLink} />
-              <FooterLinkList title="Support" links={supportsLink} />
+              <FooterLinkList title="Resources" links={supportsLink} />
             </div>
           </div>
         </div>

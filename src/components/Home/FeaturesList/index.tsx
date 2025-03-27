@@ -52,11 +52,14 @@ const FeaturesList = () => {
                       </Link>
                     </div>
 
-                    <div className="relative hidden aspect-square w-full max-w-[428px] sm:block">
+                    <div className="relative hidden w-full max-w-[428px] sm:block">
                       <Image
-                        src="/images/features/big-icon.svg"
-                        alt="AI Deal Finding"
-                        fill
+                        src="/images/logo/logo.png"
+                        alt="Agentic Deals Logo"
+                        width={428}
+                        height={160}
+                        className="object-contain"
+                        style={{ width: '100%', height: 'auto' }}
                       />
                     </div>
                   </div>

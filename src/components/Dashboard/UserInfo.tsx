@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { userService } from '@/services/users'
 import { toast } from 'react-hot-toast'
+import UserStatusBar from './UserStatusBar'
+import { User, AlertCircle } from 'lucide-react'
 
 interface UserInfoProps {
   isMobile?: boolean
@@ -24,7 +26,7 @@ const UserInfoSkeleton = () => (
 const UserInfoError = ({ onRetry }: { onRetry: () => void }) => (
   <div className="flex items-center gap-4">
     <div className="flex items-center justify-center h-10 w-10 rounded-full bg-red-500/20 border border-red-500">
-      <span className="text-red-500">!</span>
+      <AlertCircle className="w-5 h-5 text-red-500" />
     </div>
     <div className="space-y-1">
       <p className="text-sm text-red-200">Error loading profile</p>
@@ -44,7 +46,6 @@ export default function UserInfo({ isMobile = false }: UserInfoProps) {
   const [error, setError] = useState<string | null>(null)
   const [userProfile, setUserProfile] = useState<{
     email: string;
-    tier: string;
     displayName?: string;
   } | null>(null)
   const [lastFetchTime, setLastFetchTime] = useState<number>(0)
@@ -65,7 +66,6 @@ export default function UserInfo({ isMobile = false }: UserInfoProps) {
       const profile = await userService.getProfile(force)
       setUserProfile({
         email: profile.email,
-        tier: profile.subscription_tier || "Free User",
         displayName: profile.name
       })
       
@@ -78,8 +78,7 @@ export default function UserInfo({ isMobile = false }: UserInfoProps) {
       // Fallback to session data if available
       if (session?.user?.email) {
         setUserProfile({
-          email: session.user.email,
-          tier: "Free User"
+          email: session.user.email
         })
       }
     } finally {
@@ -109,7 +108,6 @@ export default function UserInfo({ isMobile = false }: UserInfoProps) {
   }
   
   const email = userProfile?.email || (session?.user?.email || "user@example.com")
-  const tier = userProfile?.tier || "Free User"
   const displayName = userProfile?.displayName
   
   return (
@@ -120,13 +118,13 @@ export default function UserInfo({ isMobile = false }: UserInfoProps) {
         transition={{ duration: 0.3 }}
         className="flex items-center gap-4 p-2 rounded-md hover:bg-white/[0.03] transition-colors cursor-pointer"
       >
-        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-medium">
-          {getInitial(email)}
+        <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center text-white/70">
+          <User className="w-7 h-7" />
         </div>
         
         <div className="flex flex-col">
           <p className="text-sm font-medium">{displayName || email}</p>
-          <p className="text-xs text-white/60">{tier}</p>
+          <UserStatusBar />
         </div>
         
         {!isMobile && (

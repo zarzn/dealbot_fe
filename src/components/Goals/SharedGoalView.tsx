@@ -99,10 +99,10 @@ export default function SharedGoalView({ goal, balance }: SharedGoalViewProps) {
             <div className="font-medium">${goal.currentPrice.toFixed(2)}</div>
           </div>
 
-          {goal.constraints.maxPrice && (
+          {goal.constraints.max_price && (
             <div>
               <div className="text-sm text-white/70 mb-1">Maximum Price</div>
-              <div className="font-medium">${goal.constraints.maxPrice.toFixed(2)}</div>
+              <div className="font-medium">${goal.constraints.max_price.toFixed(2)}</div>
             </div>
           )}
 
@@ -145,7 +145,8 @@ export default function SharedGoalView({ goal, balance }: SharedGoalViewProps) {
           isOpen={showCostModal}
           onClose={() => setShowCostModal(false)}
           onConfirm={handleConfirmClone}
-          cost={cloneCost}
+          tokenCost={cloneCost.tokenCost}
+          features={cloneCost.features}
           balance={balance}
         />
       )}

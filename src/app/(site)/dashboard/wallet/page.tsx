@@ -9,6 +9,7 @@ import TokenUsageChart from '@/components/Wallet/TokenUsageChart';
 import ConnectWalletButton from '@/components/Wallet/ConnectWalletButton';
 import PurchaseTokensModal from '@/components/Wallet/PurchaseTokensModal';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 export default function WalletPage() {
   const [balance, setBalance] = useState<number>(0);
@@ -16,10 +17,17 @@ export default function WalletPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     fetchWalletData();
-  }, []);
+    
+    // Check if the action=purchase query parameter is present
+    const action = searchParams.get('action');
+    if (action === 'purchase') {
+      setIsPurchaseModalOpen(true);
+    }
+  }, [searchParams]);
 
   const fetchWalletData = async () => {
     try {
@@ -190,7 +198,13 @@ export default function WalletPage() {
                 <div className="text-white/70 text-sm">Total Spent</div>
                 <div className="text-lg font-medium">
                   {safeTransactions
-                    .filter(tx => tx.type === 'debit')
+                    .filter(tx => (
+                      tx.type === 'debit' || 
+                      tx.type === 'deduction' || 
+                      tx.type === 'payment' || 
+                      tx.type === 'search_payment' ||
+                      tx.type === 'outgoing'
+                    ))
                     .reduce((sum, tx) => sum + tx.amount, 0)
                     .toFixed(2)} AIDL
                 </div>
@@ -199,14 +213,20 @@ export default function WalletPage() {
                 <div className="text-white/70 text-sm">Total Received</div>
                 <div className="text-lg font-medium">
                   {safeTransactions
-                    .filter(tx => tx.type === 'credit')
+                    .filter(tx => (
+                      tx.type === 'credit' || 
+                      tx.type === 'reward' || 
+                      tx.type === 'refund' || 
+                      tx.type === 'search_refund' ||
+                      tx.type === 'incoming'
+                    ))
                     .reduce((sum, tx) => sum + tx.amount, 0)
                     .toFixed(2)} AIDL
                 </div>
               </div>
               <div>
-                <div className="text-white/70 text-sm">Active Goals</div>
-                <div className="text-lg font-medium">12</div>
+                <div className="text-white/70 text-sm">Transaction Count</div>
+                <div className="text-lg font-medium">{safeTransactions.length}</div>
               </div>
             </div>
           </div>

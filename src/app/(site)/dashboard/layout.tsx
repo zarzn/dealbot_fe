@@ -8,13 +8,14 @@ import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, 
   Target, 
-  TagIcon, 
+  Tag as TagIcon, 
   Wallet, 
   Bell, 
   Settings, 
   Menu,
   X,
-  MessageSquare
+  Bookmark,
+  BarChart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PageTransition } from '@/components/ui/page-transition';
@@ -32,9 +33,9 @@ const navigation = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Goals', href: '/dashboard/goals', icon: Target },
   { name: 'Deals', href: '/dashboard/deals', icon: TagIcon },
+  { name: 'Tracked Deals', href: '/dashboard/tracked-deals', icon: Bookmark },
   { name: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
   { name: 'Notifications', href: '/dashboard/notifications', icon: Bell },
-  { name: 'Chat', href: '/websocket-chat', icon: MessageSquare },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 
@@ -224,7 +225,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Main sidebar for desktop */}
         <div 
           className={cn(
-            "hidden md:flex flex-col w-64 transition-all duration-300 bg-black/20 border-r border-white/10 h-full fixed left-0 top-0 bottom-0 z-20 shadow-xl",
+            "hidden md:flex flex-col w-45 transition-all duration-300 bg-black/20 border-r border-white/10 h-full fixed left-0 top-0 bottom-0 z-20 shadow-xl",
           )}
         >
           <div className="flex flex-col flex-1 p-4">
@@ -320,13 +321,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
 
         {/* Main content */}
-        <div className="flex flex-1 flex-col lg:pl-72">
+        <div className="flex flex-1 flex-col lg:pl-60">
           {/* Desktop top bar with notifications */}
           <div className="sticky top-0 z-30 hidden lg:flex justify-end items-center px-8 py-4">
             {/* Notification bell removed from here */}
           </div>
           
-          <main className="flex-1 py-6 px-4 sm:px-6 lg:px-8 mt-[100px] lg:mt-[60px]">
+          <main className="dashboard-content flex-1 py-6 px-4 sm:px-6 lg:px-8 mt-[100px] lg:mt-[60px]">
             <Suspense fallback={<DashboardSkeleton />}>
               <PageTransition>
                 {children}

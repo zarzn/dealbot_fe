@@ -92,7 +92,7 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-black/40 backdrop-blur-xl border-white/10 shadow-xl">
+      <DialogContent className="sm:max-w-[425px] bg-[#121212]/80 backdrop-blur-xl border-white/10 shadow-xl">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-white text-xl">Change Password</DialogTitle>
           <DialogDescription className="text-white/70">

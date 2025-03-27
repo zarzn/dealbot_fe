@@ -27,7 +27,7 @@ const Reviews = () => {
         <SectionTitle
           subTitle="Testimonials"
           title="What Our Clients Say"
-          paragraph="Hear from our satisfied users who have transformed their deal-finding process and saved both time and money with our AI-powered platform."
+          paragraph="See how our AI-powered platform has helped users discover incredible deals, predict price drops, and save thousands of dollars across major marketplaces."
         />
 
         <div
@@ -36,19 +36,19 @@ const Reviews = () => {
           }`}
         >
           <div className="space-y-7.5">
-            {reviewsData.slice(0, 9).map((review) => (
+            {reviewsData.slice(0, 4).map((review) => (
               <SingleReview key={review.id} review={review} />
             ))}
           </div>
 
           <div className="hidden space-y-7.5 sm:block">
-            {reviewsData.slice(9, 18).map((review) => (
+            {reviewsData.slice(4, 8).map((review) => (
               <SingleReview key={review.id} review={review} />
             ))}
           </div>
 
           <div className="hidden space-y-7.5 lg:block">
-            {reviewsData.slice(18, 27).map((review) => (
+            {reviewsData.slice(8, 12).map((review) => (
               <SingleReview key={review.id} review={review} />
             ))}
           </div>

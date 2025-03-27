@@ -1,253 +1,202 @@
-import NextAuth from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
-import FacebookProvider from "next-auth/providers/facebook";
-import TwitterProvider from "next-auth/providers/twitter";
-import CredentialsProvider from "next-auth/providers/credentials";
-import type { DefaultSession, NextAuthOptions } from "next-auth";
-import type { JWT } from "next-auth/jwt";
-import { NextRequest } from 'next/server';
-
-// This is required to prevent the StaticGenBailoutError
+// This is a custom implementation that bypasses NextAuth's built-in API routes
+// to avoid the cookies() requestAsyncStorage error
 export const dynamic = 'force-dynamic';
 
-// Define proper types for NextAuth
-declare module "next-auth" {
-  interface Session extends DefaultSession {
-    accessToken: string | undefined;
-    provider: string | undefined;
-    error: string | undefined;
-  }
+// Remove the edge runtime specification that's causing the crypto module error
+// export const runtime = 'edge';
 
-  interface User {
-    id: string;
-    email: string;
-    accessToken: string | undefined;
-    provider: string | undefined;
+import { NextRequest, NextResponse } from 'next/server';
+import { authOptions } from '@/lib/auth';
+import { cookies } from 'next/headers';
+
+// Simple server-side logging for critical events only
+function serverLog(message: string) {
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[NEXTAUTH] ${message}`);
   }
 }
 
-// Define proper types for JWT
-declare module "next-auth/jwt" {
-  interface JWT {
-    accessToken: string | undefined;
-    provider: string | undefined;
-    error: string | undefined;
+// Create a compatibility layer for NextAuth
+const auth = authOptions;
+
+// Sign in handler
+async function handleSignIn(req: NextRequest) {
+  try {
+    // Get request body
+    const body = await req.json();
+    const { email, password, callbackUrl } = body;
+    
+    console.log('[CUSTOM AUTH] Sign in request:', { email, hasCallbackUrl: !!callbackUrl });
+    
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: 'Email and password are required' },
+        { status: 400 }
+      );
+    }
+    
+    // Make the API request to our backend
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+      cache: 'no-store',
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: data.detail || 'Invalid credentials' },
+        { status: 401 }
+      );
+    }
+    
+    // Create a custom session cookie without using NextAuth
+    const sessionData = {
+      user: {
+        email: data.user?.email || email,
+        name: data.user?.name || email.split('@')[0],
+        id: data.user?.id || 'user-id',
+        image: data.user?.image,
+      },
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      accessToken: data.access_token,
+    };
+    
+    // Set our custom session data in a cookie
+    const cookieStr = `custom_auth_session=${encodeURIComponent(JSON.stringify(sessionData))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}`;
+    
+    // Return success with the session data and set cookie
+    const redirectUrl = callbackUrl || '/dashboard';
+    return NextResponse.json(
+      { 
+        ok: true,
+        url: redirectUrl,
+        user: sessionData.user 
+      },
+      { 
+        status: 200,
+        headers: {
+          'Set-Cookie': cookieStr,
+          'Location': redirectUrl
+        }
+      }
+    );
+  } catch (error) {
+    console.error('[CUSTOM AUTH] Sign in error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error during sign in' },
+      { status: 500 }
+    );
   }
 }
 
-// Determine if we're running in a browser
-const isBrowser = typeof window !== 'undefined';
+// Session handler - returns current session data
+async function handleSession(req: NextRequest) {
+  try {
+    // Check if we have a session cookie
+    const cookieStr = req.cookies.get('custom_auth_session')?.value;
+    
+    if (!cookieStr) {
+      return NextResponse.json({ user: null });
+    }
+    
+    // Parse the session data
+    const sessionData = JSON.parse(decodeURIComponent(cookieStr));
+    
+    // Check if session has expired
+    if (new Date(sessionData.expires) < new Date()) {
+      // Clear the cookie if expired
+      return NextResponse.json(
+        { user: null },
+        { 
+          headers: {
+            'Set-Cookie': 'custom_auth_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'
+          }
+        }
+      );
+    }
+    
+    // Return the session data
+    return NextResponse.json(sessionData);
+  } catch (error) {
+    console.error('[CUSTOM AUTH] Session error:', error);
+    return NextResponse.json({ user: null });
+  }
+}
 
-// Determine if we're running in development mode
-const isDevelopment = process.env.NODE_ENV === 'development';
+// Signout handler - clears the session cookie
+async function handleSignOut(req: NextRequest) {
+  try {
+    const cookieStr = 'custom_auth_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0';
+    const body = await req.json().catch(() => ({}));
+    const callbackUrl = body?.callbackUrl || '/auth/signin';
+    
+    return NextResponse.json(
+      { success: true, url: callbackUrl },
+      { 
+        headers: {
+          'Set-Cookie': cookieStr
+        }
+      }
+    );
+  } catch (error) {
+    console.error('[CUSTOM AUTH] Sign out error:', error);
+    return NextResponse.json(
+      { success: true, url: '/auth/signin' },
+      { 
+        headers: {
+          'Set-Cookie': 'custom_auth_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'
+        }
+      }
+    );
+  }
+}
 
-// In development, always treat as localhost
-const isLocalhost = isDevelopment || (isBrowser && (
-  window.location.hostname === 'localhost' || 
-  window.location.hostname === '127.0.0.1'
-));
-
-// HARDCODED PRODUCTION URLS
-const PRODUCTION_APP_URL = 'https://d3irpl0o2ddv9y.cloudfront.net';
-
-// Determine the base URL based on environment
-const getBaseUrl = () => {
-  // If we're in development mode, use localhost
-  if (isDevelopment || isLocalhost) {
-    return "http://localhost:3000";
+// Main handler for all auth routes
+export async function GET(req: NextRequest, { params }: { params: { nextauth: string[] }}) {
+  const path = params.nextauth[0] || '';
+  
+  // Redirect all session requests to our custom session API
+  if (path === 'session') {
+    return handleSession(req);
   }
   
-  // If we're in a browser and not on localhost, use the current URL's origin
-  if (isBrowser) {
-    return window.location.origin;
+  // For any other GET requests, return an error
+  return NextResponse.json(
+    { error: `Unsupported GET operation: ${path}` },
+    { status: 400 }
+  );
+}
+
+export async function POST(req: NextRequest, { params }: { params: { nextauth: string[] }}) {
+  const path = params.nextauth[0] || '';
+  
+  // Handle different auth operations
+  if (path === 'signin' || path === 'callback') {
+    const provider = params.nextauth[1] || '';
+    
+    // Currently only supporting credentials
+    if (provider === 'credentials') {
+      return handleSignIn(req);
+    }
+    
+    return NextResponse.json(
+      { error: `Unsupported provider: ${provider}` },
+      { status: 400 }
+    );
+  } 
+  else if (path === 'signout') {
+    return handleSignOut(req);
+  }
+  else if (path === 'session') {
+    return handleSession(req);
   }
   
-  // Use hardcoded production URL
-  return PRODUCTION_APP_URL;
-};
-
-// Get the NEXTAUTH_URL from environment or compute it
-const getNextAuthUrl = () => {
-  return getBaseUrl();
-};
-
-// Always log configuration to help with debugging
-console.log('NextAuth Configuration:', {
-  baseUrl: getBaseUrl(),
-  nextAuthUrl: getNextAuthUrl(),
-  isLocalhost,
-  isBrowser,
-  isDevelopment,
-  hostname: isBrowser ? window.location.hostname : 'not in browser',
-  NODE_ENV: process.env.NODE_ENV
-});
-
-// Define NextAuth options
-export const authOptions: NextAuthOptions = {
-  providers: [
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        email: { label: "Email", type: "text" },
-        accessToken: { label: "Access Token", type: "text" },
-      },
-      async authorize(credentials) {
-        if (credentials?.accessToken) {
-          return {
-            id: credentials.email || "user-id",
-            email: credentials.email || "user@example.com",
-            accessToken: credentials.accessToken,
-            provider: 'credentials',
-          };
-        }
-        return null;
-      },
-    }),
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    }),
-    FacebookProvider({
-      clientId: process.env.FACEBOOK_CLIENT_ID || "",
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET || "",
-    }),
-    TwitterProvider({
-      clientId: process.env.TWITTER_CLIENT_ID || "",
-      clientSecret: process.env.TWITTER_CLIENT_SECRET || "",
-      version: "2.0",
-    }),
-  ],
-  pages: {
-    signIn: "/auth/signin",
-    signOut: "/auth/signout",
-    error: "/auth/error",
-    verifyRequest: "/auth/verify-request",
-    newUser: "/auth/signup"
-  },
-  callbacks: {
-    async jwt({ token, user, account }) {
-      if (account?.provider === 'credentials' && user?.accessToken) {
-        token.accessToken = user.accessToken;
-        token.provider = 'credentials';
-      } else if (account?.access_token) {
-        token.accessToken = account.access_token;
-        token.provider = account.provider;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      return {
-        ...session,
-        accessToken: token.accessToken,
-        provider: token.provider,
-      };
-    },
-    async redirect({ url, baseUrl }) {
-      try {
-        // Always use our determined base URL
-        const effectiveBaseUrl = getBaseUrl();
-        
-        console.log('NextAuth Redirect:', {
-          url,
-          baseUrl,
-          effectiveBaseUrl,
-          environment: process.env.NODE_ENV
-        });
-        
-        // Skip NextAuth redirection entirely when using credentials provider
-        // This allows our custom redirect logic in SignIn component to take over
-        if (url.includes('/api/auth/signin/credentials') || 
-            url.includes('/api/auth/callback/credentials')) {
-          console.log('Using custom redirect logic for credentials provider');
-          return `${effectiveBaseUrl}/dashboard`;
-        }
-        
-        // If URL starts with base URL, allow it (internal redirect)
-        if (url.startsWith(effectiveBaseUrl)) {
-          return url;
-        }
-        
-        // If URL is a relative path, append it to the base URL
-        if (url.startsWith('/')) {
-          // Special case for dashboard redirect
-          if (url === '/dashboard' || url.startsWith('/auth/signin')) {
-            console.log('Redirecting to dashboard after sign-in');
-            return `${effectiveBaseUrl}/dashboard`;
-          }
-          
-          // Special case for sign out - redirect to home
-          if (url === '/signout' || url.startsWith('/auth/signout')) {
-            console.log('Redirecting to home after sign-out');
-            return effectiveBaseUrl;
-          }
-          
-          return `${effectiveBaseUrl}${url}`;
-        }
-        
-        // For any other URL, validate it's safe
-        try {
-          const urlObj = new URL(url);
-          const baseUrlObj = new URL(effectiveBaseUrl);
-          
-          // If it's the same origin, allow it
-          if (urlObj.origin === baseUrlObj.origin) {
-            return url;
-          }
-        } catch (error) {
-          console.error('Error parsing URL:', error);
-        }
-        
-        // Default to dashboard for most cases, home for sign-out
-        if (url.includes('signout')) {
-          return effectiveBaseUrl;
-        }
-        
-        console.log('Default redirect to dashboard');
-        return `${effectiveBaseUrl}/dashboard`;
-      } catch (error) {
-        console.error("Redirect callback error:", error);
-        // On error, redirect to dashboard (safer than error page)
-        return `${getBaseUrl()}/dashboard`;
-      }
-    },
-  },
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  debug: process.env.NODE_ENV === 'development',
-  secret: "Z2zvLfLkb5sPU0wjjXIaZ+AajgRDGUjj48DAFktdL78=", // Hardcoded secret from .env.production
-  // Ensure cookies work with CloudFront
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: !isLocalhost,
-      },
-    },
-    callbackUrl: {
-      name: `next-auth.callback-url`,
-      options: {
-        sameSite: "lax",
-        path: "/",
-        secure: !isLocalhost,
-      },
-    },
-    csrfToken: {
-      name: `next-auth.csrf-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: !isLocalhost,
-      },
-    },
-  },
-};
-
-const handler = NextAuth(authOptions);
-
-export { handler as GET, handler as POST };
+  // For any other POST requests, return an error
+  return NextResponse.json(
+    { error: `Unsupported POST operation: ${path}` },
+    { status: 400 }
+  );
+}

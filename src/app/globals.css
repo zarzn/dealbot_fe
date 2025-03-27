@@ -75,7 +75,100 @@
   body {
     @apply bg-background text-foreground;
   }
-} 
+}
+
+@layer components {
+  /* Dashboard color system for dark mode */
+  .dark .dashboard-content h1, 
+  .dark .dashboard-content h2, 
+  .dark .dashboard-content h3, 
+  .dark .dashboard-content h4, 
+  .dark .dashboard-content h5, 
+  .dark .dashboard-content h6,
+  .dark .dashboard-content p,
+  .dark .dashboard-content li,
+  .dark .dashboard-content div:not(.preserve-color):not([class*="text-"]),
+  .dark .dashboard-content span:not(.preserve-color):not([class*="text-"]),
+  .dark .dashboard-content label:not(.preserve-color),
+  .dark label:not(.preserve-color),
+  .dark a:not(.preserve-color):not([class*="text-"]),
+  .dark button:not(.preserve-color):not([class*="text-"]):not([class*="bg-"]) {
+    color: white;
+  }
+  
+  /* Preserve colored elements - never override these with white text */
+  .preserve-color,
+  .preserve-color *:not(.forced-white),
+  [class*="text-red-"],
+  [class*="text-green-"],
+  [class*="text-blue-"],
+  [class*="text-yellow-"],
+  [class*="text-purple-"],
+  [class*="text-indigo-"],
+  [class*="text-amber-"],
+  [class*="text-emerald-"],
+  [class*="text-pink-"],
+  .text-green-400,
+  .text-red-400,
+  .text-yellow-400,
+  .text-blue-400,
+  .text-purple,
+  .text-amber-400,
+  .text-emerald-400,
+  .text-indigo-400,
+  .text-pink-400 {
+    color: inherit;
+  }
+  
+  /* Default dashboard form elements */
+  .dark .dashboard-content input:not(.preserve-color),
+  .dark .dashboard-content textarea:not(.preserve-color),
+  .dark .dashboard-content select:not(.preserve-color),
+  .dark input:not(.preserve-color):not([class*="text-"]),
+  .dark textarea:not(.preserve-color):not([class*="text-"]),
+  .dark select:not(.preserve-color):not([class*="text-"]) {
+    color: white;
+  }
+  
+  /* Fix for placeholder text */
+  .dark ::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+  
+  /* Fix for select options which might have black backgrounds */
+  .dark option {
+    background-color: #1a1a1a;
+    color: white;
+  }
+  
+  /* Utility classes for text opacity variations */
+  .text-white-high {
+    color: rgba(255, 255, 255, 1);
+  }
+  
+  .text-white-medium {
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .text-white-low {
+    color: rgba(255, 255, 255, 0.6);
+  }
+  
+  .text-white-subtle {
+    color: rgba(255, 255, 255, 0.4);
+  }
+  
+  /* Badge and status indicators */
+  .badge.preserve-color,
+  .status-indicator.preserve-color {
+    color: inherit !important;
+  }
+  
+  /* Force white text on specific elements - this will override most color settings */
+  .forced-white {
+    color: white !important;
+  }
+}
 
 .button-border-gradient {
   position: relative;

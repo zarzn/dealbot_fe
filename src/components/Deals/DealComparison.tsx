@@ -347,7 +347,7 @@ export function DealComparison({
                       <TableCell className="font-medium">
                         <div className="flex items-center">
                           {deal.id === comparisonResult.best_deal_id && (
-                            <Award className="h-4 w-4 text-yellow-500 mr-1.5" />
+                            <Award className="h-4 w-4 text-yellow-500 preserve-color mr-1.5" />
                           )}
                           <span className="line-clamp-1">{deal.title}</span>
                         </div>
@@ -355,7 +355,7 @@ export function DealComparison({
                       <TableCell className="text-right">
                         ${deal.total_price || deal.price}
                         {deal.price_difference_percent > 0 && (
-                          <span className="text-red-500 ml-1 text-xs">
+                          <span className="text-red-500 preserve-color ml-1 text-xs">
                             +{deal.price_difference_percent}%
                           </span>
                         )}

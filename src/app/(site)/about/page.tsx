@@ -10,15 +10,15 @@ import Newsletter from "@/components/Newsletter";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "About REBATON | AI-Powered Deal Finding Platform",
-  description: "Learn how REBATON's AI technology revolutionizes deal finding with price prediction, real-time monitoring, and intelligent goal tracking.",
+  title: "About Agentic Deals | AI-Powered Deal Finding Platform",
+  description: "Learn how Agentic Deals' AI technology revolutionizes deal finding with price prediction, real-time monitoring, and intelligent goal tracking.",
 };
 
 const AboutPage = () => {
   return (
     <>
       <Breadcrumb 
-        pageTitle="About REBATON" 
+        pageTitle="About Agentic Deals" 
         pagePath={[
           { label: "Home", path: "/" },
           { label: "About", path: "/about" }

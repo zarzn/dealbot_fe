@@ -6,12 +6,7 @@ import { Clock, AlertCircle, Pause, Play, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
 import { goalsService } from '@/services/goals';
 import type { Goal } from '@/services/goals';
@@ -24,25 +19,25 @@ interface GoalStatusManagerProps {
 const statusConfig = {
   active: {
     label: 'Active',
-    color: 'bg-green-500/20 text-green-400',
+    color: 'bg-green-500/20 text-green-400 preserve-color',
     icon: Play,
     description: 'Goal is actively being monitored',
   },
   paused: {
     label: 'Paused',
-    color: 'bg-yellow-500/20 text-yellow-400',
+    color: 'bg-yellow-500/20 text-yellow-400 preserve-color',
     icon: Pause,
     description: 'Goal monitoring is paused',
   },
   completed: {
     label: 'Completed',
-    color: 'bg-blue-500/20 text-blue-400',
+    color: 'bg-blue-500/20 text-blue-400 preserve-color',
     icon: Check,
     description: 'Goal has been achieved',
   },
   expired: {
     label: 'Expired',
-    color: 'bg-red-500/20 text-red-400',
+    color: 'bg-red-500/20 text-red-400 preserve-color',
     icon: X,
     description: 'Goal has expired',
   },
@@ -59,7 +54,7 @@ export function GoalStatusManager({ goal, onStatusChange }: GoalStatusManagerPro
       if (goal.deadline) {
         const now = new Date().getTime();
         const deadline = new Date(goal.deadline).getTime();
-        const createdAt = new Date(goal.createdAt!).getTime();
+        const createdAt = goal.createdAt ? new Date(goal.createdAt).getTime() : now;
         
         // Calculate time left
         const timeLeftMs = deadline - now;
@@ -74,9 +69,14 @@ export function GoalStatusManager({ goal, onStatusChange }: GoalStatusManagerPro
           // Calculate progress
           const totalDuration = deadline - createdAt;
           const elapsed = now - createdAt;
-          const calculatedProgress = Math.min(100, (elapsed / totalDuration) * 100);
+          // Prevent NaN by ensuring totalDuration is not zero
+          const calculatedProgress = totalDuration > 0 ? Math.min(100, (elapsed / totalDuration) * 100) : 0;
           setProgress(calculatedProgress);
         }
+      } else {
+        // Handle case when no deadline exists
+        setTimeLeft('No deadline');
+        setProgress(0);
       }
     };
 
@@ -174,16 +174,16 @@ export function GoalStatusManager({ goal, onStatusChange }: GoalStatusManagerPro
               <Clock className="w-4 h-4" />
               {timeLeft}
             </div>
-            <span className="text-white/70">{Math.round(progress)}% Complete</span>
+            <span className="text-white/70">
+              {!isNaN(progress) ? `${Math.round(progress)}% Complete` : '0% Complete'}
+            </span>
           </div>
-          <Progress value={progress} />
+          <Progress value={isNaN(progress) ? 0 : progress} />
         </div>
       )}
 
       {/* Analytics */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
+      <div
         className="grid grid-cols-3 gap-4"
       >
         <div className="bg-white/[0.05] rounded-lg p-3">
@@ -193,14 +193,18 @@ export function GoalStatusManager({ goal, onStatusChange }: GoalStatusManagerPro
         <div className="bg-white/[0.05] rounded-lg p-3">
           <div className="text-sm text-white/70">Success Rate</div>
           <div className="text-lg font-semibold">
-            {goal.successRate ? `${Math.round(goal.successRate * 100)}%` : 'N/A'}
+            {goal.successRate != null && !isNaN(goal.successRate) ? 
+              `${Math.round(goal.successRate * 100)}%` : '0%'}
           </div>
         </div>
         <div className="bg-white/[0.05] rounded-lg p-3">
           <div className="text-sm text-white/70">Tokens Spent</div>
-          <div className="text-lg font-semibold">{goal.tokensSpent || 0}</div>
+          <div className="text-lg font-semibold">
+            {goal.tokensSpent != null && !isNaN(goal.tokensSpent) ? 
+              goal.tokensSpent.toFixed(2) : '0'}
+          </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 } 

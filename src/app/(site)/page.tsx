@@ -35,7 +35,9 @@ export default function Home() {
       <Support />
       {integrations.isSanityEnabled && <BlogSection />}
       <CallToAction />
+      {/* Newsletter section commented out as requested
       <Newsletter />
+      */}
     </>
   );
 }

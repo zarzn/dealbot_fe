@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { apiRequest } from '@/services/api/client';
-import { AxiosRequestConfig } from 'axios';
+import { apiClient } from '@/lib/api-client';
+import { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { toast } from 'react-hot-toast';
 
 interface UseApiOptions {
@@ -44,8 +44,8 @@ export function useApi<T>(
           ...config,
         };
 
-        const response = await apiRequest<T>(mergedConfig);
-        const responseData = response.data as T;
+        const response: AxiosResponse<T> = await apiClient(mergedConfig);
+        const responseData = response.data;
         setData(responseData);
 
         if (options.onSuccess) {

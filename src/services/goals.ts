@@ -68,23 +68,96 @@ export interface GoalCost {
 
 class GoalsService {
   async getGoalCost(): Promise<GoalCost> {
-    const response = await apiClient.get('/api/v1/goals/cost');
-    return response.data;
+    console.log('GoalsService: Fetching goal cost from API');
+    try {
+      const response = await apiClient.get('/api/v1/goals/cost');
+      console.log('GoalsService: Received raw goal cost response:', response);
+      
+      // Handle different possible response structures
+      let costData: GoalCost;
+      
+      if (response.data && typeof response.data === 'object') {
+        console.log('GoalsService: Processing response data:', response.data);
+        
+        // Case 1: Direct object with tokenCost property
+        if (typeof response.data.tokenCost === 'number') {
+          console.log('GoalsService: Found tokenCost in root object:', response.data.tokenCost);
+          costData = response.data;
+        }
+        // Case 2: Nested data property with tokenCost
+        else if (response.data.data && typeof response.data.data.tokenCost === 'number') {
+          console.log('GoalsService: Found tokenCost in nested data object:', response.data.data.tokenCost);
+          costData = response.data.data;
+        }
+        // Case 3: Response with token_cost (snake_case)
+        else if (typeof response.data.token_cost === 'number') {
+          console.log('GoalsService: Found token_cost (snake_case):', response.data.token_cost);
+          costData = {
+            tokenCost: response.data.token_cost,
+            features: response.data.features || []
+          };
+        }
+        // Case 4: Direct number value
+        else if (typeof response.data === 'number') {
+          console.log('GoalsService: Response is direct number value:', response.data);
+          costData = {
+            tokenCost: response.data,
+            features: []
+          };
+        }
+        // Fallback
+        else {
+          console.warn('GoalsService: Could not determine cost format from response:', response.data);
+          costData = {
+            tokenCost: 5.0, // Default fallback
+            features: []
+          };
+        }
+      } else {
+        console.warn('GoalsService: Invalid response format:', response.data);
+        costData = {
+          tokenCost: 5.0, // Default fallback
+          features: []
+        };
+      }
+      
+      console.log('GoalsService: Final processed goal cost data:', costData);
+      return costData;
+    } catch (error) {
+      console.error('GoalsService: Error fetching goal cost:', error);
+      
+      // Enhanced error logging
+      if (error.response) {
+        console.error('GoalsService: Error response:', error.response.status, error.response.data);
+      } else if (error.request) {
+        console.error('GoalsService: No response received from API');
+      } else {
+        console.error('GoalsService: Error message:', error.message);
+      }
+      
+      // Return default in case of error
+      return {
+        tokenCost: 5.0, // Default fallback
+        features: []
+      };
+    }
   }
 
   async createGoal(goal: CreateGoalInput): Promise<Goal> {
+    console.log('GoalsService.createGoal called with:', goal);
+    
     // Transform the input to match API schema
     const goalData = {
       title: goal.title,
-      itemCategory: goal.itemCategory,
+      itemCategory: goal.item_category,
       currentPrice: 0, // Will be set by backend
-      targetPrice: goal.constraints.minPrice,
+      targetPrice: goal.constraints.min_price,
       priceHistory: [],
       source: goal.marketplaces[0], // Primary marketplace
       url: '', // Will be set by backend
       constraints: {
-        maxPrice: goal.constraints.maxPrice,
-        minPrice: goal.constraints.minPrice,
+        maxPrice: goal.constraints.max_price,
+        minPrice: goal.constraints.min_price,
         brands: goal.constraints.brands,
         conditions: goal.constraints.conditions,
         keywords: goal.constraints.keywords,
@@ -98,12 +171,49 @@ class GoalsService {
       status: 'active',
       priority: goal.priority,
       deadline: goal.deadline,
-      maxMatches: goal.maxMatches,
-      maxTokens: goal.maxTokens,
+      max_matches: goal.max_matches, // Using snake_case to match backend expectations
+      max_tokens: goal.max_tokens, // Using snake_case to match backend expectations
     };
+    
+    console.log('GoalsService: Transformed data for API:', goalData);
+    console.log('GoalsService: Calling API endpoint:', '/api/v1/goals');
 
-    const response = await apiClient.post('/api/v1/goals', goalData);
-    return response.data;
+    try {
+      const response = await apiClient.post('/api/v1/goals', goalData);
+      console.log('GoalsService: API response for goal creation:', response);
+      
+      try {
+        // Try to parse token consumption from response if available
+        if (response.data && response.data.tokenConsumption) {
+          console.log('GoalsService: Token consumption:', response.data.tokenConsumption);
+        }
+      } catch (parseError) {
+        console.log('GoalsService: No token consumption data found in response');
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('GoalsService: API error in createGoal:', error);
+      
+      // Enhanced error logging
+      if (error.response) {
+        console.error('GoalsService: Error response:', error.response.status, error.response.data);
+        
+        // Check for token-related errors
+        const errorData = error.response.data;
+        if (errorData && typeof errorData === 'object') {
+          if (errorData.detail && errorData.detail.includes('token')) {
+            console.error('GoalsService: Token-related error detected:', errorData.detail);
+          }
+        }
+      } else if (error.request) {
+        console.error('GoalsService: No response received from API');
+      } else {
+        console.error('GoalsService: Error message:', error.message);
+      }
+      
+      throw error;
+    }
   }
 
   async getGoals(): Promise<Goal[]> {

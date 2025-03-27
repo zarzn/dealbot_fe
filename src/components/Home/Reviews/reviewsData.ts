@@ -2,221 +2,100 @@ import { Review } from "@/types/review";
 
 const reviewsData: Review[] = [
   {
-    id: 100,
-    userName: "Marc Herrera",
-    userDesignation: "@Shane",
+    id: 1,
+    userName: "Sarah Johnson",
+    userDesignation: "@TechBargainHunter",
     userImage: "/images/user/user-01.png",
     description:
-      "ruler characteristic present neighborhood sister available caught then over pound threw page anywhere secret mark whenever went disease dollar hearing partly plenty somewhere aware",
+      "Agentic Deals saved me over $500 on my latest laptop purchase! The price prediction feature alerted me 2 days before a flash sale that wasn't advertised anywhere else. The AI literally paid for itself in one transaction.",
   },
   {
-    id: 19,
-    userName: "Alfred Montgomery",
-    userDesignation: "@Olivia",
+    id: 2,
+    userName: "Michael Chen",
+    userDesignation: "@EcommerceExpert",
     userImage: "/images/user/user-02.png",
     description:
-      "local month pale negative last real card north plane thumb seldom gently lie shot floor animal introduced straw fellow applied ago anyway closer bag",
+      "As someone who resells electronics, this platform has completely transformed my business. The market trend analysis helps me identify profitable items before they become hot sellers. My profit margins increased by 32% in just three months.",
   },
-  {
-    id: 45,
-    userName: "Marvin Williamson",
-    userDesignation: "@Jeanette",
-    userImage: "/images/user/user-03.png",
-    description:
-      "state poet carried toward weak corner answer till give play seven bridge finest morning wool or although who twenty elephant slide swam being mix",
-  },
-  {
-    id: 38,
-    userName: "David Hudson",
-    userDesignation: "@Hilda",
-    userImage: "/images/user/user-04.png",
-    description:
-      "quiet type situation between cattle oxygen could tank class chose social thumb while indicate receive into equally right engineer morning thee promised quite hurry",
-  },
-  {
-    id: 8,
-    userName: "Hannah Ruiz",
-    userDesignation: "@Mitchell",
-    userImage: "/images/user/user-05.png",
-    description:
-      "freedom public door tall most getting hungry order green only worry parallel obtain yard honor there pitch broke fifth globe development musical push shirt",
-  },
-  {
-    id: 21,
-    userName: "Jay Alexander",
-    userDesignation: "@Chris",
-    userImage: "/images/user/user-06.png",
-    description:
-      "success remain while fruit shut wait plate instrument experiment shaking layers avoid heat directly dangerous example must family research scared baby did aid least",
-  },
-  {
-    id: 63,
-    userName: "Fred Graham",
-    userDesignation: "@Allie",
-    userImage: "/images/user/user-07.png",
-    description:
-      "reader halfway choose nails trail kitchen conversation eventually electric courage noun roar construction chose outer oxygen there yard spent pot sport exercise young recall",
-  },
-  {
-    id: 28,
-    userName: "Chris Cunningham",
-    userDesignation: "@Blake",
-    userImage: "/images/user/user-08.png",
-    description:
-      "crew this composed believed memory stopped close important had recent rocket layers nose tube valley built busy apartment imagine born stiff acres positive press",
-  },
-  {
-    id: 73,
-    userName: "Polly Webster",
-    userDesignation: "@Adelaide",
-    userImage: "/images/user/user-09.png",
-    description:
-      "seven morning title himself been ice may plural complete not badly anyway principal rain wood have accept busy down like widely one shallow tent",
-  },
-  {
-    id: 14,
-    userName: "Gerald Bowers",
-    userDesignation: "@Corey",
-    userImage: "/images/user/user-06.png",
-    description:
-      "couple window storm probably away hunt canal dirt such pencil science establish palace are myself entire feel pleasant milk island nearer ring merely imagine",
-  },
-  {
-    id: 801,
-    userName: "Dylan Cole",
-    userDesignation: "@Lina",
-    userImage: "/images/user/user-07.png",
-    description:
-      "yet during worried measure stiff sport against baseball melted remove team whispered writing cross back lamp smaller not bank shout scale bring naturally though",
-  },
-
   {
     id: 3,
-    userName: "Tyler Brooks",
-    userDesignation: "@Daisy",
-    userImage: "/images/user/user-01.png",
-    description:
-      "may tight moment figure ready whose married branch tip feathers field station feet union pole night broke tell difficulty lunch complete gentle relationship again",
-  },
-  {
-    id: 74,
-    userName: "Winifred Pratt",
-    userDesignation: "@Virginia",
-    userImage: "/images/user/user-02.png",
-    description:
-      "replied spider system standard daily practical party heat aboard aloud author instrument frozen mouth tower corner location alive friendly locate farm bad machinery lamp",
-  },
-  {
-    id: 25,
-    userName: "Esther Webster",
-    userDesignation: "@Jorge",
+    userName: "Emma Rodriguez",
+    userDesignation: "@SmartShopper",
     userImage: "/images/user/user-03.png",
     description:
-      "sort noon composed progress believed threw mother lift mental many silk equally scientist small most correct occasionally title outer blew old stood life around",
+      "I love how the AI learns my shopping preferences over time. It now recommends deals that perfectly match my style and budget. Last week it found me a designer bag at 60% off that I would have completely missed otherwise!",
   },
   {
-    id: 98,
-    userName: "Maude Haynes",
-    userDesignation: "@Fannie",
+    id: 4,
+    userName: "Jason Patel",
+    userDesignation: "@TechReviewer",
     userImage: "/images/user/user-04.png",
     description:
-      "add structure neighbor fine never acres regular definition earlier once such require yet break leather do sheet hidden easily report met sat climb underline",
-  },
-  {
-    id: 46,
-    userName: "Lela Moran",
-    userDesignation: "@Connor",
-    userImage: "/images/user/user-05.png",
-    description:
-      "shells house team shop inch gold mile jungle friendly believed driver court remarkable feature is ability diagram which partly lower already bee push prize",
-  },
-  {
-    id: 18,
-    userName: "Bertha McGuire",
-    userDesignation: "@Dollie",
-    userImage: "/images/user/user-08.png",
-    description:
-      "coat west similar series copy future include saw bigger bare program paper return musical mad machinery chose art claws stood instant mistake actual heart",
-  },
-  {
-    id: 81,
-    userName: "Celia Day",
-    userDesignation: "@Edward",
-    userImage: "/images/user/user-09.png",
-    description:
-      "structure spent mean touch since flew island thought burn book question mice silence spell everybody night ought chosen give fair felt together brief ship",
+      "The real-time price monitoring feature is a game changer. I set alerts for specific products, and Agentic Deals notifies me the moment prices drop below my threshold. I've managed to snag limited-time deals that would sell out in minutes.",
   },
   {
     id: 5,
-    userName: "Vera Pearson",
-    userDesignation: "@Roxie",
-    userImage: "/images/user/user-01.png",
-    description:
-      "beauty eleven chosen business butter previous four crowd slipped tower cast swam afternoon club salt window explain shade free went complex ought related let",
-  },
-  {
-    id: 8,
-    userName: "Allie Hodges",
-    userDesignation: "@Ricardo",
-    userImage: "/images/user/user-02.png",
-    description:
-      "weight duck mountain fill upon pie bar sense grow previous unknown hardly group stop writing biggest until lack cotton influence build barn lunch environment",
-  },
-  {
-    id: 80,
-    userName: "Lula Gross",
-    userDesignation: "@Lizzie",
-    userImage: "/images/user/user-03.png",
-    description:
-      "statement bread later discussion stand other exist plural post action by partly anybody additional die without if hollow frame below silk cell either above",
-  },
-  {
-    id: 44,
-    userName: "Mike Romero",
-    userDesignation: "@Leonard",
-    userImage: "/images/user/user-04.png",
-    description:
-      "softly distant ear gentle press sale on fear nose although spoken loud bee firm development settlers blood sad official obtain medicine science rain pour",
-  },
-  {
-    id: 74,
-    userName: "Aiden Alexander",
-    userDesignation: "@Adelaide",
+    userName: "Olivia Williams",
+    userDesignation: "@BudgetMom",
     userImage: "/images/user/user-05.png",
     description:
-      "early correctly memory entirely enjoy disease shoe whether minerals front constantly offer hung comfortable fix exciting phrase represent rocket plate track ago north center",
+      "With three kids in college, every dollar counts. Agentic Deals has helped our family save thousands on textbooks and electronics. The comparison across multiple marketplaces ensures we always get the absolute best price available.",
   },
   {
-    id: 11,
-    userName: "Agnes Adams",
-    userDesignation: "@Lucile",
+    id: 6,
+    userName: "Robert Garcia",
+    userDesignation: "@InvestmentPro",
     userImage: "/images/user/user-06.png",
     description:
-      "shaking count former arm directly definition mud possible ranch book muscle potatoes fun properly telephone metal name only serious seldom bound hay porch palace",
+      "I use Agentic Deals to track collectible market trends. The detailed analytics and price history graphs help me make informed investment decisions. Already made a 40% return on limited edition items I bought based on the platform's insights.",
   },
   {
     id: 7,
-    userName: "Gertrude Salazar",
-    userDesignation: "@Jeffery",
+    userName: "Jennifer Kim",
+    userDesignation: "@HomeDesigner",
     userImage: "/images/user/user-07.png",
     description:
-      "studied sitting wave what keep glass measure evening smooth pattern story meet green poem wheel wheat shoe gift shelf eat contain swimming sad capital",
+      "The deal bundling feature is brilliant! When furnishing my new apartment, Agentic Deals showed me which combinations of furniture items would maximize my savings across different stores. Saved over $1,200 and everything matches perfectly.",
   },
   {
-    id: 101,
-    userName: "Steven McCarthy",
-    userDesignation: "@Shawn",
+    id: 8,
+    userName: "David Wilson",
+    userDesignation: "@GadgetGuru",
     userImage: "/images/user/user-08.png",
     description:
-      "partly which life teacher loose dangerous soon world journey instance immediately judge start rubbed library satisfied control tool what fur although rush room young",
+      "As a tech reviewer, I need to stay on top of price fluctuations. This platform not only alerts me to deals but provides valuable insights into why prices are changing. The predictive analytics are scarily accurate - often forecasting sales weeks in advance.",
   },
   {
-    id: 82,
-    userName: "Max Larson",
-    userDesignation: "@Lillian",
+    id: 9,
+    userName: "Lisa Thompson",
+    userDesignation: "@FreelanceDesigner",
     userImage: "/images/user/user-09.png",
     description:
-      "wild laid whether younger tin mine are shoe softly apart gate nearby gas fell his cell jump announced national symbol pitch pond mysterious herself",
+      "I run a small design business and Agentic Deals has helped me optimize my supply purchases. The seasonal trend analysis lets me stock up at the lowest prices, and the inventory management integration keeps everything organized. A must-have tool!",
+  },
+  {
+    id: 10,
+    userName: "Marcus Johnson",
+    userDesignation: "@SmartHomeBuilder",
+    userImage: "/images/user/user-01.png",
+    description:
+      "When building my smart home, I needed to find compatible devices at good prices. The platform's compatibility checking feature alongside price monitoring saved me from expensive mistakes and found me deals on devices that work perfectly together.",
+  },
+  {
+    id: 11,
+    userName: "Sophia Martinez",
+    userDesignation: "@FashionBlogger",
+    userImage: "/images/user/user-02.png",
+    description:
+      "The fashion trend prediction feature is spot on! Agentic Deals helps me spot upcoming styles before they trend and buy them at lower prices. My followers are always amazed at how I find such amazing deals on the latest fashion items.",
+  },
+  {
+    id: 12,
+    userName: "Kevin Taylor",
+    userDesignation: "@GamingEnthusiast",
+    userImage: "/images/user/user-03.png",
+    description:
+      "Gaming gear can be expensive, but not with Agentic Deals! The platform alerted me to a limited-time sale on a high-end graphics card that sold out in minutes. I saved $300 and was one of the few who managed to grab one before they were gone.",
   },
 ];
 

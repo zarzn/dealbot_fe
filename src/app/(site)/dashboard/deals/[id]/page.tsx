@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { dealsService } from '@/services/deals';
 import { toast } from 'sonner';
 import { DealResponse } from '@/types/deals';
+import { useEffect as useWindowEffect } from 'react';
 
 export default function DealDetailsPage() {
   const router = useRouter();
@@ -19,6 +20,25 @@ export default function DealDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deal, setDeal] = useState<DealResponse | null>(null);
+  
+  useWindowEffect(() => {
+    const fixAccordionClicks = () => {
+      document.querySelectorAll('[data-state="closed"] button, [data-state="open"] button').forEach(trigger => {
+        if (!trigger.hasAttribute('data-fixed')) {
+          trigger.setAttribute('data-fixed', 'true');
+          trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+          });
+        }
+      });
+    };
+    
+    fixAccordionClicks();
+    const observer = new MutationObserver(fixAccordionClicks);
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!id) return;

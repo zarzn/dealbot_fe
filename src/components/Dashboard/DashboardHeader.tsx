@@ -19,9 +19,9 @@ export default function DashboardHeader({ heading, text }: DashboardHeaderProps)
       }}
       className="mb-8"
     >
-      <h1 className="text-2xl font-bold tracking-tight">{heading}</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-white-high">{heading}</h1>
       {text && (
-        <p className="mt-2 text-sm text-white/60">
+        <p className="mt-2 text-sm text-white-low">
           {text}
         </p>
       )}

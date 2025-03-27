@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { CreateGoalForm } from '@/components/Goals/CreateGoalForm';
+import { CreateGoalForm } from "@/components/Goals/CreateGoalForm";
 
 export default function CreateGoalPage() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export default function CreateGoalPage() {
       </div>
 
       {/* Form */}
-      <div className="max-w-2xl">
+      <div className="w-full">
         <CreateGoalForm onSuccess={handleGoalCreationSuccess} />
       </div>
     </div>

@@ -13,7 +13,7 @@ const SingleReview = ({ review }: { review: Review }) => {
             height={48}
           />
         </div>
-        <div>
+        <div className="ml-2">
           <h3 className="text-sm font-medium text-white">{review.userName}</h3>
           <p className="text-sm font-medium lowercase">
             {review.userDesignation}

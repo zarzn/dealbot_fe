@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { Plus, Target, AlertCircle } from 'lucide-react';
+import { AlertCircle, ShoppingCart, Store, ShoppingBag } from 'lucide-react';
 import { 
   createGoalSchema, 
   type CreateGoalInput, 
@@ -14,56 +13,107 @@ import {
   goalPriorities,
   goalPriorityLabels
 } from '@/lib/validations/goal';
-import { goalsService } from '@/services/goals';
-import { walletService } from '@/services/wallet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectItem } from '@/components/ui/select';
+import { 
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from "@/components/ui/form";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from '@/components/ui/checkbox';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
-import GoalCostModal from './GoalCostModal';
+import { GoalCostModal } from './GoalCostModal';
+import { useGoalsService } from "@/hooks/useGoalsService";
+import { useWalletService } from "@/hooks/useWalletService";
+import SimpleModal from "@/components/SimpleModal";
 
-// Add these interfaces if they don't exist in the codebase
-interface Market {
-  id: string;
-  type: string;
-  name: string;
-  status: string;
-}
+// Convert market categories to objects with value/label for the select component
+const MARKET_CATEGORY_OPTIONS = marketCategories.map(category => ({
+  value: category,
+  label: category.charAt(0).toUpperCase() + category.slice(1).replace('_', ' ')
+}));
 
 interface CreateGoalFormProps {
   onSuccess?: () => void;
 }
 
+// Custom styles for the select dropdown to match the dashboard theme
+const SELECT_STYLES = `
+  .select {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+  }
+  
+  .select-trigger {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 0.375rem !important;
+    height: 2.5rem !important;
+    padding: 0 0.75rem !important;
+  }
+  
+  .select-content {
+    background-color: rgba(23, 23, 23, 0.95) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  .select-item {
+    color: white !important;
+  }
+  
+  .select-item:hover,
+  .select-item:focus {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  select {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+  }
+  
+  select option {
+    background-color: #1a1a1a !important;
+    color: white !important;
+  }
+`;
+
 export function CreateGoalForm({ onSuccess }: CreateGoalFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [showCostModal, setShowCostModal] = useState(false);
-  const [baseCost, setBaseCost] = useState(5); // Base cost without multiplier
-  const [adjustedCost, setAdjustedCost] = useState(5); // Cost after applying priority multiplier
+  const [showFallbackModal, setShowFallbackModal] = useState(false);
+  const [baseCost, setBaseCost] = useState(5);
+  const [adjustedCost, setAdjustedCost] = useState(5);
   const [balance, setBalance] = useState(0);
-  const [availableMarkets] = useState<string[]>(['amazon', 'walmart']);
+  const [availableMarkets] = useState<string[]>(['amazon', 'walmart', 'google_shopping']);
   const [keywordInput, setKeywordInput] = useState('');
   const [brandInput, setBrandInput] = useState('');
+  const [showInsufficientBalanceAlert, setShowInsufficientBalanceAlert] = useState(false);
+  const [costFeatures, setCostFeatures] = useState<string[]>([]);
+  const [formData, setFormData] = useState<CreateGoalInput | null>(null);
+  const goalsService = useGoalsService();
+  const walletService = useWalletService();
 
-  // Initialize form with default values
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<CreateGoalInput>({
+  // Define market icons mapping
+  const marketIcons = {
+    amazon: <ShoppingCart className="h-4 w-4 mr-2" />,
+    walmart: <Store className="h-4 w-4 mr-2" />,
+    google_shopping: <ShoppingBag className="h-4 w-4 mr-2" />
+  };
+
+  // Initialize form with react-hook-form
+  const form = useForm<CreateGoalInput>({
     resolver: zodResolver(createGoalSchema),
     defaultValues: {
       title: '',
@@ -86,24 +136,61 @@ export function CreateGoalForm({ onSuccess }: CreateGoalFormProps) {
     },
   });
 
+  // Extract form methods
+  const { handleSubmit, watch, setValue } = form;
+
   // Fetch wallet balance and goal cost
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log('Fetching wallet balance and goal cost data...');
+        
         // Get wallet balance
-        const balanceData = await walletService.getBalance();
-        setBalance(typeof balanceData === 'number' ? balanceData : 0);
+        try {
+          const balance = await walletService.getBalance();
+          console.log('Retrieved balance:', balance);
+          setBalance(balance);
+        } catch (balanceError) {
+          console.error('Error fetching balance:', balanceError);
+        }
 
-        // Get goal cost - since we know the format of the data
+        // Get goal cost from backend
         try {
           const costData = await goalsService.getGoalCost();
-          setBaseCost(typeof costData.tokenCost === 'number' ? costData.tokenCost : 5);
+          console.log('Retrieved goal cost data:', costData);
+          
+          if (typeof costData.tokenCost === 'number') {
+            setBaseCost(costData.tokenCost);
+          } else {
+            setBaseCost(5); // Default fallback
+          }
+          
+          // Set features if available
+          if (costData.features && Array.isArray(costData.features)) {
+            setCostFeatures(costData.features);
+          } else {
+            // Default features
+            setCostFeatures([
+              "AI-powered goal optimization",
+              "Smart progress tracking",
+              "Real-time deal alerts",
+              "Priority matching with new deals"
+            ]);
+          }
         } catch (costError) {
-          console.error('Error fetching goal cost, using default', costError);
+          console.error('Error fetching goal cost:', costError);
           setBaseCost(5); // Default fallback
+          
+          // Set default features
+          setCostFeatures([
+            "AI-powered goal optimization",
+            "Smart progress tracking",
+            "Real-time deal alerts",
+            "Priority matching with new deals"
+          ]);
         }
       } catch (error) {
-        console.error('Failed to fetch data', error);
+        console.error('Failed to fetch wallet or cost data:', error);
         toast.error('Failed to load required data');
       }
     };
@@ -126,39 +213,100 @@ export function CreateGoalForm({ onSuccess }: CreateGoalFormProps) {
     // Calculate cost using safe multiplication to avoid floating point issues
     const multiplier = priorityMultiplier[currentPriority as keyof typeof priorityMultiplier] || 1.0;
     const calculated = Number((baseCost * multiplier).toFixed(1));
+    console.log('Cost calculation:', { 
+      baseCost,
+      priority: currentPriority, 
+      multiplier, 
+      calculatedCost: calculated
+    });
     setAdjustedCost(calculated);
   }, [currentPriority, baseCost]);
 
-  const onSubmit: SubmitHandler<CreateGoalInput> = async (data) => {
+  // Form submission handler
+  const onSubmit = async (data: CreateGoalInput) => {
+    console.log("Form submission triggered:", { data });
+    
+    // Save form data for later use
+    setFormData(data);
+    
+    // Show processing toast instead of loading
+    const toastId = toast("Processing your request...");
+    
     try {
-      // Check if user has enough balance
-      if (typeof balance !== 'number' || balance < adjustedCost) {
-        toast.error('Insufficient balance to create goal');
-        return;
+      // Get current balance
+      const currentBalance = await walletService.getBalance();
+      console.log("Current balance:", currentBalance, "Required:", adjustedCost);
+      setBalance(currentBalance);
+      
+      // Show appropriate toast based on balance
+      if (currentBalance < adjustedCost) {
+        console.log("Insufficient balance:", currentBalance, "< cost:", adjustedCost);
+        toast.error(`Insufficient balance: ${currentBalance.toFixed(1)} tokens (need ${adjustedCost.toFixed(1)})`, {
+          id: toastId
+        });
+        
+        // Show the alert banner
+        setShowInsufficientBalanceAlert(true);
+      } else {
+        toast.success(`Creating goal will cost ${adjustedCost.toFixed(1)} tokens`, {
+          id: toastId
+        });
       }
-
-      // Show confirmation modal
+      
+      // Show cost modal
+      console.log("Showing cost modal");
       setShowCostModal(true);
+      
     } catch (error) {
-      console.error('Error checking balance:', error);
-      toast.error('An error occurred. Please try again.');
+      console.error("Error checking balance:", error);
+      toast.error("Failed to check your token balance", {
+        id: toastId
+      });
+      
+      // Show fallback modal since we couldn't check balance
+      setShowFallbackModal(true);
     }
   };
 
   const handleConfirmCreate = async () => {
-    const data = watch();
-    setIsLoading(true);
+    console.log("Confirm create clicked", formData);
+    
+    // Final balance check before creation
     try {
-      await goalsService.createGoal(data);
-      await walletService.getBalance(); // Refresh balance after goal creation
-      toast.success('Goal created successfully!');
-      onSuccess?.();
-      router.push('/dashboard/goals');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create goal');
-    } finally {
-      setIsLoading(false);
-      setShowCostModal(false);
+      const finalBalance = await walletService.getBalance();
+      console.log("Final balance check:", finalBalance, "Cost:", adjustedCost);
+      
+      if (finalBalance < adjustedCost) {
+        console.error("Insufficient balance in final check");
+        toast.error(`Insufficient balance for goal creation.`);
+        return;
+      }
+      
+      // Proceed with goal creation
+      if (formData) {
+        setIsLoading(true);
+        const toastId = toast("Creating goal...");
+        
+        try {
+          console.log("Creating goal with data:", formData);
+          const goal = await goalsService.createGoal(formData);
+          console.log("Goal created:", goal);
+          toast.success("Goal created successfully!", { id: toastId });
+          if (onSuccess) onSuccess();
+          router.push('/dashboard/goals'); // Navigate to goals page
+        } catch (createError) {
+          console.error("Error creating goal:", createError);
+          toast.error("Failed to create goal. Please try again.", { id: toastId });
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        console.error("Form data missing");
+        toast.error("Form data is missing. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error in goal creation:", error);
+      toast.error("Failed to create goal. Please try again.");
     }
   };
 
@@ -205,432 +353,533 @@ export function CreateGoalForm({ onSuccess }: CreateGoalFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      {/* Basic Information */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Basic Information</h3>
-        
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Title</label>
-          <Input
-            {...register('title')}
-            placeholder="e.g., Gaming Monitor Deal"
-            error={errors.title?.message}
+    <div className="w-full mx-auto">
+      {showInsufficientBalanceAlert && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Insufficient Tokens!</AlertTitle>
+          <AlertDescription>
+            You don&apos;t have enough tokens to create this goal. Your balance: {balance.toFixed(1)} tokens. Cost: {adjustedCost.toFixed(1)} tokens.
+            <Button variant="outline" className="mt-2" onClick={() => router.push('/dashboard/wallet?action=purchase')}>
+              Add Tokens
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <Form {...form}>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" data-testid="create-goal-form">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter title for your goal" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    A clear and specific title for your goal.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="item_category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    {MARKET_CATEGORY_OPTIONS.map(category => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                  <FormDescription>
+                    Choose the category that best fits your goal.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Describe your goal in detail"
+                    className="resize-none h-32"
+                    {...field}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Provide detailed information about your goal, including any specific requirements or constraints.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Description</label>
-          <Textarea
-            {...register('description')}
-            placeholder="Describe what you're looking for..."
-            error={errors.description?.message}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Category</label>
-          <select
-            {...register('item_category')}
-            className="w-full px-4 py-2 bg-white/[0.05] border border-white/10 rounded-lg focus:outline-none focus:border-purple"
-          >
-            {marketCategories.map((category) => (
-              <option key={category} value={category}>
-                {category.charAt(0).toUpperCase() + category.slice(1)}
-              </option>
-            ))}
-          </select>
-          {errors.item_category && <p className="text-red-500 text-sm">{errors.item_category.message}</p>}
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Marketplaces</label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {[
-              { id: 'amazon', name: 'Amazon', available: true, icon: '🛒' },
-              { id: 'walmart', name: 'Walmart', available: true, icon: '🛍️' },
-              { id: 'ebay', name: 'eBay', available: false, icon: '🏷️' },
-              { id: 'target', name: 'Target', available: false, icon: '🎯' },
-              { id: 'bestbuy', name: 'Best Buy', available: false, icon: '💻' },
-            ].map((marketplace) => {
-              const isAvailable = availableMarkets.includes(marketplace.id);
-              const isSelected = watch('marketplaces')?.includes(marketplace.id);
-              
-              return (
-                <div 
-                  key={marketplace.id}
-                  onClick={() => {
-                    if (!isAvailable) {
-                      toast.error(`${marketplace.name} is not available yet`);
-                      return;
-                    }
-                    
-                    const marketplaces = watch('marketplaces') || [];
-                    if (isSelected) {
-                      // Don't allow deselecting if it's the last selected marketplace
-                      if (marketplaces.length <= 1) {
-                        toast.error('At least one marketplace must be selected');
-                        return;
-                      }
-                      
-                      setValue(
-                        'marketplaces',
-                        marketplaces.filter(m => m !== marketplace.id)
-                      );
-                    } else {
-                      setValue('marketplaces', [...marketplaces, marketplace.id]);
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="marketplaces"
+              render={() => (
+                <FormItem>
+                  <div className="mb-4">
+                    <FormLabel>Marketplaces</FormLabel>
+                    <FormDescription>
+                      Select the marketplaces to search for deals.
+                    </FormDescription>
+                  </div>
+                  {availableMarkets.map((market) => (
+                    <FormField
+                      key={market}
+                      control={form.control}
+                      name="marketplaces"
+                      render={({ field }) => {
+                        return (
+                          <FormItem
+                            key={market}
+                            className="flex flex-row items-start space-x-3 space-y-0 mb-2"
+                          >
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(market)}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([...field.value, market])
+                                    : field.onChange(
+                                        field.value?.filter(
+                                          (value) => value !== market
+                                        )
+                                      )
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal flex items-center">
+                              {marketIcons[market as keyof typeof marketIcons]}
+                              {market === 'google_shopping' ? 'Google Shopping' : 
+                                market.charAt(0).toUpperCase() + market.slice(1)}
+                            </FormLabel>
+                          </FormItem>
+                        )
+                      }}
+                    />
+                  ))}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="constraints.conditions"
+              render={() => (
+                <FormItem>
+                  <div className="mb-4">
+                    <FormLabel>Item Condition</FormLabel>
+                    <FormDescription>
+                      Select acceptable item conditions.
+                    </FormDescription>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    {['new', 'used', 'refurbished', 'open_box'].map((condition) => (
+                      <FormField
+                        key={condition}
+                        control={form.control}
+                        name="constraints.conditions"
+                        render={({ field }) => {
+                          return (
+                            <FormItem
+                              key={condition}
+                              className="flex flex-row items-start space-x-3 space-y-0"
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(condition)}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, condition])
+                                      : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== condition
+                                          )
+                                        )
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                {condition
+                                  .split('_')
+                                  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                  .join(' ')}
+                              </FormLabel>
+                            </FormItem>
+                          )
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="constraints.min_price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Minimum Price</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="constraints.max_price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Maximum Price</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="1000.00"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormItem>
+              <FormLabel>Keywords</FormLabel>
+              <div className="flex gap-2">
+                <Input
+                  value={keywordInput}
+                  onChange={(e) => setKeywordInput(e.target.value)}
+                  placeholder="Enter keyword"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addKeyword();
                     }
                   }}
-                  className={`
-                    flex items-center p-3 border rounded-lg cursor-pointer transition-colors
-                    ${isAvailable ? 'border-gray-600' : 'border-gray-800 opacity-50'}
-                    ${isSelected && isAvailable ? 'bg-primary/20 border-primary' : 'bg-transparent'}
-                  `}
-                >
-                  <span className="text-xl mr-2">{marketplace.icon}</span>
-                  <div className="flex-1">
-                    <div className="font-medium">{marketplace.name}</div>
-                    {!isAvailable && (
-                      <div className="text-xs text-gray-500">Coming soon</div>
+                />
+                <Button type="button" onClick={addKeyword}>Add</Button>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {watch('constraints.keywords')?.map((keyword) => (
+                  <Badge key={keyword} className="px-3 py-1">
+                    {keyword}
+                    <button
+                      type="button"
+                      className="ml-2 text-xs"
+                      onClick={() => removeKeyword(keyword)}
+                    >
+                      ✕
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              <FormDescription>
+                Add keywords to refine your search (optional).
+              </FormDescription>
+            </FormItem>
+            
+            <FormItem>
+              <FormLabel>Brands</FormLabel>
+              <div className="flex gap-2">
+                <Input
+                  value={brandInput}
+                  onChange={(e) => setBrandInput(e.target.value)}
+                  placeholder="Enter brand"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addBrand();
+                    }
+                  }}
+                />
+                <Button type="button" onClick={addBrand}>Add</Button>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {watch('constraints.brands')?.map((brand) => (
+                  <Badge key={brand} className="px-3 py-1">
+                    {brand}
+                    <button
+                      type="button"
+                      className="ml-2 text-xs"
+                      onClick={() => removeBrand(brand)}
+                    >
+                      ✕
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              <FormDescription>
+                Add brands to filter your search results (optional).
+              </FormDescription>
+            </FormItem>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="priority"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Priority Level (Cost Multiplier)</FormLabel>
+                  <FormControl>
+                    <div className="space-y-3">
+                      <Slider
+                        min={1}
+                        max={5}
+                        step={1}
+                        value={[field.value]}
+                        onValueChange={(values) => field.onChange(values[0])}
+                        className="w-full"
+                        range={false}
+                      />
+                      <div className="flex justify-between">
+                        {goalPriorities.map((priority) => (
+                          <div 
+                            key={priority} 
+                            className={`text-xs ${field.value === priority ? 'text-blue-400 font-bold' : 'text-muted-foreground'}`}
+                          >
+                            {goalPriorityLabels[priority]}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    Higher priority goals cost more tokens but receive faster and more accurate matches.
+                    <div className="mt-1 text-sm text-white">
+                      {field.value === 1 && 'Lowest cost option (20% discount)'}
+                      {field.value === 2 && 'Standard cost option'}
+                      {field.value === 3 && 'Premium option (20% premium)'}
+                      {field.value === 4 && 'Urgent option (50% premium)'}
+                      {field.value === 5 && 'Critical option (100% premium)'}
+                    </div>
+                    <div className="mt-2 p-2 border rounded bg-blue-950/30 text-white">
+                      Selected cost: <span className="font-bold text-lg text-blue-400">{adjustedCost.toFixed(1)} tokens</span>
+                    </div>
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="notifications.priceThreshold"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Price Alert Threshold</FormLabel>
+                  <FormControl>
+                    <div className="space-y-3">
+                      <Slider
+                        min={0.5}
+                        max={0.95}
+                        step={0.05}
+                        value={[field.value]}
+                        onValueChange={(values) => field.onChange(values[0])}
+                        className="w-full"
+                        range={false}
+                      />
+                      <div className="flex relative h-5">
+                        <span className="absolute text-xs text-muted-foreground" style={{left: '0%'}}>50%</span>
+                        <span className="absolute text-xs text-muted-foreground" style={{left: '20%'}}>60%</span>
+                        <span className="absolute text-xs text-muted-foreground" style={{left: '40%'}}>70%</span>
+                        <span className="absolute text-xs text-muted-foreground" style={{left: '60%'}}>80%</span>
+                        <span className="absolute text-xs text-muted-foreground" style={{left: '80%'}}>90%</span>
+                        <span className="absolute text-xs text-muted-foreground" style={{left: '100%', transform: 'translateX(-100%)'}}>95%</span>
+                      </div>
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    You&apos;ll be notified when a deal is found at or below <span className="font-semibold">{(field.value * 100).toFixed(0)}%</span> of your maximum price.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="deadline"
+              render={({ field: { value, onChange } }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Deadline (Optional)</FormLabel>
+                  <div className="space-y-2">
+                    <DatePicker
+                      selected={value ? new Date(value) : undefined}
+                      onSelect={(date) => {
+                        console.log("Date selected:", date);
+                        onChange(date);
+                      }}
+                      minDate={new Date()} // Can't select dates in the past
+                      placeholderText="Select deadline date"
+                    />
+                    {value && (
+                      <div className="text-xs text-muted-foreground">
+                        Selected: {new Date(value).toLocaleDateString()} 
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 px-2 ml-2" 
+                          onClick={() => onChange(undefined)}
+                        >
+                          Clear
+                        </Button>
+                      </div>
                     )}
                   </div>
-                  {isSelected && isAvailable && (
-                    <div className="h-5 w-5 bg-primary rounded-full flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      </svg>
+                  <FormDescription>
+                    Set a deadline for your goal (optional). Must be a future date.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <div className="grid grid-cols-1 gap-2">
+              <FormField
+                control={form.control}
+                name="notifications.email"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Email Notifications</FormLabel>
+                      <FormDescription>
+                        Receive updates about your goal via email.
+                      </FormDescription>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          {errors.marketplaces && <p className="text-red-500 text-sm">{errors.marketplaces.message}</p>}
-        </div>
-      </div>
-
-      {/* Price Range */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Price Range</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Minimum Price ($)</label>
-            <Input
-              type="number"
-              {...register('constraints.min_price', { valueAsNumber: true })}
-              placeholder="0"
-              error={errors.constraints?.min_price?.message}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Maximum Price ($)</label>
-            <Input
-              type="number"
-              {...register('constraints.max_price', { valueAsNumber: true })}
-              placeholder="1000"
-              error={errors.constraints?.max_price?.message}
-            />
-          </div>
-        </div>
-        {errors.constraints?.message && (
-          <p className="text-red-500 text-sm">{errors.constraints.message}</p>
-        )}
-      </div>
-
-      {/* Keywords and Features */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Search Criteria</h3>
-        
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Keywords</label>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Enter keyword and press Enter"
-              value={keywordInput}
-              onChange={(e) => setKeywordInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addKeyword();
-                }
-              }}
-              className="flex-1"
-            />
-            <Button 
-              type="button" 
-              onClick={addKeyword}
-              variant="outline"
-              className="shrink-0"
-            >
-              Add
-            </Button>
-          </div>
-          
-          <div className="flex flex-wrap gap-2 mt-2">
-            {watch('constraints.keywords')?.map((keyword) => (
-              <div 
-                key={keyword} 
-                className="flex items-center gap-1 px-3 py-1.5 bg-secondary text-secondary-foreground rounded-full text-sm"
-              >
-                {keyword}
-                <button 
-                  type="button"
-                  onClick={() => removeKeyword(keyword)}
-                  className="ml-1 text-xs hover:bg-gray-600 rounded-full h-4 w-4 inline-flex items-center justify-center"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-            {watch('constraints.keywords')?.length === 0 && (
-              <div className="text-sm text-gray-500 italic">No keywords added yet</div>
-            )}
-          </div>
-          {errors.constraints?.keywords && (
-            <p className="text-red-500 text-sm">{errors.constraints.keywords.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Brands</label>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Enter brand and press Enter"
-              value={brandInput}
-              onChange={(e) => setBrandInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addBrand();
-                }
-              }}
-              className="flex-1"
-            />
-            <Button 
-              type="button" 
-              onClick={addBrand}
-              variant="outline"
-              className="shrink-0"
-            >
-              Add
-            </Button>
-          </div>
-          
-          <div className="flex flex-wrap gap-2 mt-2">
-            {watch('constraints.brands')?.map((brand) => (
-              <div 
-                key={brand} 
-                className="flex items-center gap-1 px-3 py-1.5 bg-secondary text-secondary-foreground rounded-full text-sm"
-              >
-                {brand}
-                <button 
-                  type="button"
-                  onClick={() => removeBrand(brand)}
-                  className="ml-1 text-xs hover:bg-gray-600 rounded-full h-4 w-4 inline-flex items-center justify-center"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-            {watch('constraints.brands')?.length === 0 && (
-              <div className="text-sm text-gray-500 italic">No brands added yet</div>
-            )}
-          </div>
-          {errors.constraints?.brands && (
-            <p className="text-red-500 text-sm">{errors.constraints.brands.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Condition</label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {[
-              { id: 'new', label: 'New', description: 'Brand new, unused items' },
-              { id: 'used', label: 'Used', description: 'Used items in good condition' },
-              { id: 'refurbished', label: 'Refurbished', description: 'Professionally restored' },
-              { id: 'open_box', label: 'Open Box', description: 'Opened but unused' },
-              { id: 'renewed', label: 'Renewed', description: 'Inspected and guaranteed' },
-            ].map((condition) => {
-              const isSelected = watch('constraints.conditions')?.includes(condition.id);
+                  </FormItem>
+                )}
+              />
               
-              return (
-                <div 
-                  key={condition.id}
-                  onClick={() => {
-                    const conditions = watch('constraints.conditions') || [];
-                    // Don't allow deselecting if it would leave no conditions selected
-                    if (isSelected && conditions.length <= 1) {
-                      toast.error('At least one condition must be selected');
-                      return;
-                    }
-                    
-                    if (isSelected) {
-                      setValue(
-                        'constraints.conditions',
-                        conditions.filter(c => c !== condition.id)
-                      );
-                    } else {
-                      setValue('constraints.conditions', [...conditions, condition.id]);
-                    }
-                  }}
-                  className={`
-                    flex items-center gap-2 p-3 border rounded-lg cursor-pointer
-                    ${isSelected ? 'border-primary bg-primary/10' : 'border-gray-600'}
-                  `}
-                >
-                  <div className={`h-4 w-4 shrink-0 rounded-sm border flex items-center justify-center ${
-                    isSelected ? 'bg-primary border-primary' : 'border-gray-400'
-                  }`}>
-                    {isSelected && <span className="text-white text-xs">✓</span>}
-                  </div>
-                  <div>
-                    <div className="font-medium">{condition.label}</div>
-                    <div className="text-xs text-gray-400">{condition.description}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {errors.constraints?.conditions && (
-            <p className="text-red-500 text-sm">{errors.constraints.conditions.message}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Priority and Deadline */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Priority & Timing</h3>
-        
-        <div className="space-y-4">
-          <label className="text-sm font-medium">
-            Priority Level - {goalPriorityLabels[watch('priority')]}
-            <span className="ml-2 text-xs text-white/70">
-              (Cost: {adjustedCost.toFixed(1)} tokens)
-            </span>
-          </label>
-          
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>Low</span>
-                <span>Medium</span>
-                <span>High</span>
-                <span>Urgent</span>
-                <span>Critical</span>
-              </div>
-              <input 
-                type="range"
-                min="1"
-                max="5"
-                step="1"
-                value={watch('priority')}
-                onChange={(e) => setValue('priority', parseInt(e.target.value))}
-                className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+              <FormField
+                control={form.control}
+                name="notifications.inApp"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>In-App Notifications</FormLabel>
+                      <FormDescription>
+                        Receive updates within the app.
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
               />
             </div>
-            
-            <div className="flex items-center gap-2 px-3 py-2 bg-secondary/20 rounded">
-              <div className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-white font-bold">
-                {watch('priority')}
-              </div>
-              <div>
-                <p className="font-medium">{goalPriorityLabels[watch('priority')]}</p>
-                <p className="text-xs text-white/70">
-                  {watch('priority') === 1 && "Lowest priority, least expensive option"}
-                  {watch('priority') === 2 && "Standard priority with normal cost"}
-                  {watch('priority') === 3 && "Higher priority with 20% premium"}
-                  {watch('priority') === 4 && "Urgent priority with 50% premium"}
-                  {watch('priority') === 5 && "Critical priority, double the token cost"}
-                </p>
-              </div>
-            </div>
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Deadline (Optional)</label>
-          <DatePicker
-            selected={watch('deadline')}
-            onSelect={(date) => setValue('deadline', date ?? undefined)}
-            minDate={new Date()}
-            placeholderText="Select a deadline"
-          />
-        </div>
-      </div>
-
-      {/* Notifications */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Notifications</h3>
-        
-        <div className="space-y-4">
-          <label className="flex items-center gap-2">
-            <Checkbox
-              checked={watch('notifications.email')}
-              onCheckedChange={(checked) => 
-                setValue('notifications.email', !!checked)
-              }
-            />
-            <span className="text-sm">Email Notifications</span>
-          </label>
-
-          <label className="flex items-center gap-2">
-            <Checkbox
-              checked={watch('notifications.inApp')}
-              onCheckedChange={(checked) =>
-                setValue('notifications.inApp', !!checked)
-              }
-            />
-            <span className="text-sm">In-App Notifications</span>
-          </label>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Deal Quality Threshold ({(watch('notifications.priceThreshold') * 100).toFixed(0)}%)
-            </label>
-            <input 
-              type="range"
-              min="0"
-              max="100"
-              step="5"
-              value={watch('notifications.priceThreshold') * 100}
-              onChange={(e) => setValue('notifications.priceThreshold', parseInt(e.target.value) / 100)}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-white/70">
-              <span>Any Deal (0%)</span>
-              <span>Perfect Match (100%)</span>
-            </div>
-            <p className="text-sm text-white/50">
-              Notify me only when matches are above this quality threshold
-            </p>
+          
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={() => router.back()}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              data-testid="create-goal-button"
+              disabled={isLoading}
+              onClick={() => console.log("Create Goal button clicked")}
+            >
+              {isLoading ? 'Creating...' : 'Create Goal'}
+            </Button>
           </div>
-        </div>
-      </div>
+        </form>
+      </Form>
 
-      {/* Submit Button */}
-      <div className="flex justify-end gap-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.push('/dashboard/goals')}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Creating...' : 'Create Goal'}
-        </Button>
-      </div>
-
-      {/* Cost Modal */}
+      {/* Cost modal */}
       {showCostModal && (
         <GoalCostModal
           isOpen={showCostModal}
-          onClose={() => setShowCostModal(false)}
-          onConfirm={handleConfirmCreate}
-          cost={adjustedCost}
-          balance={balance}
+          onClose={() => {
+            console.log("Cost modal close triggered");
+            setShowCostModal(false);
+          }}
+          tokenCost={adjustedCost || 5}
+          features={costFeatures || [
+            "AI-powered goal optimization",
+            "Smart progress tracking",
+            "Real-time deal alerts",
+            "Priority matching with new deals"
+          ]}
+          balance={balance || 0}
+          onConfirm={() => {
+            console.log("Cost modal confirm triggered");
+            handleConfirmCreate();
+          }}
         />
       )}
-    </form>
+
+      {/* Fallback modal if the main modal fails to appear */}
+      {showFallbackModal && (
+        <SimpleModal
+          show={showFallbackModal}
+          title={balance >= adjustedCost ? "Goal Cost Breakdown" : "Insufficient Tokens"}
+          message={
+            balance >= adjustedCost
+              ? `Creating this goal will cost ${adjustedCost.toFixed(1)} tokens. Your current balance is ${balance.toFixed(1)} tokens.`
+              : `You need ${(adjustedCost - balance).toFixed(1)} more tokens to create this goal. Your current balance is ${balance.toFixed(1)} tokens.`
+          }
+          onCancel={() => setShowFallbackModal(false)}
+          onConfirm={balance >= adjustedCost ? handleConfirmCreate : () => {}}
+          canConfirm={balance >= adjustedCost}
+          confirmText={balance >= adjustedCost ? "Create Goal" : "Add Tokens"}
+          routerPush={router.push}
+        />
+      )}
+
+      {/* Add custom styles */}
+      <style jsx global>{SELECT_STYLES}</style>
+    </div>
   );
 } 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FiShare2 } from 'react-icons/fi';
-import { Button, Tooltip } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { ShareModal } from './ShareModal';
 import { Deal } from '@/types/deals';
 import { ShareableContentType } from '@/types/sharing';
@@ -61,19 +62,26 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
 
   return (
     <>
-      <Tooltip content={tooltip}>
-        <Button
-          variant={variant}
-          size={size}
-          onClick={handleOpenModal}
-          className={`${defaultButtonClass} ${className}`}
-          aria-label="Share"
-          disabled={buttonDisabled}
-        >
-          <FiShare2 className={`h-4 w-4 ${size !== 'icon' ? 'mr-1' : ''}`} />
-          {size !== 'icon' && 'Share'}
-        </Button>
-      </Tooltip>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={variant}
+              size={size}
+              onClick={handleOpenModal}
+              className={`${defaultButtonClass} ${className}`}
+              aria-label="Share"
+              disabled={buttonDisabled}
+            >
+              <FiShare2 className={`h-4 w-4 ${size !== 'icon' ? 'mr-1' : ''}`} />
+              {size !== 'icon' && 'Share'}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       <ShareModal
         isOpen={isModalOpen}

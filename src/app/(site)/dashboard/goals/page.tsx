@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Filter, SlidersHorizontal, Check, Target, DollarSign, Tag, BarChart3 } from 'lucide-react';
+import { Plus, Search, Filter, SlidersHorizontal, Check, Target, DollarSign, Tag, BarChart3, ChevronDown } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import {
   DropdownMenu,
@@ -12,23 +12,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import { useGoals } from '@/hooks/useGoals';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type SortOption = 'newest' | 'oldest' | 'price-low' | 'price-high' | 'title';
 type FilterOption = 'all' | 'active' | 'paused' | 'completed' | 'expired';
+type PriorityOption = 'all' | 'high' | 'medium' | 'low';
 type PriceRange = 'all' | 'under-50' | '50-100' | '100-500' | 'over-500';
 
 const sortGoals = (a: any, b: any, sortBy: SortOption) => {
   switch (sortBy) {
     case 'newest':
-      return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
     case 'oldest':
-      return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+      return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
     case 'price-low':
-      return (a.targetPrice || 0) - (b.targetPrice || 0);
+      return (a.constraints?.max_price || 0) - (b.constraints?.max_price || 0);
     case 'price-high':
-      return (b.targetPrice || 0) - (a.targetPrice || 0);
+      return (b.constraints?.max_price || 0) - (a.constraints?.max_price || 0);
     case 'title':
       return (a.title || '').localeCompare(b.title || '');
     default:
@@ -38,19 +43,59 @@ const sortGoals = (a: any, b: any, sortBy: SortOption) => {
 
 export default function GoalsPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [pendingSearchQuery, setPendingSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterOption>('all');
+  const [filterPriority, setFilterPriority] = useState<PriorityOption>('all');
   const [priceRange, setPriceRange] = useState<PriceRange>('all');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [showExpandedFilters, setShowExpandedFilters] = useState(false);
+  const [minPrice, setMinPrice] = useState<number>(0);
+  const [maxPrice, setMaxPrice] = useState<number>(1000);
+  const [priceFilterEnabled, setPriceFilterEnabled] = useState(false);
+  const [pendingFilters, setPendingFilters] = useState({
+    status: filterStatus,
+    priority: filterPriority,
+    minPrice,
+    maxPrice,
+    priceFilterEnabled,
+    sortBy
+  });
+  const [filtersChanged, setFiltersChanged] = useState(false);
   
   const { data: goals, isLoading, error } = useGoals();
 
-  if (error) {
-    toast({
-      title: 'Error loading goals',
-      description: error.message,
-      variant: 'destructive',
-    });
-  }
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: 'Error loading goals',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  }, [error]);
+
+  // Handle search input change
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPendingSearchQuery(e.target.value);
+  };
+
+  // Handle search form submission
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery !== pendingSearchQuery) {
+      setSearchQuery(pendingSearchQuery);
+    }
+  };
+
+  // Handle Enter key press in search input
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (searchQuery !== pendingSearchQuery) {
+        setSearchQuery(pendingSearchQuery);
+      }
+    }
+  };
 
   const getPriceRangeFilter = (price: number) => {
     if (price < 50) return 'under-50';
@@ -59,14 +104,42 @@ export default function GoalsPage() {
     return 'over-500';
   };
 
+  // Update pending filters when filter controls change
+  const updatePendingFilters = (newPartialFilters: Partial<typeof pendingFilters>) => {
+    setPendingFilters(prev => ({
+      ...prev,
+      ...newPartialFilters
+    }));
+    setFiltersChanged(true);
+  };
+
+  // Apply pending filters
+  const applyPendingFilters = () => {
+    setFilterStatus(pendingFilters.status);
+    setFilterPriority(pendingFilters.priority);
+    setMinPrice(pendingFilters.minPrice);
+    setMaxPrice(pendingFilters.maxPrice);
+    setPriceFilterEnabled(pendingFilters.priceFilterEnabled);
+    setSortBy(pendingFilters.sortBy);
+    setFiltersChanged(false);
+  };
+
   const filteredGoals = (goals || []).filter(goal => {
-    // Status filter
+    // Status filter (all, active, paused, completed, expired)
     if (filterStatus !== 'all' && goal.status !== filterStatus) return false;
     
+    // Priority filter (all, high, medium, low)
+    if (filterPriority !== 'all') {
+      const priorityValue = goal.priority;
+      if (filterPriority === 'high' && priorityValue !== 1) return false;
+      if (filterPriority === 'medium' && priorityValue !== 2) return false;
+      if (filterPriority === 'low' && priorityValue !== 3) return false;
+    }
+    
     // Price range filter
-    if (priceRange !== 'all') {
-      const goalPriceRange = getPriceRangeFilter(goal.constraints?.max_price || 0);
-      if (goalPriceRange !== priceRange) return false;
+    if (priceFilterEnabled) {
+      const goalMaxPrice = goal.constraints?.max_price || 0;
+      if (goalMaxPrice < minPrice || goalMaxPrice > maxPrice) return false;
     }
     
     // Search query
@@ -113,80 +186,204 @@ export default function GoalsPage() {
       </div>
 
       {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/50" />
-          <input
-            type="text"
-            placeholder="Search goals..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white/[0.05] border border-white/10 rounded-lg focus:outline-none focus:border-purple"
-          />
+      <div className="flex flex-col gap-4 mb-6 bg-white/[0.03] rounded-xl p-4 backdrop-blur-sm border border-white/10">
+        {/* Search row with all controls */}
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Search Form */}
+          <form 
+            onSubmit={handleSearchSubmit} 
+            className="relative w-full md:w-1/2 lg:w-2/5 flex items-center"
+          >
+            <input
+              type="text"
+              placeholder="Search goals..."
+              value={pendingSearchQuery}
+              onChange={handleSearchInputChange}
+              onKeyDown={handleKeyDown}
+              className="w-full h-10 px-4 pr-10 rounded-md bg-white/[0.05] border border-white/10 text-white focus:ring-1 focus:ring-purple focus:border-purple"
+            />
+            <Button 
+              type="submit"
+              variant="ghost" 
+              size="icon" 
+              className="absolute right-0 h-10 w-10 text-white/70"
+              disabled={isLoading}
+            >
+              {isLoading ? <span className="animate-spin">⌛</span> : <Search className="h-4 w-4" />}
+            </Button>
+          </form>
+
+          {/* Filter Controls - organized into a consistent row */}
+          <div className="flex items-center justify-between md:justify-end w-full gap-2 flex-wrap">
+            {/* Filters Button */}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="bg-white/[0.05] border border-white/10 hover:bg-white/[0.1]"
+              onClick={() => setShowExpandedFilters(!showExpandedFilters)}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filters {showExpandedFilters ? '▲' : '▼'}
+              {filtersChanged && <span className="ml-1 h-2 w-2 rounded-full bg-purple"></span>}
+            </Button>
+            
+            {/* Sort Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="bg-white/[0.05] border border-white/10 hover:bg-white/[0.1]">
+                  <SlidersHorizontal className="h-4 w-4 mr-2" />
+                  {sortBy === 'newest' ? 'Newest First' : 
+                   sortBy === 'oldest' ? 'Oldest First' : 
+                   sortBy === 'price-low' ? 'Price: Low to High' : 
+                   sortBy === 'price-high' ? 'Price: High to Low' : 
+                   sortBy === 'title' ? 'Title' : 'Sort'}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {[
+                  { value: 'newest', label: 'Newest First' },
+                  { value: 'oldest', label: 'Oldest First' },
+                  { value: 'price-low', label: 'Price: Low to High' },
+                  { value: 'price-high', label: 'Price: High to Low' },
+                  { value: 'title', label: 'Title' },
+                ].map(({ value, label }) => (
+                  <DropdownMenuItem
+                    key={value}
+                    onClick={() => {
+                      setSortBy(value as SortOption);
+                    }}
+                    className="flex items-center justify-between"
+                  >
+                    <span>{label}</span>
+                    {sortBy === value && <Check className="w-4 h-4" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger className="px-4 py-2 bg-white/[0.05] border border-white/10 rounded-lg flex items-center gap-2 hover:bg-white/[0.1] transition">
-            <Filter className="w-5 h-5" />
-            <span>Filter</span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuLabel>Status</DropdownMenuLabel>
-            {['all', 'active', 'paused', 'completed', 'expired'].map((status) => (
-              <DropdownMenuItem
-                key={status}
-                onClick={() => setFilterStatus(status as FilterOption)}
-                className="flex items-center justify-between"
+
+        {/* Expanded Filters - collapsible section */}
+        {showExpandedFilters && (
+          <div className="mt-2 p-4 rounded-xl bg-white/[0.05] backdrop-blur-sm border border-white/10 transition-all duration-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Status Filter */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-white/70 mb-2">Status</h3>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: 'all', label: 'All Goals' },
+                    { value: 'active', label: 'Active' },
+                    { value: 'paused', label: 'Paused' },
+                    { value: 'completed', label: 'Completed' },
+                    { value: 'expired', label: 'Expired' },
+                  ].map(({ value, label }) => (
+                    <Button
+                      key={value}
+                      variant="outline"
+                      size="sm"
+                      className={`${
+                        pendingFilters.status === value
+                          ? 'bg-purple/50 border-purple text-white'
+                          : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
+                      }`}
+                      onClick={() => updatePendingFilters({ status: value as FilterOption })}
+                    >
+                      {pendingFilters.status === value && <Check className="h-3 w-3 mr-1" />}
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Priority Filter */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-white/70 mb-2">Priority</h3>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: 'all', label: 'All Priorities' },
+                    { value: 'high', label: 'High' },
+                    { value: 'medium', label: 'Medium' },
+                    { value: 'low', label: 'Low' },
+                  ].map(({ value, label }) => (
+                    <Button
+                      key={value}
+                      variant="outline"
+                      size="sm"
+                      className={`${
+                        pendingFilters.priority === value
+                          ? 'bg-purple/50 border-purple text-white'
+                          : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
+                      }`}
+                      onClick={() => updatePendingFilters({ priority: value as PriorityOption })}
+                    >
+                      {pendingFilters.priority === value && <Check className="h-3 w-3 mr-1" />}
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Price Range Filter */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-white/70">Price Range</h3>
+                  <div className="flex items-center">
+                    <Checkbox
+                      id="priceFilterEnabled"
+                      checked={pendingFilters.priceFilterEnabled}
+                      onCheckedChange={(checked) => 
+                        updatePendingFilters({ priceFilterEnabled: checked as boolean })
+                      }
+                    />
+                    <Label htmlFor="priceFilterEnabled" className="ml-2 text-sm">
+                      Enable price filter
+                    </Label>
+                  </div>
+                </div>
+
+                <div className={pendingFilters.priceFilterEnabled ? 'opacity-100' : 'opacity-50'}>
+                  <div className="py-6 px-2">
+                    <Slider
+                      disabled={!pendingFilters.priceFilterEnabled}
+                      value={[pendingFilters.minPrice, pendingFilters.maxPrice]}
+                      min={0}
+                      max={1000}
+                      step={10}
+                      onValueChange={(values) => {
+                        updatePendingFilters({ 
+                          minPrice: values[0],
+                          maxPrice: values[1] 
+                        });
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="bg-white/[0.05] rounded px-2 py-1 text-sm">
+                      ${pendingFilters.minPrice}
+                    </div>
+                    <div className="bg-white/[0.05] rounded px-2 py-1 text-sm">
+                      ${pendingFilters.maxPrice}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Apply Filters Button */}
+            <div className="mt-6 flex justify-end">
+              <Button
+                variant="default"
+                size="sm"
+                className="bg-purple hover:bg-purple/80"
+                onClick={applyPendingFilters}
+                disabled={!filtersChanged}
               >
-                <span>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
-                {filterStatus === status && <Check className="w-4 h-4" />}
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>Price Range</DropdownMenuLabel>
-            {[
-              { value: 'all', label: 'All Prices' },
-              { value: 'under-50', label: 'Under $50' },
-              { value: '50-100', label: '$50 - $100' },
-              { value: '100-500', label: '$100 - $500' },
-              { value: 'over-500', label: 'Over $500' },
-            ].map(({ value, label }) => (
-              <DropdownMenuItem
-                key={value}
-                onClick={() => setPriceRange(value as PriceRange)}
-                className="flex items-center justify-between"
-              >
-                <span>{label}</span>
-                {priceRange === value && <Check className="w-4 h-4" />}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger className="px-4 py-2 bg-white/[0.05] border border-white/10 rounded-lg flex items-center gap-2 hover:bg-white/[0.1] transition">
-            <SlidersHorizontal className="w-5 h-5" />
-            <span>Sort</span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            {[
-              { value: 'newest', label: 'Newest First' },
-              { value: 'oldest', label: 'Oldest First' },
-              { value: 'price-low', label: 'Price: Low to High' },
-              { value: 'price-high', label: 'Price: High to Low' },
-              { value: 'title', label: 'Title' },
-            ].map(({ value, label }) => (
-              <DropdownMenuItem
-                key={value}
-                onClick={() => setSortBy(value as SortOption)}
-                className="flex items-center justify-between"
-              >
-                <span>{label}</span>
-                {sortBy === value && <Check className="w-4 h-4" />}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                Apply Filters
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Goals Grid */}
@@ -224,21 +421,23 @@ export default function GoalsPage() {
                 <div className="flex items-center gap-2">
                   <Tag className="w-4 h-4 text-white/50" />
                   <span>
-                    Current: ${goal.analytics?.best_match_score?.toFixed(2) || 'N/A'}
+                    Matches: {goal.matches_found || 0}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Target className="w-4 h-4 text-white/50" />
                   <span>
-                    Matches: {goal.analytics?.total_matches || 0}
+                    Priority: {goal.priority === 1 ? 'High' : goal.priority === 2 ? 'Medium' : 'Low'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-white/50" />
-                  <span>
-                    Success: {goal.analytics?.average_match_score ? `${(goal.analytics.average_match_score * 100).toFixed(0)}%` : 'N/A'}
-                  </span>
-                </div>
+                {goal.deadline && (
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-white/50" />
+                    <span>
+                      Deadline: {new Date(goal.deadline).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
               </div>
             </Link>
           ))}
@@ -250,10 +449,9 @@ export default function GoalsPage() {
           <p className="text-white/70 mb-6">Create your first goal to start tracking deals</p>
           <Link
             href="/dashboard/goals/create"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 rounded-lg text-white hover:bg-blue-500/80 transition"
+            className="px-4 py-2 bg-purple rounded-lg text-white hover:bg-purple/80 transition"
           >
-            <Plus className="w-5 h-5" />
-            <span>Create Goal</span>
+            Create Goal
           </Link>
         </div>
       )}

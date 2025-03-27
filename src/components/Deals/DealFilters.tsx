@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { PriceRangeSlider } from '@/components/ui/price-range-slider';
 import { FiFilter, FiX } from 'react-icons/fi';
 
 export interface DealFiltersState {
@@ -211,6 +212,23 @@ export const DealFilters: React.FC<DealFiltersProps> = ({
                 <span>${filters.priceMin}</span>
                 <span>${filters.priceMax}</span>
               </div>
+              
+              <PriceRangeSlider
+                minValue={filters.priceMin || 0}
+                maxValue={filters.priceMax || 1000}
+                min={0}
+                max={1000}
+                step={10}
+                onChange={([min, max]) => {
+                  setFilters({
+                    ...filters,
+                    priceMin: min,
+                    priceMax: max
+                  });
+                }}
+                className="mb-4"
+                showLabels={false}
+              />
               
               <div className="flex justify-between mt-4">
                 <div className="w-[48%]">

@@ -45,6 +45,15 @@ const processQueue = (error: any, token: string | null = null) => {
  */
 apiClient.interceptors.request.use(
   (config) => {
+    // Add request debugging for tracked deals endpoint
+    if (config.url?.includes('/tracked')) {
+      console.log(`[API Client] Making request to ${config.url}`, {
+        method: config.method,
+        headers: config.headers,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     // Skip adding auth token for public endpoints
     const isPublicEndpoint = config.url?.includes('/public-deals') || 
                           config.url?.includes('/auth/login') || 

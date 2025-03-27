@@ -1,6 +1,7 @@
 "use client";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from 'framer-motion';
@@ -17,9 +18,15 @@ const Logo = ({ linkWrapper = true }) => {
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.7 }}
-      className="text-blue-500 flex items-center text-black dark:text-white text-xl font-bold"
+      className="flex items-center text-black dark:text-white text-xl font-bold"
     >
-      REBATON
+      <Image 
+        src="/images/logo/logo.png" 
+        alt="Agentic Deals Logo" 
+        width={168} 
+        height={48} 
+        className="h-12 w-auto"
+      />
     </motion.div>
   );
 

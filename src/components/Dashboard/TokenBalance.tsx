@@ -5,6 +5,7 @@ import { Coins } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { analyticsService } from '@/services/analytics';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 const TokenBalance = () => {
   // Use React Query to fetch token balance
@@ -34,7 +35,9 @@ const TokenBalance = () => {
     <div>
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-lg font-semibold">Token Balance</h3>
-        <Coins className="w-5 h-5 text-purple" />
+        <Link href="/dashboard/wallet" className="hover:bg-white/[0.05] p-1 rounded-lg transition">
+          <Coins className="w-5 h-5 text-purple" />
+        </Link>
       </div>
       
       {isLoading || balance === null ? (

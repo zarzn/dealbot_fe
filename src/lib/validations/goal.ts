@@ -38,9 +38,7 @@ export const goalConstraintsSchema = z.object({
   conditions: z.array(z.string())
     .min(1, "Select at least one condition")
     .default(['new']),
-  keywords: z.array(z.string())
-    .min(1, "At least one keyword is required")
-    .default([]),
+  keywords: z.array(z.string()).default([]),
   features: z.array(z.string()).optional(),
 }).refine(data => data.min_price < data.max_price, {
   message: "Minimum price must be less than maximum price",

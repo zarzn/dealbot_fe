@@ -113,6 +113,8 @@ class AnalyticsService {
       date: string;
       amount: number;
       category: string;
+      description?: string;
+      type?: string;
     }>;
     summary: {
       total: number;

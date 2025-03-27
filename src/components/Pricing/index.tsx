@@ -44,18 +44,6 @@ const Pricing = () => {
           </div>
         </div>
 
-        {/* <!-- grid row --> */}
-        <div className="relative -z-1 flex justify-center gap-7.5">
-          <div className="pricing-grid pricing-grid-border relative h-[250px] w-full max-w-[50px]"></div>
-          <div className="pricing-grid pricing-grid-border relative h-[250px] w-full max-w-[50px]"></div>
-          <div className="pricing-grid pricing-grid-border relative h-[250px] w-full max-w-[50px]"></div>
-          <div className="pricing-grid pricing-grid-border relative h-[250px] w-full max-w-[50px]"></div>
-          <div className="pricing-grid pricing-grid-border relative h-[250px] w-full max-w-[50px]"></div>
-          <div className="pricing-grid pricing-grid-border relative h-[250px] w-full max-w-[50px]"></div>
-          <div className="pricing-grid pricing-grid-border relative h-[250px] w-full max-w-[50px]"></div>
-          <div className="pricing-grid pricing-grid-border relative h-[250px] w-full max-w-[50px]"></div>
-        </div>
-
         <PricingGrids />
       </div>
     </section>

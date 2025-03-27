@@ -39,6 +39,7 @@ export interface Deal {
   tags?: string[];
   verified?: boolean;
   featured?: boolean;
+  ai_analysis?: AIAnalysis;
 }
 
 export interface DealSuggestion {

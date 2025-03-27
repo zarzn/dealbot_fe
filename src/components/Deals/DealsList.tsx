@@ -36,6 +36,11 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import ShareButton from './ShareButton';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { PriceRangeSlider } from '@/components/ui/price-range-slider';
 
 type SortOption = 'newest' | 'oldest' | 'price-low' | 'price-high' | 'title';
 type FilterOption = 'all' | 'verified' | 'featured' | 'tracked';
@@ -88,7 +93,9 @@ export const DealsList: React.FC<DealsListProps> = ({
   const [pendingSearchQuery, setPendingSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<CategoryOption>('all');
   const [filterStatus, setFilterStatus] = useState<FilterOption>('all');
-  const [priceRange, setPriceRange] = useState<PriceRange>('all');
+  const [minPrice, setMinPrice] = useState<number>(0);
+  const [maxPrice, setMaxPrice] = useState<number>(1000);
+  const [priceFilterEnabled, setPriceFilterEnabled] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [isLoading, setIsLoading] = useState(!initialDeals.length && !externalDeals);
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +105,15 @@ export const DealsList: React.FC<DealsListProps> = ({
   const [hasMore, setHasMore] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [showExpandedFilters, setShowExpandedFilters] = useState(false);
+  const [pendingFilters, setPendingFilters] = useState({
+    category: filterCategory,
+    status: filterStatus,
+    minPrice,
+    maxPrice,
+    priceFilterEnabled,
+    sortBy
+  });
+  const [filtersChanged, setFiltersChanged] = useState(false);
   
   // Replace the isMounted state with useRef initialization
   useEffect(() => {
@@ -175,10 +191,10 @@ export const DealsList: React.FC<DealsListProps> = ({
 
   // Helper function to get score color
   const getScoreColor = useCallback((score: number): string => {
-    if (score >= 8) return 'text-green-500';
-    if (score >= 6) return 'text-yellow-500';
-    if (score >= 4) return 'text-orange-500';
-    return 'text-red-500';
+    if (score >= 8) return 'text-green-500 preserve-color';
+    if (score >= 6) return 'text-yellow-500 preserve-color';
+    if (score >= 4) return 'text-orange-500 preserve-color';
+    return 'text-red-500 preserve-color';
   }, []);
 
   // Helper function to format price
@@ -201,49 +217,68 @@ export const DealsList: React.FC<DealsListProps> = ({
     return Math.round(((originalNum - currentNum) / originalNum) * 100);
   }, []);
 
-  // Convert filters to API search query
-  const createSearchQuery = useCallback((): DealSearch => {
-    // Map price range to actual values
-    let minPrice, maxPrice;
-    if (priceRange === 'under-50') {
-      maxPrice = 50;
-    } else if (priceRange === '50-100') {
-      minPrice = 50;
-      maxPrice = 100;
-    } else if (priceRange === '100-500') {
-      minPrice = 100;
-      maxPrice = 500;
-    } else if (priceRange === 'over-500') {
-      minPrice = 500;
+  // Create search query parameters
+  const createSearchQuery = useCallback(() => {
+    const filters: Record<string, any> = {};
+    
+    // Add category filter if selected
+    if (filterCategory && filterCategory !== 'all') {
+      filters.category = filterCategory;
     }
-
-    // Map feature flags
-    const featured = filterStatus === 'featured' ? true : undefined;
-    const verified = filterStatus === 'verified' ? true : undefined;
     
-    console.log('[DealsList] Creating search query with page:', page);
+    // Add status filter if selected
+    if (filterStatus && filterStatus !== 'all') {
+      filters.status = filterStatus;
+    }
     
-    return {
-      query: searchQuery,
-      page: page,
+    // Determine sort parameters based on sortBy option
+    let sort_by = '';
+    let sort_order = '';
+    
+    switch (sortBy) {
+      case 'newest':
+        sort_by = 'created_at';
+        sort_order = 'desc';
+        break;
+      case 'oldest':
+        sort_by = 'created_at';
+        sort_order = 'asc';
+        break;
+      case 'price-low':
+        sort_by = 'price';
+        sort_order = 'asc';
+        break;
+      case 'price-high':
+        sort_by = 'price';
+        sort_order = 'desc';
+        break;
+      case 'title':
+        sort_by = 'title';
+        sort_order = 'asc';
+        break;
+      default:
+        sort_by = 'created_at';
+        sort_order = 'desc';
+    }
+    
+    // Construct the search parameters
+    const searchParams: DealSearch = {
+      query: searchQuery.trim(),
+      page,
       page_size: 12,
-      limit: 12, // Include for backend compatibility
-      offset: (page - 1) * 12, // Include for backend compatibility
-      sort_by: sortBy === 'newest' ? 'created_at' : 
-                sortBy === 'oldest' ? 'created_at' :
-                sortBy === 'price-low' ? 'price' :
-                sortBy === 'price-high' ? 'price' :
-                sortBy === 'title' ? 'title' : 'created_at',
-      sort_order: sortBy === 'oldest' || sortBy === 'price-low' ? 'asc' : 'desc',
-      filters: {
-        category: filterCategory !== 'all' ? filterCategory : undefined,
-        price_min: minPrice,
-        price_max: maxPrice,
-        featured,
-        verified,
-      }
+      filters: Object.keys(filters).length > 0 ? filters : undefined,
+      sort_by,
+      sort_order
     };
-  }, [searchQuery, page, sortBy, filterCategory, filterStatus, priceRange]);
+
+    // Add price filter if enabled - as top-level parameters to match the backend API
+    if (priceFilterEnabled && (minPrice > 0 || maxPrice < 1000)) {
+      searchParams.min_price = minPrice;
+      searchParams.max_price = maxPrice;
+    }
+    
+    return searchParams;
+  }, [filterCategory, filterStatus, priceFilterEnabled, minPrice, maxPrice, searchQuery, page, sortBy]);
 
   // Handle search input change
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -279,21 +314,53 @@ export const DealsList: React.FC<DealsListProps> = ({
     setError(null);
     
     try {
-      const searchQuery = createSearchQuery();
+      const searchParams = createSearchQuery();
       
-      const response = await dealsService.searchDeals(searchQuery);
+      // Enhanced debug logging to help trace issues
+      console.log('[DealsList] Searching with params:', {
+        query: searchParams.query,
+        page: searchParams.page,
+        sortBy: searchParams.sort_by,
+        sortOrder: searchParams.sort_order,
+        filters: searchParams.filters,
+        minPrice: searchParams.min_price,
+        maxPrice: searchParams.max_price,
+        fullParams: JSON.stringify(searchParams)
+      });
       
-      // Instead of appending to existing deals, replace with current page results
-      setDeals(response.deals);
+      const response = await dealsService.searchDeals(searchParams);
       
-      // Calculate total pages
-      const total = response.total || 0;
-      setTotalItems(total);
-      const pageSize = searchQuery.page_size || 12;
-      setTotalPages(Math.ceil(total / pageSize));
+      // Enhanced debug logging for the response
+      console.log('[DealsList] Search response received:', {
+        totalDeals: response.deals?.length,
+        totalCount: response.total,
+        currentPage: searchParams.page,
+        sortBy: response.sort_by,  // Check if sort_by is returned by the backend
+        sortOrder: response.sort_order,  // Check if sort_order is returned by the backend
+        sampledDeal: response.deals?.length > 0 ? {
+          id: response.deals[0].id,
+          title: response.deals[0].title,
+          price: response.deals[0].price,
+          created_at: response.deals[0].created_at
+        } : null
+      });
       
-      // No longer needed with pagination
-      setHasMore(false);
+      // Clear the previous deals and set new ones
+      setDeals([]);
+      setTimeout(() => {
+        // Use setTimeout to ensure UI updates with the empty state first
+        // This creates a visual feedback that something has changed
+        setDeals(response.deals || []);
+        
+        // Calculate total pages
+        const total = response.total || 0;
+        setTotalItems(total);
+        const pageSize = searchParams.page_size || 12;
+        setTotalPages(Math.ceil(total / pageSize));
+        
+        console.log('[DealsList] Updated deals state with', response.deals?.length, 'deals');
+      }, 50);
+      
     } catch (err) {
       console.error('Error loading deals:', err);
       setError('Failed to load deals. Please try again later.');
@@ -302,14 +369,35 @@ export const DealsList: React.FC<DealsListProps> = ({
       setIsLoading(false);
       isLoadingRef.current = false;
     }
-  }, [createSearchQuery, dealsService]);
+  }, [createSearchQuery]);
 
-  // Use a single useEffect for both filter changes and page changes
+  // When filters change, reset to page 1
   useEffect(() => {
     if (!isMounted.current) return;
-    
+    setPage(1);
+  }, [searchQuery]); // Only search query triggers immediate update
+
+  // Use a separate useEffect for loading deals that depends on the page and search query
+  useEffect(() => {
+    if (!isMounted.current) return;
+    console.log('[DealsList] Effect triggered to load deals - page or searchQuery changed');
     loadDeals();
-  }, [searchQuery, filterCategory, filterStatus, priceRange, sortBy, page, loadDeals]);
+  }, [page, searchQuery, loadDeals]);
+
+  // Add a new effect to react to filter and sort changes
+  useEffect(() => {
+    if (!isMounted.current) return;
+    console.log('[DealsList] Filter state changed:', {
+      filterCategory,
+      filterStatus,
+      priceFilterEnabled,
+      minPrice,
+      maxPrice,
+      sortBy
+    });
+    setPage(1);
+    loadDeals();
+  }, [filterCategory, filterStatus, priceFilterEnabled, minPrice, maxPrice, sortBy, loadDeals]);
 
   // Handle page change
   const handlePageChange = useCallback((newPage: number) => {
@@ -368,14 +456,63 @@ export const DealsList: React.FC<DealsListProps> = ({
     return pageNumbers;
   }, [page, totalPages, isMobile]);
 
-  // Handle deal selection
-  const handleDealClick = useCallback((dealId: string) => {
+  // Helper function to determine if navigation should happen on click
+  const handleDealCardClick = (event: React.MouseEvent, dealId: string) => {
+    // Check if the event target is part of an accordion, button, or other interactive element
+    let target = event.target as HTMLElement;
+    let currentElement = target;
+    
+    // Debug log
+    console.log('Deal card clicked:', currentElement.tagName, currentElement.className);
+    
+    // Walk up the DOM tree to see if any parent elements have data attributes indicating 
+    // they're part of an interactive UI element
+    while (currentElement && currentElement !== event.currentTarget) {
+      // Add more debug logging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Checking element:', {
+          tag: currentElement.tagName,
+          classes: currentElement.className,
+          dataNoNavigation: currentElement.dataset.noNavigation,
+          dataState: currentElement.getAttribute('data-state'),
+          role: currentElement.getAttribute('role')
+        });
+      }
+      
+      // Check for elements that should prevent navigation
+      if (
+        currentElement.tagName === 'BUTTON' || 
+        currentElement.tagName === 'A' ||
+        currentElement.getAttribute('role') === 'button' ||
+        currentElement.classList.contains('accordion') ||
+        currentElement.classList.contains('interactive-element') ||
+        currentElement.dataset.noNavigation === 'true' ||
+        currentElement.getAttribute('data-state') === 'open' || 
+        currentElement.getAttribute('data-state') === 'closed' ||
+        // Add additional checks for Radix UI elements
+        (currentElement.className && 
+          (currentElement.className.includes('Accordion') || 
+           currentElement.className.includes('accordion') ||
+           currentElement.className.includes('radix')))
+      ) {
+        // Found an interactive element - don't navigate
+        console.log('Preventing navigation due to interactive element click:', 
+          currentElement.tagName, 
+          currentElement.className
+        );
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      currentElement = currentElement.parentElement as HTMLElement;
+    }
+    
+    // If we made it here, the click wasn't on an interactive element, so navigate
+    console.log('Navigating to deal detail:', dealId);
     if (onDealSelect) {
       onDealSelect(dealId);
-    } else if (router) {
-      router.push(`/dashboard/deals/${dealId}`);
     }
-  }, [onDealSelect, router]);
+  };
 
   // Handle create button click
   const handleCreateClick = useCallback(() => {
@@ -385,6 +522,58 @@ export const DealsList: React.FC<DealsListProps> = ({
       router.push('/dashboard/goals/create');
     }
   }, [onCreateDeal, router]);
+
+  // Apply pending filters
+  const applyPendingFilters = () => {
+    console.log('[DealsList] Applying pending filters:', pendingFilters);
+    
+    // Capture the previous values to check if anything actually changed
+    const prevCategory = filterCategory;
+    const prevStatus = filterStatus;
+    const prevMinPrice = minPrice;
+    const prevMaxPrice = maxPrice;
+    const prevPriceFilterEnabled = priceFilterEnabled;
+    const prevSortBy = sortBy;
+    
+    // Update all filter states from pending filters
+    setFilterCategory(pendingFilters.category);
+    setFilterStatus(pendingFilters.status);
+    setMinPrice(pendingFilters.minPrice);
+    setMaxPrice(pendingFilters.maxPrice);
+    setPriceFilterEnabled(pendingFilters.priceFilterEnabled);
+    setSortBy(pendingFilters.sortBy);
+    
+    // Reset filters changed flag
+    setFiltersChanged(false);
+    
+    // Check if anything actually changed
+    const filtersActuallyChanged = 
+      prevCategory !== pendingFilters.category ||
+      prevStatus !== pendingFilters.status ||
+      prevMinPrice !== pendingFilters.minPrice ||
+      prevMaxPrice !== pendingFilters.maxPrice ||
+      prevPriceFilterEnabled !== pendingFilters.priceFilterEnabled ||
+      prevSortBy !== pendingFilters.sortBy;
+    
+    console.log('[DealsList] Filters actually changed:', filtersActuallyChanged);
+    
+    // If nothing changed, force a reload anyway
+    if (!filtersActuallyChanged) {
+      console.log('[DealsList] No filters changed, but forcing reload anyway');
+      setPage(1);
+      loadDeals();
+    }
+    // Note: if filters did change, the useEffect with filter dependencies will trigger a reload
+  };
+  
+  // Update pending filters when filter controls change
+  const updatePendingFilters = (newPartialFilters: Partial<typeof pendingFilters>) => {
+    setPendingFilters(prev => ({
+      ...prev,
+      ...newPartialFilters
+    }));
+    setFiltersChanged(true);
+  };
 
   // If not mounted yet (during SSR), return null or a loading placeholder
   if (!isMounted.current) {
@@ -419,31 +608,7 @@ export const DealsList: React.FC<DealsListProps> = ({
       }
     }
 
-    // Category filter
-    if (filterCategory !== 'all' && deal.category !== filterCategory) {
-      return false;
-    }
-
-    // Status filter
-    if (filterStatus === 'verified' && !deal.verified) {
-      return false;
-    }
-    if (filterStatus === 'featured' && !deal.featured) {
-      return false;
-    }
-    if (filterStatus === 'tracked' && !deal.is_tracked) {
-      return false;
-    }
-
-    // Price range filter
-    if (priceRange !== 'all') {
-      const price = deal.price || 0;
-      if (priceRange === 'under-50' && price >= 50) return false;
-      if (priceRange === '50-100' && (price < 50 || price >= 100)) return false;
-      if (priceRange === '100-500' && (price < 100 || price >= 500)) return false;
-      if (priceRange === 'over-500' && price < 500) return false;
-    }
-
+    // We no longer filter locally as filtering is handled by the backend
     return true;
   });
 
@@ -451,12 +616,13 @@ export const DealsList: React.FC<DealsListProps> = ({
     <div className="w-full" style={{ maxWidth }}>
       {/* Header with search and filters */}
       {showFilters && (
-        <div className="flex flex-col gap-4 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col gap-4 mb-6 bg-white/[0.03] rounded-xl p-4 backdrop-blur-sm border border-white/10">
+          {/* Search row with all controls */}
+          <div className="flex flex-col md:flex-row gap-4">
             {/* Search Form */}
             <form 
               onSubmit={handleSearchSubmit} 
-              className="relative w-full md:w-1/2 lg:w-1/3 flex items-center"
+              className="relative w-full md:w-1/2 lg:w-2/5 flex items-center"
             >
               <input
                 type="text"
@@ -477,8 +643,8 @@ export const DealsList: React.FC<DealsListProps> = ({
               </Button>
             </form>
 
-            {/* Buttons and Share */}
-            <div className="flex items-center space-x-2">
+            {/* Filter Controls - organized into a consistent row */}
+            <div className="flex items-center justify-between md:justify-end w-full gap-2 flex-wrap">
               {/* Share Results Button */}
               {deals.length > 0 && (
                 <ShareButton
@@ -488,18 +654,6 @@ export const DealsList: React.FC<DealsListProps> = ({
                   className="bg-white/[0.05] border border-white/10 hover:bg-white/[0.1] p-2 h-9 w-9"
                   tooltip="Share Results"
                 />
-              )}
-
-              {/* Create Deal Button */}
-              {showCreateButton && (
-                <Button
-                  onClick={handleCreateClick} 
-                  size="sm"
-                  className="bg-purple hover:bg-purple-600 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Deal
-                </Button>
               )}
 
               {/* Filters Button */}
@@ -518,7 +672,11 @@ export const DealsList: React.FC<DealsListProps> = ({
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="bg-white/[0.05] border border-white/10 hover:bg-white/[0.1]">
                     <SlidersHorizontal className="h-4 w-4 mr-2" />
-                    Sort
+                    {sortBy === 'newest' ? 'Newest First' : 
+                     sortBy === 'oldest' ? 'Oldest First' : 
+                     sortBy === 'price-low' ? 'Price: Low to High' : 
+                     sortBy === 'price-high' ? 'Price: High to Low' : 
+                     sortBy === 'title' ? 'Title' : 'Sort'}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -531,7 +689,12 @@ export const DealsList: React.FC<DealsListProps> = ({
                   ].map(({ value, label }) => (
                     <DropdownMenuItem
                       key={value}
-                      onClick={() => setSortBy(value as SortOption)}
+                      onClick={() => {
+                        console.log('[DealsList] Setting sort option directly:', value);
+                        // Directly set the sort option rather than using pending filters
+                        setSortBy(value as SortOption);
+                        // The useEffect hook will detect this change and reload the deals
+                      }}
                       className="flex items-center justify-between"
                     >
                       <span>{label}</span>
@@ -540,15 +703,27 @@ export const DealsList: React.FC<DealsListProps> = ({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
+              
+              {/* Create Deal Button - most important action so placed at the end */}
+              {showCreateButton && (
+                <Button
+                  onClick={handleCreateClick} 
+                  size="sm"
+                  className="bg-purple hover:bg-purple-600 text-white"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Deal
+                </Button>
+              )}
             </div>
           </div>
 
-          {/* Expanded Filters */}
+          {/* Expanded Filters - now well organized in a card-like container */}
           {showExpandedFilters && (
-            <div className="mt-2 p-4 rounded-xl bg-white/[0.03] backdrop-blur-sm border border-white/10 transition-all duration-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="mt-2 p-4 rounded-xl bg-white/[0.05] backdrop-blur-sm border border-white/10 transition-all duration-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Status Filter */}
-                <div>
+                <div className="space-y-3">
                   <h3 className="text-sm font-medium text-white/70 mb-2">Status</h3>
                   <div className="flex flex-wrap gap-2">
                     {[
@@ -562,13 +737,13 @@ export const DealsList: React.FC<DealsListProps> = ({
                         variant="outline"
                         size="sm"
                         className={`${
-                          filterStatus === value
+                          pendingFilters.status === value
                             ? 'bg-purple/50 border-purple text-white'
                             : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
                         }`}
-                        onClick={() => setFilterStatus(value as FilterOption)}
+                        onClick={() => updatePendingFilters({ status: value as FilterOption })}
                       >
-                        {filterStatus === value && <Check className="h-3 w-3 mr-1" />}
+                        {pendingFilters.status === value && <Check className="h-3 w-3 mr-1" />}
                         {label}
                       </Button>
                     ))}
@@ -576,33 +751,28 @@ export const DealsList: React.FC<DealsListProps> = ({
                 </div>
 
                 {/* Category Filter */}
-                <div>
+                <div className="space-y-3">
                   <h3 className="text-sm font-medium text-white/70 mb-2">Category</h3>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {[
                       { value: 'all', label: 'All Categories' },
                       { value: 'electronics', label: 'Electronics' },
                       { value: 'clothing', label: 'Clothing' },
                       { value: 'home', label: 'Home & Garden' },
                       { value: 'sports', label: 'Sports & Outdoors' },
-                      { value: 'beauty', label: 'Beauty & Health' },
-                      { value: 'toys', label: 'Toys & Games' },
-                      { value: 'books', label: 'Books & Media' },
-                      { value: 'services', label: 'Services' },
-                      { value: 'other', label: 'Other' },
                     ].map(({ value, label }) => (
                       <Button
                         key={value}
                         variant="outline"
                         size="sm"
                         className={`${
-                          filterCategory === value
+                          pendingFilters.category === value
                             ? 'bg-purple/50 border-purple text-white'
                             : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
-                        } justify-start`}
-                        onClick={() => setFilterCategory(value as CategoryOption)}
+                        }`}
+                        onClick={() => updatePendingFilters({ category: value as CategoryOption })}
                       >
-                        {filterCategory === value && <Check className="h-3 w-3 mr-1" />}
+                        {pendingFilters.category === value && <Check className="h-3 w-3 mr-1" />}
                         {label}
                       </Button>
                     ))}
@@ -610,34 +780,90 @@ export const DealsList: React.FC<DealsListProps> = ({
                 </div>
 
                 {/* Price Range Filter */}
-                <div>
-                  <h3 className="text-sm font-medium text-white/70 mb-2">Price Range</h3>
-                  <div className="flex flex-col gap-2">
-                    {[
-                      { value: 'all', label: 'All Prices' },
-                      { value: 'under-50', label: 'Under $50' },
-                      { value: '50-100', label: '$50 - $100' },
-                      { value: '100-500', label: '$100 - $500' },
-                      { value: 'over-500', label: 'Over $500' },
-                    ].map(({ value, label }) => (
-                      <Button
-                        key={value}
-                        variant="outline"
-                        size="sm"
-                        className={`${
-                          priceRange === value
-                            ? 'bg-purple/50 border-purple text-white'
-                            : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
-                        } justify-start`}
-                        onClick={() => setPriceRange(value as PriceRange)}
-                      >
-                        {priceRange === value && <Check className="h-3 w-3 mr-1" />}
-                        <DollarSign className={`h-3.5 w-3.5 ${value === 'all' ? 'mr-1' : ''}`} />
-                        {label}
-                      </Button>
-                    ))}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-white/70">Price Range</h3>
+                    <div className="flex items-center">
+                      <Checkbox
+                        id="priceFilterEnabled"
+                        checked={pendingFilters.priceFilterEnabled}
+                        onCheckedChange={(checked) => 
+                          updatePendingFilters({ priceFilterEnabled: checked as boolean })
+                        }
+                      />
+                      <Label htmlFor="priceFilterEnabled" className="ml-2 text-sm">
+                        Enable price filter
+                      </Label>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between text-sm mb-2">
+                    <span>${pendingFilters.minPrice}</span>
+                    <span>${pendingFilters.maxPrice}</span>
+                  </div>
+                  
+                  <PriceRangeSlider
+                    minValue={pendingFilters.minPrice}
+                    maxValue={pendingFilters.maxPrice}
+                    min={0}
+                    max={1000}
+                    step={10}
+                    onChange={([min, max]) => {
+                      updatePendingFilters({
+                        minPrice: min,
+                        maxPrice: max
+                      });
+                    }}
+                    disabled={!pendingFilters.priceFilterEnabled}
+                    className="mb-6"
+                    showLabels={false} // We're already showing the labels separately
+                  />
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="minPrice">Min Price</Label>
+                      <Input
+                        id="minPrice"
+                        type="number"
+                        value={pendingFilters.minPrice}
+                        onChange={(e) => updatePendingFilters({ minPrice: parseInt(e.target.value) || 0 })}
+                        disabled={!pendingFilters.priceFilterEnabled}
+                        min={0}
+                        max={pendingFilters.maxPrice}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="maxPrice">Max Price</Label>
+                      <Input
+                        id="maxPrice"
+                        type="number"
+                        value={pendingFilters.maxPrice}
+                        onChange={(e) => updatePendingFilters({ maxPrice: parseInt(e.target.value) || 0 })}
+                        disabled={!pendingFilters.priceFilterEnabled}
+                        min={pendingFilters.minPrice}
+                        max={1000}
+                      />
+                    </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Global Apply Filters Button - consistently positioned */}
+              <div className="mt-6 flex justify-end">
+                <Button
+                  onClick={() => {
+                    console.log('[DealsList] Apply Filters button clicked');
+                    // Clear the deals first to provide visual feedback that something is happening
+                    setDeals([]);
+                    // Then apply the filters (which will trigger a reload)
+                    applyPendingFilters();
+                  }}
+                  disabled={isLoading || !filtersChanged}
+                  className="bg-purple hover:bg-purple-600 text-white min-w-[120px]"
+                >
+                  {isLoading ? <Loader size="sm" className="mr-2" /> : null}
+                  {isLoading ? 'Applying...' : 'Apply Filters'}
+                </Button>
               </div>
             </div>
           )}
@@ -682,11 +908,11 @@ export const DealsList: React.FC<DealsListProps> = ({
 
         {/* Deals grid */}
         {!isLoading && !error && deals.length > 0 && (
-          <div className={`grid gap-4 sm:gap-6 grid-cols-${gridColumns.base} md:grid-cols-${gridColumns.md} lg:grid-cols-${gridColumns.lg} xl:grid-cols-${gridColumns.xl}`}>
+          <div className={`grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3`}>
             {deals.map((deal: DealResponse) => (
               <div 
                 key={deal.id} 
-                onClick={() => onDealSelect && onDealSelect(deal.id)}
+                onClick={(e) => handleDealCardClick(e, deal.id)}
                 className="cursor-pointer"
               >
                 <DealCard

@@ -58,4 +58,73 @@ const SelectItem = React.forwardRef<HTMLOptionElement, SelectItemProps>(
 
 SelectItem.displayName = "SelectItem"
 
-export { Select, SelectItem } 
+// Add the missing components needed by other parts of the app
+
+interface SelectTriggerProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode
+}
+
+const SelectTrigger = React.forwardRef<HTMLDivElement, SelectTriggerProps>(
+  ({ className, children, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          className
+        )}
+        {...props}
+      >
+        {children}
+        <FiChevronDown className="h-4 w-4 opacity-50" />
+      </div>
+    )
+  }
+)
+
+SelectTrigger.displayName = "SelectTrigger"
+
+interface SelectValueProps extends React.HTMLAttributes<HTMLSpanElement> {
+  placeholder?: string
+}
+
+const SelectValue = React.forwardRef<HTMLSpanElement, SelectValueProps>(
+  ({ className, placeholder, children, ...props }, ref) => {
+    return (
+      <span
+        ref={ref}
+        className={cn("flex-grow text-sm truncate", className)}
+        {...props}
+      >
+        {children || placeholder}
+      </span>
+    )
+  }
+)
+
+SelectValue.displayName = "SelectValue"
+
+interface SelectContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode
+}
+
+const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
+  ({ className, children, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "relative z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-80",
+          className
+        )}
+        {...props}
+      >
+        <div className="p-1">{children}</div>
+      </div>
+    )
+  }
+)
+
+SelectContent.displayName = "SelectContent"
+
+export { Select, SelectItem, SelectTrigger, SelectValue, SelectContent } 

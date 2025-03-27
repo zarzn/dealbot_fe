@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from 'react';
 import ClientDealSection from '@/components/Deals/ClientDealSection';
 import { PageHeader } from "@/components/ui/page-header";
 

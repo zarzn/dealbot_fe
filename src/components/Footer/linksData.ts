@@ -3,32 +3,26 @@ import { FooterLink } from "@/types/footerLink";
 export const productsLink: FooterLink[] = [
   {
     id: 1,
-    title: "Features",
-    href: "#",
+    title: "AI Deal Finder",
+    href: "/dashboard/deals",
     newTab: false,
   },
   {
     id: 2,
-    title: "Integrations",
-    href: "#",
+    title: "Price Prediction",
+    href: "/dashboard/deals",
     newTab: false,
   },
   {
     id: 3,
-    title: "Pricing",
-    href: "#",
+    title: "Deal Tracking",
+    href: "/dashboard/tracked-deals",
     newTab: false,
   },
   {
     id: 4,
-    title: "Changes log",
-    href: "#",
-    newTab: false,
-  },
-  {
-    id: 5,
-    title: "Roadmap",
-    href: "#",
+    title: "Market Comparison",
+    href: "/dashboard/deals",
     newTab: false,
   },
 ];
@@ -36,57 +30,46 @@ export const productsLink: FooterLink[] = [
 export const companiesLink: FooterLink[] = [
   {
     id: 11,
+    title: "About Us",
+    href: "/about",
+    newTab: false,
+  },
+  {
+    id: 12,
     title: "Privacy Policy",
     href: "#",
     newTab: false,
   },
   {
-    id: 12,
-    title: "Refund Policy",
-    href: "#",
-    newTab: false,
-  },
-  {
     id: 13,
-    title: "Support",
-    href: "#",
-    newTab: false,
-  },
-  {
-    id: 14,
-    title: "Community",
+    title: "Terms of Service",
     href: "#",
     newTab: false,
   },
 ];
+
 export const supportsLink: FooterLink[] = [
   {
     id: 21,
-    title: "Features",
+    title: "User Guide",
     href: "#",
     newTab: false,
   },
   {
-    id: 32,
-    title: "Integrations",
+    id: 22,
+    title: "Marketplace APIs",
     href: "#",
     newTab: false,
   },
   {
-    id: 43,
-    title: "Pricing",
+    id: 23,
+    title: "Contact Support",
     href: "#",
     newTab: false,
   },
   {
-    id: 54,
-    title: "Changes log",
-    href: "#",
-    newTab: false,
-  },
-  {
-    id: 65,
-    title: "Roadmap",
+    id: 24,
+    title: "FAQ",
     href: "#",
     newTab: false,
   },

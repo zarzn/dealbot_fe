@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiLink, FiCopy, FiTwitter, FiFacebook, FiMail, FiCheck, FiX, FiShare2, FiAlertTriangle } from 'react-icons/fi';
 import { Dialog, Transition } from '@headlessui/react';
 import { toast } from 'react-hot-toast';
+import { getSession } from 'next-auth/react';
 import { 
   Button, 
   Input, 
@@ -19,7 +20,8 @@ import {
   ShareContentRequest 
 } from '@/types/sharing';
 import { createShareableContent } from '@/services/sharing';
-import apiClient from '@/services/api/client';
+import { authService } from '@/services/auth';
+import { apiClient } from '@/lib/api-client';
 
 // API path constants
 const BASE_PATH = '/api/v1';
@@ -53,20 +55,9 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Set initial values based on content type
+  // Mount effect
   useEffect(() => {
     setIsMounted(true);
-    
-    // Check if we have a token in localStorage and report it
-    if (typeof window !== 'undefined') {
-      const hasToken = !!localStorage.getItem('access_token');
-      console.log('ShareModal mount - localStorage token present:', hasToken);
-      if (hasToken) {
-        const token = localStorage.getItem('access_token');
-        console.log('Token prefix:', token?.substring(0, 10) + '...');
-      }
-    }
-    
     return () => setIsMounted(false);
   }, []);
 
@@ -97,136 +88,157 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     }
   }, [isOpen, deal, contentType, isMounted]);
 
-  const validateForm = (): boolean => {
+  // Validate form
+  const validateForm = () => {
     if (!title.trim()) {
       setError('Title is required');
       return false;
     }
-
-    if (contentType === ShareableContentType.DEAL && !deal) {
-      setError('Cannot share: Deal information is missing');
-      return false;
-    }
-
-    if (contentType === ShareableContentType.SEARCH_RESULTS && !searchParams) {
-      setError('Cannot share: Search parameters are missing');
-      return false;
-    }
-
+    
     if (includeNotes && !personalNotes.trim()) {
-      setError('Personal notes are required when enabled');
+      setError('Personal notes cannot be empty if enabled');
       return false;
     }
-
-    setError(null);
+    
     return true;
   };
 
-  const handleShare = async () => {
+  // Function to verify authentication before sharing
+  const verifyAuthentication = async (): Promise<boolean> => {
     try {
-      if (!validateForm()) {
-        return;
+      console.log('[AUTH DEBUG] Verifying authentication for sharing...');
+      
+      // First check localStorage for token (our main auth method)
+      const localAccessToken = localStorage.getItem('access_token');
+      
+      if (localAccessToken) {
+        console.log('[AUTH DEBUG] Found access token in localStorage');
+        return true;
       }
-
-      setIsLoading(true);
-      setError(null);
-
-      // Check authentication status first
+      
+      // Fallback to NextAuth session if no localStorage token
+      const session = await getSession();
+      
+      console.log('[AUTH DEBUG] Session status:', {
+        hasSession: !!session,
+        hasAccessToken: !!session?.accessToken,
+        hasLocalToken: !!localAccessToken,
+        user: session?.user?.email || 'No user'
+      });
+      
+      if (!session?.accessToken && !localAccessToken) {
+        console.error('[AUTH DEBUG] No active session found for sharing');
+        setError('You must be logged in to share content. Please sign in and try again.');
+        return false;
+      }
+      
+      // Additional token verification
       try {
-        console.log('Checking authentication status...');
-        const authCheckResponse = await apiClient.get(`${BASE_PATH}/deals/share/auth-debug`);
-        console.log('Auth check response:', authCheckResponse.data);
-        
-        if (!authCheckResponse.data.authenticated) {
-          console.warn('Not authenticated! Will attempt to use test endpoint as fallback.');
-        }
-      } catch (authCheckError) {
-        console.error('Error checking auth status:', authCheckError);
-      }
-
-      // Create share request
-      const request: ShareContentRequest = {
-        content_type: contentType,
-        title,
-        description: description.trim() || undefined,
-        visibility,
-        include_personal_notes: includeNotes,
-        personal_notes: includeNotes ? personalNotes.trim() : undefined,
-        expiration_days: expirationDays,
-      };
-
-      // Add content specific fields
-      if (contentType === ShareableContentType.DEAL && deal) {
-        request.content_id = deal.id;
-      } else if (contentType === ShareableContentType.SEARCH_RESULTS && searchParams) {
-        request.search_params = searchParams;
-      }
-
-      // Try to create shareable content
-      let response;
-      try {
-        // Check if localStorage has access token
-        const localStorageToken = localStorage.getItem('access_token');
-        console.log('localStorage token present:', !!localStorageToken);
-        
-        // Try the primary endpoint first
-        console.log('Attempting to create shareable content with primary endpoint');
-        response = await createShareableContent(request);
-        console.log('Successfully created shareable content with primary endpoint');
-      } catch (shareError: any) {
-        console.error('Primary endpoint failed:', shareError);
-        
-        // If authentication error or other failure, try the test endpoint
-        if (shareError.response?.status === 401 || shareError.code === 'UNAUTHORIZED') {
-          console.warn('Authentication failed or other error. Falling back to test endpoint...');
-          try {
-            console.log('Trying test endpoint with request:', request);
-            const testResponse = await apiClient.post(`${BASE_PATH}/deals/share/test`, request);
-            console.log('Test endpoint response:', testResponse.data);
-            
-            // Get the result from the test endpoint
-            if (testResponse.data && testResponse.data.result) {
-              response = testResponse.data.result;
-              console.log('Successfully parsed test endpoint response:', response);
-            } else {
-              throw new Error('Invalid response format from test endpoint');
-            }
-          } catch (testError: any) {
-            console.error('Test endpoint also failed:', testError);
-            
-            // As a last resort, try the no-auth API test endpoint
-            try {
-              console.log('Trying no-auth API test endpoint...');
-              const apiTestResponse = await apiClient.post(`${BASE_PATH}/deals/share/api-test`, request);
-              console.log('API test endpoint response:', apiTestResponse.data);
-              
-              // Show error that we couldn't share but at least let the user know 
-              // we received their share request
-              throw new Error('Sharing services are currently unavailable. Your request was received but could not be processed.');
-            } catch (apiTestError) {
-              console.error('All fallback endpoints failed:', apiTestError);
-              throw shareError; // Re-throw the original error if all fallbacks fail
-            }
+        // Make a lightweight API call to verify the token is valid
+        const token = localAccessToken || session?.accessToken;
+        await apiClient.get('/api/v1/auth/verify-token', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'X-No-Auth-Redirect': 'true'
           }
-        } else {
-          throw shareError; // Re-throw if not an auth error
-        }
+        });
+        console.log('[AUTH DEBUG] Token verification successful');
+      } catch (verifyError) {
+        console.error('[AUTH DEBUG] Token verification failed:', verifyError);
+        // Continue anyway since we'll handle auth errors during the actual share request
       }
+      
+      console.log('[AUTH DEBUG] Authentication verified successfully');
+      return true;
+    } catch (error) {
+      console.error('[AUTH DEBUG] Error verifying authentication:', error);
+      setError('Authentication error. Please try signing in again.');
+      return false;
+    }
+  };
 
+  // Handle share action
+  const handleShare = async () => {
+    console.log('[SHARE DEBUG] Starting share process...');
+    if (!validateForm()) {
+      console.log('[SHARE DEBUG] Form validation failed');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    console.log('[SHARE DEBUG] Set loading state, cleared errors');
+
+    // First verify authentication
+    console.log('[SHARE DEBUG] Verifying authentication...');
+    const isAuthenticated = await verifyAuthentication();
+    if (!isAuthenticated) {
+      console.log('[SHARE DEBUG] Authentication verification failed');
+      setIsLoading(false);
+      return;
+    }
+    console.log('[SHARE DEBUG] Authentication verified successfully');
+
+    const request: ShareContentRequest = {
+      content_type: contentType as ShareableContentType,
+      title,
+      description,
+      personal_notes: includeNotes ? personalNotes : undefined,
+      visibility,
+      expiration_days: parseInt(expirationDays?.toString() || '0'),
+      include_personal_notes: includeNotes
+    };
+
+    if (contentType === ShareableContentType.DEAL && deal) {
+      request.content_id = deal.id;
+    } else if (contentType === ShareableContentType.SEARCH_RESULTS && searchParams) {
+      request.search_params = searchParams;
+    }
+    
+    console.log('[SHARE DEBUG] Prepared share request:', request);
+
+    try {
+      // Create shareable content
+      console.log('[SHARE DEBUG] Calling createShareableContent...');
+      const response = await createShareableContent(request);
+      console.log('[SHARE DEBUG] Share request successful:', response);
+      
+      // Store share URL in state and local storage for resilience
       setShareUrl(response.shareable_link);
+      
+      // Store in localStorage to prevent loss during redirects
+      if (typeof window !== 'undefined' && response.shareable_link) {
+        localStorage.setItem('last_share_url', response.shareable_link);
+        localStorage.setItem('last_share_title', title);
+        console.log('[SHARE DEBUG] Stored share URL in localStorage');
+      }
+      
+      // Update state
       setIsShared(true);
+      setIsLoading(false);
       
       if (onShare) {
         onShare();
       }
       
+      console.log('[SHARE DEBUG] Share process completed successfully');
       toast.success('Content shared successfully!');
     } catch (error: any) {
-      console.error('Failed to share content:', error);
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to share content';
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
+      console.error('[SHARE DEBUG] Failed to share content:', error);
+      console.error('[SHARE DEBUG] Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        responseData: error.response?.data,
+        stack: error.stack
+      });
+      
+      // Check for authentication errors
+      if (error.message && error.message.includes('Authentication')) {
+        setError('Authentication error. Please sign in again and retry.');
+      } else {
+        setError(error.response?.data?.detail || error.message || 'Failed to share content');
+      }
+      
       setIsLoading(false);
     }
   };
@@ -242,18 +254,52 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     }
   };
 
+  const safeOpenWindow = (url: string) => {
+    try {
+      const newWindow = window.open(url, '_blank');
+      // If popup blocked or other issue
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        // Fallback - copy to clipboard and show instructions
+        navigator.clipboard.writeText(shareUrl || '')
+          .then(() => {
+            toast.success('Link copied to clipboard. Please share manually.');
+          })
+          .catch(() => {
+            toast.error('Could not open sharing window. Please copy link manually.');
+          });
+      }
+    } catch (error) {
+      console.error('Error opening share window:', error);
+      toast.error('Could not open sharing window');
+    }
+  };
+
   const shareOnTwitter = () => {
     if (shareUrl) {
-      const text = encodeURIComponent(`${title} ${description ? `- ${description}` : ''}`);
-      const url = encodeURIComponent(shareUrl);
-      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
+      // First verify authentication is still valid
+      verifyAuthentication().then(isAuthenticated => {
+        if (isAuthenticated) {
+          const text = encodeURIComponent(`${title} ${description ? `- ${description}` : ''}`);
+          const url = encodeURIComponent(shareUrl);
+          safeOpenWindow(`https://twitter.com/intent/tweet?text=${text}&url=${url}`);
+        } else {
+          toast.error('Authentication required to share on social media');
+        }
+      });
     }
   };
 
   const shareOnFacebook = () => {
     if (shareUrl) {
-      const url = encodeURIComponent(shareUrl);
-      window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+      // First verify authentication is still valid
+      verifyAuthentication().then(isAuthenticated => {
+        if (isAuthenticated) {
+          const url = encodeURIComponent(shareUrl);
+          safeOpenWindow(`https://www.facebook.com/sharer/sharer.php?u=${url}`);
+        } else {
+          toast.error('Authentication required to share on social media');
+        }
+      });
     }
   };
 
@@ -261,7 +307,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     if (shareUrl) {
       const subject = encodeURIComponent(title);
       const body = encodeURIComponent(`${description ? `${description}\n\n` : ''}${shareUrl}`);
-      window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+      safeOpenWindow(`mailto:?subject=${subject}&body=${body}`);
     }
   };
 
@@ -297,7 +343,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             leaveFrom="opacity-100 scale-100"
             leaveTo="opacity-0 scale-95"
           >
-            <div className="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-black/40 backdrop-blur-xl border border-white/10 shadow-xl rounded-2xl">
+            <div className="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-[#121212]/80 backdrop-blur-xl border border-white/10 shadow-xl rounded-2xl">
               <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-white">
                 {isShared ? 'Share Your Link' : 'Share Content'}
               </Dialog.Title>

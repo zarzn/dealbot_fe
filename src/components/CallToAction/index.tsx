@@ -1,9 +1,20 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useApp } from "@/providers/AppProvider";
 
 const CallToAction = () => {
+  // Use the useApp hook to check if user is authenticated
+  const { isAuthenticated } = useApp();
+
+  // If user is already logged in, don't show this section
+  if (isAuthenticated) {
+    return null;
+  }
+
   return (
-    <section>
+    <section className="mb-16">
       <div className="mx-auto max-w-[1170px] px-4 sm:px-8 xl:px-0">
         <div className="cta-box-gradient relative z-999 overflow-hidden rounded-[30px] bg-dark px-4 py-20 lg:py-25">
           {/* <!-- bg shapes --> */}
@@ -62,7 +73,7 @@ const CallToAction = () => {
             </p>
 
             <Link
-              href="/"
+              href="/signup/"
               className="hero-button-gradient inline-flex rounded-lg px-7 py-3 font-medium text-white duration-300 ease-in hover:opacity-80"
             >
               Get Started for Free

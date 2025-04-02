@@ -1,15 +1,14 @@
 "use client";
-import { signOut, useSession } from "next-auth/react";
+import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import { motion } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
-import { FORCE_LOGOUT_EVENT } from '@/lib/api-client';
+import { useSafeSession } from "@/lib/use-safe-session";
+import { authService } from "@/services/auth";
 import DropDown from "./DropDown";
 import menuData from "./menuData";
-import ClientLiveNotifications from "../Notifications/ClientLiveNotifications";
+import NotificationCenter from "@/components/Notifications/NotificationCenter";
 
 // Modified Logo component to accept an optional linkWrapper prop
 const Logo = ({ linkWrapper = true }) => {
@@ -41,25 +40,32 @@ const Logo = ({ linkWrapper = true }) => {
   ) : logoContent;
 };
 
-const Header = () => {
+export default function Header() {
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [stickyMenu, setStickyMenu] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
-  // Use useSession hook to get auth state
-  const { data: session, status: authStatus } = useSession();
+  // Use safe session hook instead of next-auth's useSession
+  const session = useSafeSession();
+  const { data, status } = session;
   
   // Check for tokens to handle case where session might be missing but tokens exist
   const [hasTokens, setHasTokens] = useState(false);
 
+  const router = useRouter();
+  const pathname = usePathname();
+
   // Simplified authentication logic - if either auth mechanism reports logout, treat as logged out
-  const isAuthenticated = authStatus === 'authenticated' && hasTokens;
+  const isAuthenticated = status === 'authenticated' && hasTokens;
+
+  // Set client-side flag for safe rendering
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Effect to check for tokens in localStorage (can only run client-side)
   useEffect(() => {
-    if (typeof window === 'undefined') return; // Only run in browser
-    
-    setIsClient(true);
+    if (!isClient) return; // Only run in browser
     
     // Function to check token status
     const checkTokens = () => {
@@ -80,16 +86,14 @@ const Header = () => {
       setHasTokens(false);
     };
     
-    window.addEventListener(FORCE_LOGOUT_EVENT, handleForceLogout);
+    window.addEventListener('FORCE_LOGOUT_EVENT', handleForceLogout);
     
     // Clean up interval and event listener on unmount
     return () => {
       clearInterval(intervalId);
-      window.removeEventListener(FORCE_LOGOUT_EVENT, handleForceLogout);
+      window.removeEventListener('FORCE_LOGOUT_EVENT', handleForceLogout);
     };
-  }, [authStatus, session]);
-
-  const pathUrl = usePathname();
+  }, [status, isClient]);
 
   // Sticky menu
   const handleStickyMenu = () => {
@@ -101,20 +105,34 @@ const Header = () => {
   };
 
   useEffect(() => {
+    if (!isClient) return;
     window.addEventListener("scroll", handleStickyMenu);
     return () => window.removeEventListener("scroll", handleStickyMenu);
-  }, []);
+  }, [isClient]);
   
   // Function for secure sign-out
-  const handleSignOut = () => {
-    // Clear tokens first to ensure immediate UI update
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    setHasTokens(false);
-    
-    // Then navigate to the dedicated sign-out page
-    window.location.href = "/auth/signout";
+  const handleSignOut = async () => {
+    try {
+      // Clear tokens first to ensure immediate UI update
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user_data');
+      setHasTokens(false);
+      
+      // Call auth service logout
+      await authService.logout();
+      
+      // Navigate to login
+      router.push('/auth/signin');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
+
+  // Render nothing during SSG for safe static exports
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <>
@@ -192,7 +210,7 @@ const Header = () => {
                       <Link
                         href={`${menuItem.path}`}
                         className={`hover:nav-gradient relative border border-transparent px-4 py-1.5 text-sm hover:text-white ${
-                          pathUrl === menuItem.path
+                          pathname === menuItem.path
                             ? "nav-gradient text-white"
                             : "text-white/80"
                         }`}
@@ -208,7 +226,7 @@ const Header = () => {
             <div className="mt-7 flex items-center gap-6 lg:mt-0">
               {isAuthenticated ? (
                 <>
-                  <ClientLiveNotifications />
+                  <NotificationCenter />
                   <Link 
                     href="/dashboard" 
                     className="text-sm font-medium text-white hover:text-purple transition-colors"
@@ -258,6 +276,4 @@ const Header = () => {
       </header>
     </>
   );
-};
-
-export default Header;
+}

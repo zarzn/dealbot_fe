@@ -8,6 +8,7 @@ const goalsApi = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
 // Log the API URL in development mode

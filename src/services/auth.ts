@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { signIn } from 'next-auth/react';
 import { API_CONFIG } from './api/config';
 import { apiClient } from '@/lib/api-client';
 import { UserService, userService } from '@/services/users';
@@ -57,7 +56,7 @@ export const authService = {
       formData.append('username', data.email); // Backend expects username field but we use email
       formData.append('password', data.password);
       
-      // Use the full path with API prefix as required by the backend
+      // Call backend API directly
       const response = await apiClient.post(
         '/api/v1/auth/login',
         formData.toString(),
@@ -73,9 +72,15 @@ export const authService = {
       
       // Store tokens
       this.setTokens(response.data);
-
-      // No longer need to call signIn here, will do that in the component
-      console.log('Returning tokens for NextAuth sign-in');
+      
+      // For debugging - log user info if available
+      if (response.data.user) {
+        console.log('User info received:', {
+          id: response.data.user.id,
+          email: response.data.user.email,
+          name: response.data.user.name
+        });
+      }
       
       return response.data;
     } catch (error: any) {
@@ -93,12 +98,45 @@ export const authService = {
         data: data
       });
       
+      // Call backend API directly  
       const response = await apiClient.post('/api/v1/auth/register', data);
       console.log('Registration successful');
       return response.data;
     } catch (error: any) {
       console.error('Response error:', error);
       const message = error.response?.data?.detail || 'Registration failed';
+      throw new Error(message);
+    }
+  },
+
+  async logout(): Promise<void> {
+    try {
+      console.log('Logging out user');
+      
+      // Get stored tokens
+      const accessToken = localStorage.getItem('access_token');
+      
+      if (accessToken) {
+        // Call backend API to blacklist the token
+        await apiClient.post('/api/v1/auth/logout', {}, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        });
+      }
+      
+      // Clear tokens regardless of API success
+      this.clearTokens();
+      
+      console.log('Logout successful');
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      
+      // Still clear tokens on error
+      this.clearTokens();
+      
+      // Rethrow for handling
+      const message = error.response?.data?.detail || 'Logout failed';
       throw new Error(message);
     }
   },
@@ -144,7 +182,8 @@ export const authService = {
   async handleSocialLogin(provider: string): Promise<void> {
     try {
       console.log('Initiating social login with provider:', provider);
-      await signIn(provider, { callbackUrl: '/dashboard' });
+      // Redirect to backend social auth endpoint
+      window.location.href = `${API_CONFIG.baseURL}/api/v1/auth/social/${provider}`;
     } catch (error: any) {
       console.error('Social login error:', error);
       throw new Error(`${provider} login failed`);
@@ -249,86 +288,14 @@ export const authService = {
       // Get user profile to access the email
       const profile = await userService.getProfile();
       
-      // Send verification request with the user's email
-      await apiClient.post('/api/v1/users/verify-email/request', { 
-        email: profile.email 
+      // Send verification email
+      await apiClient.post('/api/v1/auth/request-verification', {
+        email: profile.email
       });
       console.log('Verification email request successful');
     } catch (error: any) {
-      console.error('Email verification request error:', error);
-      
-      // Extract error message from response
-      let errorMessage = 'Failed to send verification email';
-      let statusCode = error.response?.status || 500;
-      
-      if (error.response?.data) {
-        // If we have a proper API error response
-        if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data;
-        } else if (error.response.data.detail) {
-          errorMessage = error.response.data.detail;
-        }
-        
-        // Check for "already verified" error
-        if (errorMessage.includes('already verified')) {
-          console.log('Email is already verified, updating profile data');
-          
-          // Try to refresh the user profile in the background
-          try {
-            await userService.getProfile(true); // Force refresh
-          } catch (refreshError) {
-            console.error('Failed to refresh profile after discovering email is verified:', refreshError);
-          }
-          
-          // Rethrow with the "already verified" error
-          const alreadyVerifiedError = new Error(errorMessage);
-          // @ts-ignore - Adding custom property
-          alreadyVerifiedError.code = 'EMAIL_ALREADY_VERIFIED';
-          throw alreadyVerifiedError;
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      // Throw with the extracted message
-      throw new Error(errorMessage);
-    }
-  },
-
-  /**
-   * Change the user's password
-   * @param {string} currentPassword - The user's current password
-   * @param {string} newPassword - The new password
-   * @returns {Promise<void>}
-   */
-  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    try {
-      console.log('Changing password');
-      await apiClient.post('/api/v1/auth/change-password', {
-        current_password: currentPassword,
-        new_password: newPassword
-      });
-      console.log('Password change successful');
-    } catch (error: any) {
-      console.error('Password change error:', error);
-      const message = error.response?.data?.detail || 'Failed to change password';
-      throw new Error(message);
-    }
-  },
-
-  /**
-   * Sign out from all devices
-   * This will invalidate all active sessions for the current user
-   * @returns {Promise<void>}
-   */
-  async signOutAllDevices(): Promise<void> {
-    try {
-      console.log('Signing out from all devices');
-      await apiClient.post('/api/v1/auth/logout-all');
-      console.log('Sign out from all devices successful');
-    } catch (error: any) {
-      console.error('Sign out from all devices error:', error);
-      const message = error.response?.data?.detail || 'Failed to sign out from all devices';
+      console.error('Verification email request error:', error);
+      const message = error.response?.data?.detail || 'Failed to request verification email';
       throw new Error(message);
     }
   }

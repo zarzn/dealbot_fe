@@ -1,17 +1,26 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { useSafeSession } from '@/lib/use-safe-session';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { API_CONFIG } from '@/services/api/config';
 
 export default function DebugPage() {
-  const { data: session, status } = useSession();
+  const session = useSafeSession();
+  const status = session?.status || 'unauthenticated';
+  const sessionData = session?.data;
+  
   const router = useRouter();
   const [apiResponse, setApiResponse] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
+
+  // Set client-side flag when component mounts
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Function to test session API
   const fetchSession = async () => {
@@ -47,10 +56,15 @@ export default function DebugPage() {
 
   // Redirect to dashboard on authenticated session
   useEffect(() => {
-    if (status === 'authenticated') {
-      console.log('User is authenticated, can redirect to dashboard', session);
+    if (isClient && status === 'authenticated') {
+      console.log('User is authenticated, can redirect to dashboard', sessionData);
     }
-  }, [status, session, router]);
+  }, [status, sessionData, router, isClient]);
+
+  // Render nothing during SSG for safe static exports
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
@@ -60,11 +74,11 @@ export default function DebugPage() {
         <div className="mb-8 p-4 border rounded bg-gray-50">
           <h2 className="text-xl font-semibold mb-4">Session Status</h2>
           <p className="mb-2">Current status: <span className="font-medium">{status}</span></p>
-          {status === 'authenticated' && (
+          {status === 'authenticated' && sessionData && (
             <div>
               <p className="text-green-600 font-medium">✓ User is authenticated</p>
               <pre className="mt-2 p-2 bg-gray-800 text-white rounded overflow-auto text-sm">
-                {JSON.stringify(session, null, 2)}
+                {JSON.stringify(sessionData, null, 2)}
               </pre>
             </div>
           )}

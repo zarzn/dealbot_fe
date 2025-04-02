@@ -42,7 +42,7 @@ const Header: React.FC<HeaderProps> = ({
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
           >
-            <Link href="/login">
+            <Link href="/auth/signin">
               <Button variant="outline" size="sm">
                 Sign In
               </Button>

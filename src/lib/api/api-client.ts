@@ -11,6 +11,7 @@ export const apiClient: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
+  withCredentials: true, // Essential for CORS with credentials
 });
 
 // Request interceptor for adding auth token
@@ -70,8 +71,8 @@ apiClient.interceptors.response.use(
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
           
-          // Redirect to login page
-          window.location.href = '/login?session_expired=true';
+          // Redirect to login with session expired flag
+          window.location.href = '/auth/signin?session_expired=true';
         }
       }
     }

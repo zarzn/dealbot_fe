@@ -12,6 +12,7 @@ const dealsApi = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Essential for CORS with credentials
 });
 
 // Log the API URL in development mode
@@ -70,6 +71,7 @@ export const searchDeals = async (searchParams: DealSearch & {
       method: 'POST',
       headers,
       body: JSON.stringify(searchParams),
+      credentials: 'include', // Essential for CORS with credentials
     });
 
     if (!response.ok) {
@@ -231,7 +233,10 @@ export class DealsApi {
       }
     }
     
-    return { headers };
+    return { 
+      headers,
+      withCredentials: true // Essential for CORS with credentials
+    };
   }
 
   /**

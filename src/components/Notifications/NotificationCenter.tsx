@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader } from '@/components/ui/loader';
 import { NotificationItem } from './NotificationItem';
+import { apiClient } from '@/lib/api-client';
+import { API_ENDPOINTS } from '@/services/api/config';
+import { useSafeSession } from '@/lib/use-safe-session';
 
 // Define tabs for filtering notifications
 type NotificationTab = 'all' | 'unread' | 'deals' | 'system';
@@ -20,20 +23,22 @@ export const NotificationCenter: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
   const [activeTab, setActiveTab] = useState<NotificationTab>('all');
-  const [isMounted, setIsMounted] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  const [wsSetupComplete, setWsSetupComplete] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const session = useSafeSession();
 
-  // Set isMounted to true after component mounts
+  // Set isClient to true after component mounts
   useEffect(() => {
-    setIsMounted(true);
+    setIsClient(true);
     return () => {
-      setIsMounted(false);
+      setIsClient(false);
     };
   }, []);
 
   // Close notifications when clicking outside
   useEffect(() => {
-    if (!isMounted) return;
+    if (!isClient) return;
 
     const handleClickOutside = (event: MouseEvent) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
@@ -48,20 +53,20 @@ export const NotificationCenter: React.FC = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isOpen, isMounted]);
+  }, [isOpen, isClient]);
 
   // Load notifications when component is opened
   useEffect(() => {
-    if (!isMounted) return;
+    if (!isClient) return;
     
-    if (isOpen) {
+    if (isOpen && session.status === 'authenticated') {
       loadNotifications();
     }
-  }, [isOpen, isMounted]);
+  }, [isOpen, isClient, session.status]);
 
   // WebSocket connection
   useEffect(() => {
-    if (!isMounted) return;
+    if (!isClient || !session.data?.accessToken || wsSetupComplete) return;
 
     let wsCleanup: (() => void) | undefined;
     let retryTimeout: NodeJS.Timeout | undefined;
@@ -84,8 +89,15 @@ export const NotificationCenter: React.FC = () => {
       try {
         console.log(`Attempting to get websocket token (attempt ${retryCount + 1})...`);
         
-        // Try to get the websocket token first
-        const tokenResponse = await fetch('/api/v1/notifications/websocket-token', {
+        // Check if we have an access token before making the request
+        const accessToken = localStorage.getItem('access_token');
+        if (!accessToken) {
+          console.log('No access token available for WebSocket setup, skipping...');
+          return;
+        }
+        
+        // Use apiClient instead of direct fetch for proper token and error handling
+        const tokenResponse = await apiClient.get(API_ENDPOINTS.WEBSOCKET_TOKEN, {
           // Add cache busting to prevent stale responses
           headers: {
             'Cache-Control': 'no-cache',
@@ -93,11 +105,12 @@ export const NotificationCenter: React.FC = () => {
           }
         });
         
-        if (!tokenResponse.ok) {
+        // Use proper status check (response.status is a number, not an object with a status)
+        if (tokenResponse.status !== 200) {
           throw new Error(`Failed to get websocket token: ${tokenResponse.status}`);
         }
         
-        const data = await tokenResponse.json();
+        const data = tokenResponse.data;
         const token = data?.token;
         
         if (!token) {
@@ -114,6 +127,7 @@ export const NotificationCenter: React.FC = () => {
           console.log('WebSocket connected');
           // Reset retry count on successful connection
           retryCount = 0;
+          setWsSetupComplete(true);
         };
         
         ws.onmessage = (event) => {
@@ -132,7 +146,7 @@ export const NotificationCenter: React.FC = () => {
           setIsError(true);
           
           // Only retry if component is mounted
-          if (isMounted && retryCount < MAX_RETRIES) {
+          if (isClient && retryCount < MAX_RETRIES) {
             retryCount++;
             const delay = getRetryDelay();
             console.log(`WebSocket error. Will retry in ${delay}ms...`);
@@ -145,7 +159,7 @@ export const NotificationCenter: React.FC = () => {
           console.log(`WebSocket closed with code ${event.code}`);
           
           // Only retry unexpected closes if component is mounted
-          if (isMounted && event.code !== 1000 && retryCount < MAX_RETRIES) {
+          if (isClient && event.code !== 1000 && retryCount < MAX_RETRIES) {
             retryCount++;
             const delay = getRetryDelay();
             console.log(`WebSocket closed unexpectedly. Will retry in ${delay}ms...`);
@@ -166,7 +180,7 @@ export const NotificationCenter: React.FC = () => {
         setIsError(true);
         
         // Retry with exponential backoff
-        if (isMounted && retryCount < MAX_RETRIES) {
+        if (isClient && retryCount < MAX_RETRIES) {
           retryCount++;
           const delay = getRetryDelay();
           console.log(`Failed to setup WebSocket. Will retry in ${delay}ms...`);
@@ -176,7 +190,10 @@ export const NotificationCenter: React.FC = () => {
       }
     };
     
-    setupWs();
+    // Only attempt to set up WebSocket if we're authenticated
+    if (session.status === 'authenticated') {
+      setupWs();
+    }
     
     return () => {
       // Clean up websocket connection when component unmounts
@@ -185,11 +202,11 @@ export const NotificationCenter: React.FC = () => {
         clearTimeout(retryTimeout);
       }
     };
-  }, [isMounted]);
+  }, [isClient, session.status, session.data?.accessToken, wsSetupComplete]);
 
   // Load notifications from API
   const loadNotifications = async () => {
-    if (!isMounted) return;
+    if (!isClient || session.status !== 'authenticated') return;
     
     setIsLoading(true);
     setIsError(false);
@@ -224,7 +241,7 @@ export const NotificationCenter: React.FC = () => {
 
   // Handle new notification from WebSocket
   const handleNewNotification = (notification: Notification) => {
-    if (!isMounted) return;
+    if (!isClient) return;
     
     setNotifications(prev => [notification, ...prev]);
     
@@ -238,7 +255,7 @@ export const NotificationCenter: React.FC = () => {
 
   // Mark a notification as read
   const markAsRead = async (id: string) => {
-    if (!isMounted) return;
+    if (!isClient) return;
     
     try {
       await notificationService.markAsRead(id);
@@ -260,7 +277,7 @@ export const NotificationCenter: React.FC = () => {
 
   // Mark all notifications as read
   const markAllAsRead = async () => {
-    if (!isMounted) return;
+    if (!isClient) return;
     
     try {
       await notificationService.markAllAsRead();
@@ -281,7 +298,7 @@ export const NotificationCenter: React.FC = () => {
 
   // Delete a notification - not implemented in API yet, only UI update
   const deleteNotification = (id: string) => {
-    if (!isMounted) return;
+    if (!isClient) return;
     
     // Remove from local state first for immediate feedback
     setNotifications(prev => prev.filter(n => n.id !== id));
@@ -316,9 +333,21 @@ export const NotificationCenter: React.FC = () => {
     }
   };
 
-  // Don't render anything on the server
-  if (!isMounted) {
-    return null;
+  // Don't render anything during static build
+  if (!isClient) {
+    // Return minimal representation for static generation
+    return (
+      <div className="relative">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="relative"
+          aria-label="Notifications"
+        >
+          <FiBell size={18} />
+        </Button>
+      </div>
+    );
   }
 
   return (

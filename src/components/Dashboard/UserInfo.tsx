@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { useSession } from 'next-auth/react'
+import { useSafeSession } from '@/lib/use-safe-session'
 import { userService } from '@/services/users'
 import { toast } from 'react-hot-toast'
 import UserStatusBar from './UserStatusBar'
@@ -41,18 +41,30 @@ const UserInfoError = ({ onRetry }: { onRetry: () => void }) => (
 )
 
 export default function UserInfo({ isMobile = false }: UserInfoProps) {
-  const { data: session, status: sessionStatus } = useSession()
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // Use safe session hook instead of next-auth's useSession
+  const session = useSafeSession();
+  const sessionStatus = session?.status || 'unauthenticated';
+  const userData = session?.data?.user;
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{
     email: string;
     displayName?: string;
-  } | null>(null)
-  const [lastFetchTime, setLastFetchTime] = useState<number>(0)
+  } | null>(null);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  const [isClient, setIsClient] = useState(false);
   const FETCH_COOLDOWN = 30000; // 30 seconds cooldown between fetches
   
+  // Set isClient to true once component mounts
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+  
   const fetchUserData = useCallback(async (force = false) => {
-    // Skip fetch if we're within cooldown period unless force=true
+    // Skip fetch if we're within cooldown period unless force=true or if not client-side
+    if (!isClient) return;
+    
     const now = Date.now();
     if (!force && now - lastFetchTime < FETCH_COOLDOWN) {
       console.log('Skipping profile fetch due to cooldown');
@@ -76,27 +88,31 @@ export default function UserInfo({ isMobile = false }: UserInfoProps) {
       setError("Could not load user data")
       
       // Fallback to session data if available
-      if (session?.user?.email) {
+      if (userData?.email) {
         setUserProfile({
-          email: session.user.email
+          email: userData.email
         })
       }
     } finally {
       setIsLoading(false)
     }
-  }, [session, lastFetchTime])
+  }, [userData, lastFetchTime, isClient])
   
-  // Fetch when session changes or component mounts
+  // Fetch when session changes or component mounts (client-side only)
   useEffect(() => {
-    // Only fetch if we have a valid session
-    if (sessionStatus === 'authenticated') {
+    if (isClient && sessionStatus === 'authenticated') {
       fetchUserData(false);
     }
-  }, [sessionStatus, fetchUserData])
+  }, [sessionStatus, fetchUserData, isClient])
   
   // Get first letter of email for avatar
   const getInitial = (email: string) => {
     return email && email.length > 0 ? email[0].toUpperCase() : "U"
+  }
+  
+  // Handle SSG - render nothing during static build
+  if (!isClient) {
+    return <UserInfoSkeleton />
   }
   
   if (isLoading && !userProfile) {
@@ -107,7 +123,7 @@ export default function UserInfo({ isMobile = false }: UserInfoProps) {
     return <UserInfoError onRetry={() => fetchUserData(true)} />
   }
   
-  const email = userProfile?.email || (session?.user?.email || "user@example.com")
+  const email = userProfile?.email || (userData?.email || "user@example.com")
   const displayName = userProfile?.displayName
   
   return (

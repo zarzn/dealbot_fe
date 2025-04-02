@@ -1,19 +1,27 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { useSafeSession } from '@/lib/use-safe-session';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 export default function AuthTestPage() {
-  const { data: session, status } = useSession();
+  // Use safe version of useSession
+  const session = useSafeSession();
+  const status = session?.status || 'unauthenticated';
+  const sessionData = session?.data;
+  
   const [localTokens, setLocalTokens] = useState<{
     accessToken: string | null;
     refreshToken: string | null;
   }>({ accessToken: null, refreshToken: null });
   
   const [cookies, setCookies] = useState<string[]>([]);
+  const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
+    // Mark that we're client-side
+    setIsClient(true);
+    
     // Check for tokens in localStorage
     const accessToken = localStorage.getItem('access_token');
     const refreshToken = localStorage.getItem('refresh_token');
@@ -23,20 +31,25 @@ export default function AuthTestPage() {
     setCookies(document.cookie.split(';').map(c => c.trim()));
   }, []);
   
+  // Render nothing during SSG for safe static exports
+  if (!isClient) {
+    return null;
+  }
+  
   return (
     <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow">
         <h1 className="text-3xl font-bold mb-6 text-gray-900">Authentication Test Page</h1>
         
         <div className="mb-8 p-4 border rounded bg-gray-50">
-          <h2 className="text-xl font-semibold mb-4">NextAuth Session Status</h2>
+          <h2 className="text-xl font-semibold mb-4">Session Status</h2>
           <p className="mb-2">Current status: <span className="font-medium">{status}</span></p>
           
-          {status === 'authenticated' && (
+          {status === 'authenticated' && sessionData && (
             <div>
-              <p className="text-green-600 font-medium">✅ NextAuth session is active</p>
+              <p className="text-green-600 font-medium">✅ Session is active</p>
               <div className="mt-2 p-3 bg-gray-800 text-white rounded overflow-auto text-sm">
-                <pre>{JSON.stringify(session, null, 2)}</pre>
+                <pre>{JSON.stringify(sessionData, null, 2)}</pre>
               </div>
             </div>
           )}
@@ -46,7 +59,7 @@ export default function AuthTestPage() {
           )}
           
           {status === 'unauthenticated' && (
-            <p className="text-red-600">❌ No NextAuth session</p>
+            <p className="text-red-600">❌ No session</p>
           )}
         </div>
         

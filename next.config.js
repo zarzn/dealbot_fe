@@ -27,21 +27,26 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   
-  // Add trailingSlash to ensure consistent URL handling
-  trailingSlash: true,
+  // Disable trailing slashes for better SPA compatibility
+  trailingSlash: false,
   
-  // Add asset prefix to ensure proper asset loading on nested routes
-  assetPrefix: '/',
+  // Remove asset prefix that could be causing SPA navigation issues
+  // assetPrefix: '/',
   
-  // For development, comment out the static export
-  // output: 'export',
+  // Enable static export for production deployment to S3/CloudFront
+  // We only want to use 'export' in production
+  output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
   
-  // Enable trace in development mode to help with debugging
+  // Disable server actions for static export in production only
   experimental: {
-    serverComponentsExternalPackages: ['next-auth'],
-    // Enable server actions for development
+    // Keep appDir enabled
     appDir: true,
-    serverActions: true
+    
+    // Only enable server features in development
+    ...(process.env.NODE_ENV !== 'production' ? {
+      serverComponentsExternalPackages: ['next-auth'],
+      serverActions: true
+    } : {})
   },
   
   // This will ensure only /auth/* API routes are included in the build
@@ -50,9 +55,11 @@ const nextConfig = {
   
   // Include favicon.ico in the page extensions for proper handling
   pageExtensions: ['tsx', 'ts', 'jsx', 'js', 'md', 'mdx'],
-  
-  // API routes for development
-  async rewrites() {
+};
+
+// Only add rewrites in development mode (and explicitly check for output option)
+if (process.env.NODE_ENV !== 'production' && nextConfig.output !== 'export') {
+  nextConfig.rewrites = async () => {
     return [
       {
         source: '/api/v1/:path*',
@@ -60,11 +67,7 @@ const nextConfig = {
         basePath: false,
       }
     ];
-  },
-  
-  // Add a comment about static export for future deployments
-  // To deploy to AWS S3, uncomment the output: 'export' line above,
-  // comment out the rewrites() function, and set serverActions: false
-};
+  };
+}
 
 module.exports = nextConfig;

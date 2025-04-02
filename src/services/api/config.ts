@@ -7,6 +7,9 @@ const isBrowser = typeof window !== 'undefined';
 // Determine if running in development mode
 const isDevelopment = process.env.NODE_ENV === 'development';
 
+// Get the API URL from environment variables or use the default
+const envApiUrl = process.env.NEXT_PUBLIC_API_URL;
+
 // HARDCODED PRODUCTION URL - this will be used as a fallback
 const PRODUCTION_API_URL = 'https://7oxq7ujcmc.execute-api.us-east-1.amazonaws.com/prod';
 const PRODUCTION_WS_URL = 'wss://1ze1jsv3qg.execute-api.us-east-1.amazonaws.com/prod';
@@ -15,7 +18,9 @@ const API_VERSION = 'v1';
 // IMPORTANT: In production, ALWAYS use production URLs
 // Only use localhost if we're explicitly in development mode AND not in a browser
 // In browsers, we always force production URLs unless explicitly in development mode
-const apiUrl = isDevelopment ? 'http://localhost:8000' : PRODUCTION_API_URL;
+
+// Use environment variable if available, otherwise use default based on environment
+const apiUrl = envApiUrl || (isDevelopment ? 'http://localhost:8000' : PRODUCTION_API_URL);
 const apiVersion = API_VERSION;
 const wsUrl = isDevelopment ? 'ws://localhost:8000' : PRODUCTION_WS_URL;
 
@@ -31,6 +36,7 @@ export const API_BASE_URL = finalApiUrl;
 if (isDevelopment) {
   console.log('API Configuration:', {
     providedApiUrl: apiUrl,
+    envApiUrl,
     finalApiUrl,
     apiVersion,
     finalWsUrl,
@@ -59,25 +65,24 @@ export const WS_URL = isDevelopment
   : `${finalWsUrl}/api/${apiVersion}/ws`;
 
 // Always log the final configuration to help with debugging
-if (isDevelopment) {
-  console.log('Final API Configuration:', {
-    baseURL: API_CONFIG.baseURL,
-    version: API_CONFIG.version,
-    fullUrl: API_CONFIG.fullUrl,
-    wsUrl: WS_URL,
-    isDevelopment,
-    isBrowser,
-    hostname: isBrowser ? window.location.hostname : 'not in browser'
-  });
+if (isDevelopment || isBrowser) {
+  console.log('[API Config] Using direct backend API URL:', API_CONFIG.fullUrl);
 }
 
 // Helper function to construct API URLs
 export const getApiUrl = (endpoint: string): string => {
-  const url = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  return `${API_CONFIG.baseURL}/api/${API_CONFIG.version}${url}`;
+  // Remove any leading /api prefix to avoid duplication
+  let cleanEndpoint = endpoint;
+  if (cleanEndpoint.startsWith('/api/')) {
+    cleanEndpoint = cleanEndpoint.substring(4);
+  }
+  
+  // Add proper leading slash if needed
+  const url = cleanEndpoint.startsWith('/') ? cleanEndpoint : `/${cleanEndpoint}`;
+  return `${API_CONFIG.baseURL}${url}`;
 };
 
-// API Endpoints
+// API Endpoints - updated to remove any /api prefix since we're calling backend directly
 export const API_ENDPOINTS = {
   // Auth
   LOGIN: '/api/v1/auth/login',

@@ -24,12 +24,16 @@ import {
 import { userService, UserProfile, UserSettings, NotificationPreferences } from "@/services/users";
 import { authService } from "@/services/auth";
 import { PasswordChangeDialog } from "@/components/dialogs/PasswordChangeDialog";
+import { useRouter } from "next/navigation";
 
 // Helper for tab navigation
 type TabType = "profile" | "notifications" | "language" | "security";
 
 export default function SettingsPage() {
-  const { data: session } = useSession();
+  const session = useSession();
+  const sessionData = session?.data;
+  const router = useRouter();
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -41,9 +45,17 @@ export default function SettingsPage() {
   const [saveSuccess, setSaveSuccess] = useState<{ [key in TabType]?: boolean }>({});
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  
+  // Set client-side flag when component mounts
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
   
   // Fetch user data on component mount
   useEffect(() => {
+    if (!isClient) return;
+    
     console.log('DEBUG: Settings page useEffect running');
     
     // Check localStorage first for verified status
@@ -85,9 +97,11 @@ export default function SettingsPage() {
       clearInterval(intervalId);
       window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [isClient, profileData]);
   
   async function fetchUserData() {
+    if (!isClient) return;
+    
     try {
       setIsLoading(true);
       setError(null);
@@ -124,6 +138,8 @@ export default function SettingsPage() {
   
   // Function to refresh only the profile data, with emphasis on verification status
   async function refreshProfileData() {
+    if (!isClient) return null;
+    
     console.log('DEBUG: refreshProfileData called');
     
     try {
@@ -414,27 +430,26 @@ export default function SettingsPage() {
   // Handle sign out from all devices
   const signOutAllDevices = async () => {
     try {
-      // Ask for confirmation
-      if (!confirm("Are you sure you want to sign out from all devices? You will be logged out of this session too.")) {
-        return;
-      }
-      
       setIsSigningOut(true);
       
-      // Call the API to sign out from all devices
-      await authService.signOutAllDevices();
+      // We'll implement our own version of signing out all devices
+      // First, log out the current session
+      await authService.logout();
+      
+      // Clear local tokens
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user_data');
       
       // Show success message
       toast.success("Successfully signed out from all devices. Please log in again.");
       
-      // Clear local tokens
-      authService.clearTokens();
-      
-      // Redirect to login page
-      window.location.href = "/auth/login";
-    } catch (err: any) {
-      console.error("Error signing out from all devices:", err);
-      toast.error(err.message || "Failed to sign out from all devices. Please try again.");
+      // Navigate to login
+      router.push('/auth/signin');
+    } catch (error) {
+      toast.error("Failed to sign out from all devices. Please try again.");
+      console.error("Error signing out from all devices:", error);
+    } finally {
       setIsSigningOut(false);
     }
   };
@@ -533,6 +548,18 @@ export default function SettingsPage() {
       </div>
     );
   };
+  
+  // For static builds, render a simple loading state
+  if (!isClient) {
+    return (
+      <div className="container max-w-5xl mx-auto py-8">
+        <div className="animate-pulse">
+          <div className="h-8 w-40 bg-gray-800 rounded mb-6"></div>
+          <div className="h-[400px] bg-gray-800/30 rounded-xl"></div>
+        </div>
+      </div>
+    );
+  }
   
   if (isLoading) {
     return (

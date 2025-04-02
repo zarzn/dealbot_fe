@@ -1,9 +1,9 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useSession } from 'next-auth/react';
 import { User } from '@/types/api';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '@/app/context/AuthContext';
 
 interface AppContextType {
   user: User | null;
@@ -32,33 +32,19 @@ interface AppProviderProps {
 }
 
 export function AppProvider({ children }: AppProviderProps) {
-  const { data: session, status } = useSession();
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Use our custom auth context instead of next-auth session
+  const { user, isLoading, isAuthenticated, updateUser: authUpdateUser } = useAuth();
 
-  useEffect(() => {
-    if (status === 'loading') {
-      return;
-    }
-
-    if (session?.user) {
-      setUser(session.user);
-    } else {
-      setUser(null);
-    }
-
-    setIsLoading(false);
-  }, [session, status]);
-
+  // Update user function with toast notification
   const updateUser = (newUser: User) => {
-    setUser(newUser);
+    authUpdateUser(newUser);
     toast.success('Profile updated successfully');
   };
 
   const value = {
     user,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated,
     updateUser,
   };
 

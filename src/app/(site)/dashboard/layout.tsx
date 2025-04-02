@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSafeSession } from '@/lib/use-safe-session';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -20,15 +20,17 @@ import {
 import { cn } from '@/lib/utils';
 import { PageTransition } from '@/components/ui/page-transition';
 import UserInfo from '@/components/Dashboard/UserInfo';
+import NotificationCenter from '@/components/Notifications/NotificationCenter';
+import { FORCE_LOGOUT_EVENT } from '@/lib/api-client';
 import { Suspense } from 'react';
 import { DashboardSkeleton } from '@/components/Dashboard/DashboardSkeleton';
 import { toast } from 'react-hot-toast';
-import { FORCE_LOGOUT_EVENT } from '@/lib/api-client';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
+// Navigation items - match the backup file navigation
 const navigation = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Goals', href: '/dashboard/goals', icon: Target },
@@ -39,6 +41,7 @@ const navigation = [
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 
+// NavItem component for sidebar - updated to match the backup styling
 const NavItem = ({ href, icon: Icon, name, isActive, onClick }: {
   href: string;
   icon: any;
@@ -84,98 +87,43 @@ const NavItem = ({ href, icon: Icon, name, isActive, onClick }: {
   );
 };
 
+// Main Dashboard Layout component
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { data: session, status: authStatus } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  
+  // Use safe session hook instead of next-auth's useSession
+  const session = useSafeSession();
+  const { data, status } = session;
+  
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // Check for localStorage tokens
-  const [hasLocalTokens, setHasLocalTokens] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Effect to check tokens in localStorage
+  // Set client-side flag
   useEffect(() => {
-    const accessToken = localStorage.getItem('access_token');
-    setHasLocalTokens(!!accessToken);
-    setIsLoading(false);
+    setIsClient(true);
+  }, []);
+  
+  // Check for valid tokens on mount
+  useEffect(() => {
+    if (!isClient) return;
     
-    // If no authentication found at all, redirect to login
-    if (authStatus === 'unauthenticated' && !accessToken) {
+    const accessToken = localStorage.getItem('access_token');
+    const refreshToken = localStorage.getItem('refresh_token');
+    
+    // If no tokens but we're in authenticated state, redirect to login
+    if (!accessToken && status !== 'loading') {
       router.push('/auth/signin');
     }
     
-    // Periodically check token validity (every 10 minutes instead of 5)
-    const tokenCheckInterval = setInterval(() => {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        try {
-          // Simple JWT expiry check
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          const isExpiring = payload.exp && (payload.exp * 1000) - Date.now() < 15 * 60 * 1000; // Less than 15 minutes left
-          
-          // If token is about to expire, try to refresh it proactively
-          if (isExpiring) {
-            console.log('Token is about to expire, refreshing...');
-            const refreshToken = localStorage.getItem('refresh_token');
-            if (refreshToken) {
-              fetch(`${window.location.origin}/api/v1/auth/refresh`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refresh_token: refreshToken }),
-              })
-              .then(res => res.json())
-              .then(data => {
-                if (data.access_token && data.refresh_token) {
-                  localStorage.setItem('access_token', data.access_token);
-                  localStorage.setItem('refresh_token', data.refresh_token);
-                  console.log('Token refreshed successfully');
-                }
-              })
-              .catch(err => {
-                console.error('Failed to refresh token:', err);
-                // On refresh failure, clear all authentication
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('refresh_token');
-                
-                // Clear user service caches
-                if (typeof window !== 'undefined') {
-                  try {
-                    // Access userService through a dynamic import to avoid circular dependencies
-                    import('@/services/users').then(({ userService }) => {
-                      userService.clearCaches();
-                    }).catch(e => console.error('Failed to import userService:', e));
-                  } catch (e) {
-                    console.error('Failed to clear user caches:', e);
-                  }
-                }
-              });
-            }
-          }
-        } catch (e) {
-          console.error('Error checking token validity:', e);
-        }
-      }
-    }, 10 * 60 * 1000); // Check every 10 minutes instead of 5
-    
-    // Listen for forced logout events (e.g., from token refresh failures)
+    // Set up event listener for forced logout
     const handleForceLogout = () => {
-      // Clear any local tokens for extra safety
+      console.log('Force logout event received in dashboard layout');
+      // Clear tokens and reload to trigger auth redirect
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
-      
-      // Clear user service caches
-      if (typeof window !== 'undefined') {
-        try {
-          // Access userService through a dynamic import to avoid circular dependencies
-          import('@/services/users').then(({ userService }) => {
-            userService.clearCaches();
-          }).catch(e => console.error('Failed to import userService:', e));
-        } catch (e) {
-          console.error('Failed to clear user caches:', e);
-        }
-      }
+      localStorage.removeItem('user_data');
       
       // Show a toast notification
       toast.error('Your session has expired. Please sign in again.', {
@@ -187,38 +135,44 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         },
       });
       
-      // Redirect to login page
-      router.push('/auth/signin?reason=session_expired');
+      router.push('/auth/signin');
     };
     
     window.addEventListener(FORCE_LOGOUT_EVENT, handleForceLogout);
     
-    // Clean up event listener and interval
     return () => {
       window.removeEventListener(FORCE_LOGOUT_EVENT, handleForceLogout);
-      clearInterval(tokenCheckInterval);
     };
-    
-  }, [authStatus, session, router]);
+  }, [router, isClient, status]);
   
-  // Show loading state while checking auth
-  if (isLoading) {
+  // If component is not yet mounted on client, show a minimal loading state
+  if (!isClient) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex min-h-screen flex-col">
+        <div className="h-[57px] border-b"></div>
+        <div className="flex flex-1">
+          <div className="w-[250px] border-r hidden lg:block"></div>
+          <div className="flex-1"></div>
+        </div>
       </div>
     );
   }
   
-  // Allow access if either NextAuth session or localStorage token is present
-  const isAuthenticated = authStatus === 'authenticated' || hasLocalTokens;
+  // If still waiting for authentication or no valid tokens
+  if (status === 'loading') {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
   
-  if (!isAuthenticated) {
-    // Redirect to login if not authenticated
+  // If not authenticated and not loading, redirect to login
+  if (status === 'unauthenticated') {
     router.push('/auth/signin');
     return null;
   }
-
+  
   return (
     <>
       <div className="flex flex-col md:flex-row min-h-screen">
@@ -316,7 +270,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </button>
           <div className="text-xl font-semibold text-white/80">Dashboard</div>
           <div className="flex items-center">
-            {/* Notification bell removed from here */}
+            <NotificationCenter />
           </div>
         </div>
 
@@ -324,7 +278,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex flex-1 flex-col lg:pl-60">
           {/* Desktop top bar with notifications */}
           <div className="sticky top-0 z-30 hidden lg:flex justify-end items-center px-8 py-4">
-            {/* Notification bell removed from here */}
+            <NotificationCenter />
           </div>
           
           <main className="dashboard-content flex-1 py-6 px-4 sm:px-6 lg:px-8 mt-[100px] lg:mt-[60px]">

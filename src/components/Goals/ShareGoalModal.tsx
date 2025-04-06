@@ -29,6 +29,32 @@ export default function ShareGoalModal({
     setIsLoading(true);
     try {
       const response = await goalsService.shareGoal(goalId);
+      
+      // Always use the production domain for share links
+      if (response.shareUrl) {
+        // Get the production URL from environment variables
+        const productionDomain = process.env.NEXT_PUBLIC_APP_URL || 'https://rebaton.ai';
+        
+        let fixedUrl = response.shareUrl;
+        
+        if (!fixedUrl.startsWith('http')) {
+          // If it's a relative URL, prepend the production domain
+          fixedUrl = `${productionDomain}${fixedUrl.startsWith('/') ? '' : '/'}${fixedUrl}`;
+        } else {
+          try {
+            // For any absolute URL, replace the domain part with the production domain
+            const urlObj = new URL(fixedUrl);
+            fixedUrl = fixedUrl.replace(`${urlObj.protocol}//${urlObj.host}`, productionDomain);
+          } catch (urlError) {
+            console.error('Error parsing URL:', urlError);
+            // If URL parsing fails, keep the original URL
+          }
+        }
+        
+        // Update the response object with the fixed URL
+        response.shareUrl = fixedUrl;
+      }
+      
       setShareData(response);
     } catch (error: any) {
       toast.error(error.message || 'Failed to share goal');
@@ -41,6 +67,7 @@ export default function ShareGoalModal({
     if (!shareData?.shareUrl) return;
     
     try {
+      console.log('Copying share URL:', shareData.shareUrl);
       await navigator.clipboard.writeText(shareData.shareUrl);
       setCopied(true);
       toast.success('Link copied to clipboard!');

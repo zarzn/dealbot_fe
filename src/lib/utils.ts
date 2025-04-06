@@ -77,15 +77,27 @@ export function formatCurrency(amount: number, currency: string = 'USD'): string
  * @param dateString - The date string or timestamp to format
  * @returns Formatted date string
  */
-export function formatDate(dateString: string | number | Date): string {
-  const date = new Date(dateString);
+export function formatDate(dateString: string | number | Date | null | undefined): string {
+  if (!dateString) return 'N/A';
   
-  // Return formatted date
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(date);
+  try {
+    const date = new Date(dateString);
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return 'Invalid date';
+    }
+    
+    // Return formatted date
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(date);
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'Invalid date';
+  }
 }
 
 /**
@@ -93,30 +105,43 @@ export function formatDate(dateString: string | number | Date): string {
  * @param dateString - The date string or timestamp
  * @returns Relative time string
  */
-export function getRelativeTime(dateString: string | number | Date): string {
-  const date = new Date(dateString);
-  const now = new Date();
+export function getRelativeTime(dateString: string | number | Date | null | undefined): string {
+  if (!dateString) return 'N/A';
   
-  const secondsAgo = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
-  if (secondsAgo < 60) {
-    return 'just now';
+  try {
+    const date = new Date(dateString);
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return 'Invalid date';
+    }
+    
+    const now = new Date();
+    
+    const secondsAgo = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (secondsAgo < 60) {
+      return 'just now';
+    }
+    
+    const minutesAgo = Math.floor(secondsAgo / 60);
+    if (minutesAgo < 60) {
+      return `${minutesAgo} ${minutesAgo === 1 ? 'minute' : 'minutes'} ago`;
+    }
+    
+    const hoursAgo = Math.floor(minutesAgo / 60);
+    if (hoursAgo < 24) {
+      return `${hoursAgo} ${hoursAgo === 1 ? 'hour' : 'hours'} ago`;
+    }
+    
+    const daysAgo = Math.floor(hoursAgo / 24);
+    if (daysAgo < 30) {
+      return `${daysAgo} ${daysAgo === 1 ? 'day' : 'days'} ago`;
+    }
+    
+    return formatDate(date);
+  } catch (error) {
+    console.error('Error calculating relative time:', error);
+    return 'Invalid date';
   }
-  
-  const minutesAgo = Math.floor(secondsAgo / 60);
-  if (minutesAgo < 60) {
-    return `${minutesAgo} ${minutesAgo === 1 ? 'minute' : 'minutes'} ago`;
-  }
-  
-  const hoursAgo = Math.floor(minutesAgo / 60);
-  if (hoursAgo < 24) {
-    return `${hoursAgo} ${hoursAgo === 1 ? 'hour' : 'hours'} ago`;
-  }
-  
-  const daysAgo = Math.floor(hoursAgo / 24);
-  if (daysAgo < 30) {
-    return `${daysAgo} ${daysAgo === 1 ? 'day' : 'days'} ago`;
-  }
-  
-  return formatDate(date);
 } 

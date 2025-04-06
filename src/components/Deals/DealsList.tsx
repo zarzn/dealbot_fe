@@ -981,38 +981,6 @@ export const DealsList: React.FC<DealsListProps> = ({
         {!isLoading && !error && deals.length > 0 && (
           <div className="text-center text-white/50 text-sm mt-4">
             Showing {deals.length} of {totalItems} results • Page {page} of {totalPages}
-            
-            {/* Debug buttons - only visible in development */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="mt-4 flex justify-center gap-2">
-                <button 
-                  className="bg-purple px-2 py-1 text-xs rounded" 
-                  onClick={() => {
-                    // Direct test of page 2
-                    console.log('[DealsList] Debug: Directly testing page 2');
-                    handlePageChange(2);
-                  }}
-                >
-                  Test Page 2
-                </button>
-                <button 
-                  className="bg-purple px-2 py-1 text-xs rounded" 
-                  onClick={async () => {
-                    // Direct API call test
-                    console.log('[DealsList] Debug: Direct API call to page 2');
-                    const query = { ...createSearchQuery(), page: 2 };
-                    try {
-                      const result = await dealsService.searchDeals(query);
-                      console.log('[DealsList] Debug API result:', result);
-                    } catch (err) {
-                      console.error('[DealsList] Debug API error:', err);
-                    }
-                  }}
-                >
-                  Test API Page 2
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>

@@ -10,6 +10,7 @@ import ConnectWalletButton from '@/components/Wallet/ConnectWalletButton';
 import PurchaseTokensModal from '@/components/Wallet/PurchaseTokensModal';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 
 export default function WalletPage() {
   const [balance, setBalance] = useState<number>(0);
@@ -18,6 +19,14 @@ export default function WalletPage() {
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const searchParams = useSearchParams();
+
+  // Get balance data
+  const { isLoading: isBalanceLoading, data: balanceData, error: balanceError, refetch: refetchBalance } = 
+    useQuery({
+      queryKey: ['tokenBalance'],
+      queryFn: () => walletService.getBalance(),
+      staleTime: 30 * 1000, // 30 seconds
+    });
 
   useEffect(() => {
     fetchWalletData();

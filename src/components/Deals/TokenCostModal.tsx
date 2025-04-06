@@ -93,42 +93,43 @@ export default function TokenCostModal({
         )}
 
         {!hasEnoughTokens && (
-          <div className="flex items-start gap-3 p-3 bg-red-500/10 text-red-400 rounded-lg text-sm">
+          <div className="flex items-start gap-3 p-3 bg-amber-500/10 text-amber-400 rounded-lg text-sm">
             <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium">Insufficient Balance</p>
-              <p className="text-red-400/70 mt-1">
-                You need {(actualTokenCost - userBalance).toFixed(2)} more AIDL tokens to perform this action.
+              <p className="font-medium">Balance Warning</p>
+              <p className="text-amber-400/90 mt-1">
+                Your displayed balance ({userBalance.toFixed(2)} AIDL) appears to be lower than the cost ({actualTokenCost} AIDL). 
+                You can still proceed, but the operation will fail if your actual balance is insufficient.
               </p>
             </div>
           </div>
         )}
 
         <div className="flex gap-3">
-          {hasEnoughTokens ? (
-            <>
-              <button
-                onClick={onConfirm}
-                className="flex-1 px-4 py-2 bg-purple rounded-lg text-white hover:bg-purple/80 transition"
-              >
-                Confirm ({actualTokenCost} AIDL)
-              </button>
-              <button
-                onClick={onClose}
-                className="flex-1 px-4 py-2 bg-white/[0.05] rounded-lg hover:bg-white/[0.1] transition"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
+          <button
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2 bg-purple rounded-lg text-white hover:bg-purple/80 transition"
+          >
+            Confirm ({actualTokenCost} AIDL)
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 bg-white/[0.05] rounded-lg hover:bg-white/[0.1] transition"
+          >
+            Cancel
+          </button>
+        </div>
+        
+        {!hasEnoughTokens && (
+          <div className="flex justify-center mt-2">
             <Link
               href="/dashboard/wallet"
-              className="flex-1 px-4 py-2 bg-purple rounded-lg text-white hover:bg-purple/80 transition text-center"
+              className="text-sm text-purple hover:underline"
             >
-              Add Tokens
+              Add more tokens to your account
             </Link>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

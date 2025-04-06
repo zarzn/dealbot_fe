@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Filter, SlidersHorizontal, Check } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, ArrowDownLeft, SlidersHorizontal, Check } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { walletService } from '@/services/wallet';
@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
+import FilterIcon from '@/components/icons/FilterIcon';
 
 type FilterOption = 'all' | 'credit' | 'debit';
 type SortOption = 'newest' | 'oldest' | 'amount-high' | 'amount-low';
@@ -115,7 +116,7 @@ export default function TransactionsPage() {
         
         <DropdownMenu>
           <DropdownMenuTrigger className="px-4 py-2 bg-white/[0.05] border border-white/10 rounded-lg flex items-center gap-2 hover:bg-white/[0.1] transition">
-            <Filter className="w-5 h-5" />
+            <FilterIcon className="w-5 h-5" />
             <span>Filter</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent>

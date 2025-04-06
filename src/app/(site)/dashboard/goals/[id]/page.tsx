@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Calendar, Tag, ChevronRight, Share, Edit, Trash, AlertCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistance, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { Progress } from '@/components/ui/custom-progress';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -23,6 +23,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 
 // Enhanced types to align with backend
@@ -86,66 +87,64 @@ interface ExtendedGoal extends Goal {
 }
 
 export default function GoalDetailsPage() {
-  const params = useParams();
   const router = useRouter();
+  const params = useParams();
+  const searchParams = useSearchParams();
+  
+  // Get goal ID from either path parameter or query parameter
+  const pathId = params?.id as string;
+  const queryId = searchParams?.get('id');
+  const goalId = pathId || queryId;
+  
   const [goal, setGoal] = useState<ExtendedGoal | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [analytics, setAnalytics] = useState<GoalAnalytics | null>(null);
-  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('details');
+  const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [relatedDeals, setRelatedDeals] = useState<Deal[]>([]);
   const [isLoadingDeals, setIsLoadingDeals] = useState(false);
-  const [activeTab, setActiveTab] = useState("details");
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
-    loadGoal();
-  }, []);
-
-  // Load goal data from the API
-  const loadGoal = async () => {
-    const goalId = params?.id;
-    if (!goalId || Array.isArray(goalId)) {
-      setError("Invalid goal ID");
+    if (goalId) {
+      loadGoal(goalId);
+    } else {
       setIsLoading(false);
-      return;
+      setError("No goal ID provided");
     }
+  }, [goalId]);
 
+  const loadGoal = async (id: string) => {
     try {
       setIsLoading(true);
-      console.log(`Fetching goal with ID: ${goalId}`);
-      const goalData = await goalsService.getGoalById(goalId);
+      setIsLoadingAnalytics(true);
       
-      // Debug notification settings
-      console.log("Goal data received:", goalData);
+      // Load goal and analytics in parallel
+      const [goalData, analyticsData] = await Promise.all([
+        goalsService.getGoalById(id),
+        goalsService.getGoalAnalytics(id).catch(err => {
+          console.error("Error loading analytics:", err);
+          return null;
+        })
+      ]);
       
-      // Cast to ExtendedGoal type for proper type checking
-      const typedGoalData = goalData as ExtendedGoal;
-      setGoal(typedGoalData);
+      setGoal(goalData as ExtendedGoal);
       
-      // Load related data once we have the goal
-      loadAnalytics(goalId as string);
-      loadRelatedDeals(goalId as string);
+      // Handle analytics with type safety
+      if (analyticsData) {
+        setAnalytics(analyticsData as unknown as GoalAnalytics);
+      }
+      
+      setError(null);
+      loadRelatedDeals(id);
     } catch (error: any) {
       console.error("Error loading goal:", error);
-      setError(error.message || 'Failed to load goal');
-      toast.error(error.message || 'Failed to load goal');
+      setError(error.message || "Failed to load goal details");
+      toast.error(error.message || "Failed to load goal details");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Load analytics data for the goal
-  const loadAnalytics = async (goalId: string) => {
-    try {
-      setIsLoadingAnalytics(true);
-      const analyticsData = await goalsService.getGoalAnalytics(goalId);
-      setAnalytics(analyticsData as unknown as GoalAnalytics);
-    } catch (error: any) {
-      console.error("Error loading analytics:", error);
-      // Don't show a toast for analytics error - it's not critical
-    } finally {
       setIsLoadingAnalytics(false);
     }
   };
@@ -166,13 +165,13 @@ export default function GoalDetailsPage() {
     }
   };
 
-  // Handle goal status changes
+  // Update the goal status
   const handleStatusChange = async (newStatus: Goal['status']) => {
     if (!goal || !goal.id) return;
     
     try {
-      await goalsService.updateGoalStatus(goal.id, newStatus);
-      setGoal({ ...goal, status: newStatus });
+      const updatedGoal = await goalsService.updateGoalStatus(goal.id, newStatus);
+      setGoal(updatedGoal as ExtendedGoal);
       toast.success(`Goal status updated to ${newStatus}`);
     } catch (error: any) {
       console.error("Error updating goal status:", error);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { CreateEditDealForm } from '@/components/Deals/CreateEditDealForm';
@@ -8,15 +8,22 @@ import { PageHeader } from '@/components/ui/page-header';
 import { toast } from 'sonner';
 import { DealResponse } from '@/types/deals';
 import { Loader } from '@/components/ui/loader';
+import { useEffect, useState } from 'react';
 
 export default function EditDealPage() {
   const router = useRouter();
   const params = useParams();
-  const id = params?.id as string;
+  const searchParams = useSearchParams();
+  
+  // Get ID from either path parameter or query parameter
+  const pathId = params?.id as string;
+  const queryId = searchParams.get('id');
+  const id = queryId || pathId;
 
   const handleSuccess = (deal: DealResponse) => {
     toast.success('Deal updated successfully');
-    router.push(`/dashboard/deals/${deal.id}`);
+    // Use query parameters for the new navigation
+    router.push(`/dashboard/deals?id=${deal.id}`);
   };
 
   if (!id) {
@@ -31,7 +38,7 @@ export default function EditDealPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link
-          href={`/dashboard/deals/${id}`}
+          href={`/dashboard/deals?id=${id}`}
           className="p-2 hover:bg-white/[0.05] rounded-lg transition"
         >
           <ArrowLeft className="w-5 h-5" />

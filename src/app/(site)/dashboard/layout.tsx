@@ -269,9 +269,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
           <div className="text-xl font-semibold text-white/80">Dashboard</div>
-          <div className="flex items-center">
-            <NotificationCenter />
-          </div>
+          {/* Mobile notification center removed to fix duplicate bell icon */}
         </div>
 
         {/* Main content */}

@@ -34,8 +34,8 @@ const AboutPage = () => {
       {/* Platform Demo */}
       <Video />
 
-      {/* Our Team */}
-      <Team />
+      {/* Our Team - Temporarily disabled */}
+      {/* <Team /> */}
 
       {/* User Reviews */}
       <section className="relative z-20 overflow-hidden pb-20 bg-white/[0.02]">
@@ -50,8 +50,8 @@ const AboutPage = () => {
       {/* Call to Action */}
       <CallToAction />
 
-      {/* Newsletter */}
-      <Newsletter />
+      {/* Newsletter - Temporarily disabled */}
+      {/* <Newsletter /> */}
     </>
   );
 };

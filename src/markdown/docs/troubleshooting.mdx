@@ -1,205 +1,399 @@
 ---
 title: "Troubleshooting Guide"
-excerpt: "Solutions for common issues with the AI Agentic Deals System"
+excerpt: "Solutions for common issues you might encounter while using our platform"
 coverImage: "/images/docs/troubleshooting.jpg"
-date: "2025-03-04"
-author: "AI Agentic Deals Team"
+date: "2024-03-04"
+author: "RebatOn Team"
 ---
 
 # Troubleshooting Guide
 
-This guide provides solutions for common issues you might encounter while using the AI Agentic Deals System.
+Encountering an issue with RebatOn? This guide covers common problems and their solutions to get you back to deal hunting quickly.
 
-## Authentication Issues
+## 
 
-### I can't log in to my account
+### 
 
-If you're unable to log in, try these solutions:
+**Possible causes and solutions:**
 
-1. **Verify your credentials**
-   - Double-check your email address and password
-   - Ensure Caps Lock is not enabled
-   - Try resetting your password via the [forgot password page](/auth/forgot-password)
+1. **Incorrect email or password**
+   - Double-check for typos in your email address
+   - Try resetting your password using the "Forgot Password" link
+   - Check if caps lock is enabled
 
-2. **Clear browser cache and cookies**
-   - This resolves many authentication issues related to cached data
-   - In Chrome: Settings → Privacy and Security → Clear browsing data
-   - In Firefox: Options → Privacy & Security → Cookies and Site Data → Clear Data
-
-3. **Check your email for verification**
-   - New accounts require email verification
-   - Check your spam/junk folder for the verification email
+2. **Account not verified**
+   - Look for a verification email in your inbox (and spam folder)
    - Request a new verification email from the login page
 
-### My session keeps expiring
+3. **Social login issues**
+   - Try logging in directly with your email and password
+   - Ensure you're using the same social account you signed up with
+   - Check if your social account is connected in Account Settings
 
-If you're frequently logged out:
+4. **Browser issues**
+   - Clear your browser cache and cookies
+   - Try using incognito/private mode
+   - Update your browser to the latest version
 
-1. **Check your browser settings**
-   - Ensure your browser isn't set to clear cookies when closed
-   - Verify that you haven't enabled "private browsing" or "incognito" mode
+### 
 
-2. **Update your browser**
-   - Outdated browsers may have issues with JWT token handling
-   - Make sure you're using the latest version of your browser
+**Possible causes and solutions:**
 
-## Wallet Connection Issues
+1. **Email in spam folder**
+   - Check your spam, junk, promotions, or updates folders
+   - Add support@rebaton.ai to your contacts list
 
-### I can't connect my Solana wallet
+2. **Incorrect email address**
+   - Verify you entered the correct email during signup
+   - Contact support if you need to update your email
 
-Common Solana wallet connection issues:
+3. **Email server delays**
+   - Wait up to 15 minutes for delayed emails
+   - Try requesting another email after waiting
 
-1. **Browser extension not detected**
-   - Ensure the wallet extension (e.g., Phantom, Solflare) is installed
-   - Try refreshing the page after making sure the extension is unlocked
+4. **Email blocking**
+   - Temporarily disable email filters
+   - Use a different email address if available
 
-2. **Wrong network selected**
-   - Open your wallet and ensure it's connected to the correct network (Mainnet Beta)
-   - The platform will not recognize wallets connected to Devnet or Testnet
+### 
 
-3. **Permission denied**
-   - If you previously denied connection permission, you'll need to reset it
-   - Check your wallet settings for site permissions
+This typically happens after multiple failed login attempts or suspicious activity detection.
 
-### My token balance isn't updating
+**How to resolve:**
 
-If your token balance appears incorrect:
+1. Wait 30 minutes before trying again
+2. Reset your password using the "Forgot Password" link
+3. Contact support if you continue to experience issues
 
-1. **Network congestion**
-   - During periods of high network activity, transactions may be delayed
-   - Wait a few minutes and refresh the page
+## 
 
-2. **Transaction failed**
-   - Check your wallet's transaction history to see if the transaction failed
-   - Look for error messages in the transaction details
+### 
 
-## Deal Search Issues
-
-### My searches return no results
-
-If you're not seeing any deals:
+**Possible causes and solutions:**
 
 1. **Search terms too specific**
-   - Try using more general terms (e.g., "laptops" instead of specific model numbers)
-   - Remove specific filters that might be too restrictive
+   - Use fewer keywords
+   - Remove specific model numbers or unique identifiers
+   - Try more general category terms
 
-2. **Token balance insufficient**
-   - Some searches require a minimum token balance
-   - Check your wallet section to verify your current balance
+2. **Filters too restrictive**
+   - Reset all filters and try again
+   - Gradually add filters back one at a time
+   - Expand price ranges and other numerical filters
 
-3. **Temporary API issues**
-   - Our scrapers occasionally encounter rate limiting from marketplaces
-   - Try again in a few minutes or search a different category
+3. **No matching deals currently available**
+   - Set up a Deal Goal to be notified when matching deals appear
+   - Try similar products or alternative brands
+   - Save your search to check back later
 
-### Deal analysis is not working
+4. **Regional availability issues**
+   - Check if your region settings are correct in Account Settings
+   - Some deals may be restricted to certain countries
 
-If deal analysis features aren't functioning:
+### 
 
-1. **AI service temporarily unavailable**
-   - Our AI services occasionally undergo maintenance
-   - Try again later or check our status page for updates
+**Possible causes and solutions:**
 
-2. **Insufficient data for analysis**
-   - Some deals may not have enough historical data for comprehensive analysis
-   - Try analyzing more popular products with longer price histories
+1. **Search query misinterpreted**
+   - Use more specific terminology
+   - Try using quotation marks around exact phrases
+   - Use advanced search operators (described in the [Searching Deals](/how-to-use/searching-deals) guide)
 
-## WebSocket Connection Issues
+2. **Profile preferences affecting results**
+   - Check your preference settings in your profile
+   - Temporarily set preferences to default
 
-### Real-time updates not working
+3. **Browser caching old results**
+   - Clear your browser cache
+   - Try the search in incognito/private mode
 
-If you're not receiving real-time updates:
+### 
 
-1. **Check internet connection**
-   - WebSocket connections require a stable internet connection
-   - Try connecting to a different network if available
+Remember that Deal Scores are relative to both historical prices and market conditions. If you believe a score is wrong:
 
-2. **Firewall or proxy blocking WebSockets**
-   - Some network configurations block WebSocket connections
-   - Try using a different network without strict firewall rules
+1. Check the price history tab to understand the context
+2. Look at the breakdown of scoring factors
+3. Use the "Report Issue" button on the deal page to notify our team
+4. Consider if you have different criteria than our algorithm (specialized needs, etc.)
 
-3. **Manually reconnect**
-   - Log out and log back in to re-establish the WebSocket connection
-   - Refresh the page to attempt reconnection
+## 
 
-## Performance Issues
+### 
 
-### The application is slow or unresponsive
+**Possible causes and solutions:**
 
-If the platform is performing poorly:
+1. **Notification settings disabled**
+   - Check Account Settings > Notifications
+   - Ensure the specific notification types are enabled
+   - Verify that your notification methods (email, browser, mobile) are enabled
 
-1. **Check your internet connection**
-   - Run a speed test to verify your connection is stable
-   - Try connecting to a different network if available
+2. **Browser notification permissions**
+   - Check that your browser allows notifications from our site
+   - Look for the notification icon in your address bar to manage permissions
 
-2. **Clear browser cache**
-   - Accumulated cache can slow down web applications
-   - Clear your browser's cache and temporary files
-
-3. **Close unused tabs and applications**
-   - Limited system resources can impact performance
-   - Close other resource-intensive applications and browser tabs
-
-4. **Try a different browser**
-   - If issues persist, try accessing the platform in a different browser
-   - Chrome and Firefox generally provide the best performance
-
-## Mobile-Specific Issues
-
-### Display problems on mobile devices
-
-If the interface doesn't display correctly on your mobile device:
-
-1. **Use landscape orientation**
-   - Some complex features display better in landscape mode
-   - Try rotating your device
-
-2. **Enable desktop mode**
-   - For tablets or larger phones, request the desktop site
-   - In most mobile browsers, this option is in the menu or settings
-
-3. **Update your mobile browser**
-   - Older mobile browsers may have compatibility issues
-   - Update to the latest version available
-
-## Account Management Issues
-
-### I didn't receive verification email
-
-If you didn't receive your verification email:
-
-1. **Check spam/junk folders**
-   - Verification emails are sometimes filtered as spam
+3. **Email issues**
+   - Check spam folders
+   - Verify your email address is correct
    - Add our domain to your safe senders list
 
-2. **Verify email address**
-   - Make sure you entered your email address correctly
-   - Request a new verification email from the login page
+4. **Mobile app settings**
+   - Ensure app notifications are enabled in your device settings
+   - Check that background app refresh is enabled
+   - Verify you're signed in to the same account on all devices
 
-### I can't update my profile
+### 
 
-If you're unable to update your profile information:
+This can happen when marketplace data hasn't synchronized properly:
 
-1. **Check required fields**
-   - All required fields must be completed
-   - Look for error messages indicating missing information
+1. Click the "Refresh" button on the deal card
+2. Visit the deal page to trigger a manual refresh
+3. If the issue persists, report it using the "Report Issue" button
 
-2. **Session timeout**
-   - Your session may have expired during a long form edit
-   - Log in again and try updating your profile
+### 
 
-## Getting Additional Help
+**Possible causes and solutions:**
 
-If you've tried the relevant troubleshooting steps and still have issues:
+1. **Account limit reached**
+   - Free accounts can track up to 3 deals
+   - Check your current plan limits in Account Settings
+   - Consider upgrading your plan or purchasing tracking slots
 
-1. **Contact Support**
-   - Email: support@agentic-deals.example.com
-   - Include detailed information about your issue
-   - Mention troubleshooting steps you've already tried
+2. **Technical glitch**
+   - Try logging out and back in
+   - Clear your browser cache and cookies
+   - Try using a different browser or device
 
-2. **Check System Status**
-   - Visit our [status page](https://status.agentic-deals.example.com)
-   - Check for any ongoing service disruptions
+## 
 
-3. **Community Forum**
-   - Our [community forum](/community) may have solutions from other users
-   - Search for similar issues before posting a new question 
+### 
+
+**Possible causes and solutions:**
+
+1. **Goal criteria too specific or restrictive**
+   - Edit your goal to broaden the requirements
+   - Increase your maximum price
+   - Remove some specific feature requirements
+
+2. **Goal description unclear**
+   - Add more details about what you're looking for
+   - Use specific product categories and common terms
+   - Avoid abbreviations the system might not understand
+
+3. **Goal processing delay**
+   - New goals can take up to 24 hours to start generating results
+   - Check back later or adjust notification settings
+
+### 
+
+If goal recommendations don't match what you're looking for:
+
+1. Click "Not Relevant" on inappropriate recommendations
+2. Use the feedback form to explain why it's not relevant
+3. Edit your goal with more specific requirements
+4. Check that your goal description isn't ambiguous or contradictory
+
+## 
+
+### 
+
+**Possible causes and solutions:**
+
+1. **Recent token usage**
+   - Check your token history in Wallet to see recent usage
+   - Look for automated renewals or subscription charges
+
+2. **Token expiration**
+   - Check if tokens have expired (free tokens expire after 90 days)
+   - Look for expiration notices in your email or notifications
+
+3. **Account sync issue**
+   - Log out and log back in
+   - Try refreshing the wallet page
+
+If you still believe there's an error, contact support with details about the missing tokens.
+
+### 
+
+**Possible causes and solutions:**
+
+1. **Payment method issues**
+   - Check that your payment card is valid and not expired
+   - Verify billing address matches what's on file with your bank
+   - Try a different payment method
+
+2. **Transaction blocks**
+   - Check with your bank if they're blocking the transaction
+   - Temporarily disable security features that might block online purchases
+
+3. **Regional restrictions**
+   - Confirm that purchases are supported in your region
+   - Try using a different payment method supported in your region
+
+## 
+
+### 
+
+**Possible causes and solutions:**
+
+1. **Expired content**
+   - Deals may have expired or been removed
+   - Shares with expiration dates may have elapsed
+   - Check your Shared Deals dashboard for status
+
+2. **Privacy settings**
+   - Verify the visibility setting (public vs. private)
+   - Ensure recipients are logged in if the share is private
+
+3. **Link format issues**
+   - Make sure the entire link was copied and shared
+   - Try regenerating the share link
+
+### 
+
+**Possible causes and solutions:**
+
+1. **Popup blockers**
+   - Disable popup blockers for our site
+   - Right-click and copy the link to share manually instead
+
+2. **Social media login issues**
+   - Ensure you're logged into the social media platform
+   - Try sharing in a different browser
+
+3. **Platform restrictions**
+   - Some platforms may restrict certain links
+   - Try another sharing method or platform
+
+## 
+
+### 
+
+**Possible causes and solutions:**
+
+1. **App needs updating**
+   - Check for updates in the App Store or Google Play
+   - Install the latest version
+
+2. **Device issues**
+   - Restart your device
+   - Close other apps running in background
+   - Check for system updates
+
+3. **Cache issues**
+   - Clear the app cache in your device settings
+   - Log out and log back in
+   - As a last resort, uninstall and reinstall the app
+
+### 
+
+**Possible causes and solutions:**
+
+1. **Camera permissions**
+   - Check that camera permissions are enabled for the app
+   - Go to device settings to grant necessary permissions
+
+2. **Poor lighting or focus**
+   - Ensure adequate lighting
+   - Hold the phone steady and give it time to focus
+   - Make sure the barcode is clean and undamaged
+
+3. **Unsupported barcode type**
+   - Confirm we support the barcode type you're scanning
+   - Try manually searching for the product instead
+
+## 
+
+### 
+
+**Possible causes and solutions:**
+
+1. **Internet connection**
+   - Check your internet speed at [speedtest.net](https://www.speedtest.net)
+   - Try connecting to a different network
+   - Disable VPNs or proxies temporarily
+
+2. **Browser issues**
+   - Clear browser cache and cookies
+   - Disable extensions, especially ad blockers
+   - Try our lightweight mode (toggle in footer)
+   - Update your browser to the latest version
+
+3. **Device performance**
+   - Close other applications and tabs
+   - Restart your device
+   - Try a different device if possible
+
+### 
+
+**Possible causes and solutions:**
+
+1. **Browser compatibility**
+   - Try a different browser (Chrome, Firefox, Safari, Edge)
+   - Update your current browser to the latest version
+
+2. **JavaScript or CSS issues**
+   - Ensure JavaScript is enabled
+   - Clear browser cache and reload
+   - Disable browser extensions that might interfere
+
+3. **Connectivity problems**
+   - Check for stable internet connection
+   - Try a different network
+
+## 
+
+### 
+
+**Possible causes and solutions:**
+
+1. **Card issues**
+   - Check that your card isn't expired
+   - Verify you have sufficient funds
+   - Confirm billing address matches your card
+
+2. **Bank restrictions**
+   - Contact your bank to authorize the transaction
+   - Check for fraud alerts or blocks
+
+3. **Payment processor issues**
+   - Try a different payment method
+   - Wait a few hours and try again
+
+### 
+
+If you've subscribed but don't see your benefits:
+
+1. Check Account Settings > Subscription to verify status
+2. Look for confirmation emails or receipts
+3. Try logging out and back in
+4. Allow up to 15 minutes for systems to sync after subscribing
+
+## 
+
+If you're still experiencing issues after trying these troubleshooting steps:
+
+1. **Check System Status**
+   Visit our [status page](https://status.rebaton.ai) to see if there are any known issues or outages.
+
+2. **Contact Support**
+   - Use the Help button in the bottom right corner of any page
+   - Email support@rebaton.ai with details of your issue
+   - Include screenshots, error messages, and steps to reproduce the problem
+
+3. **Visit Our Community Forum**
+   Browse or post on our [community forum](/community) where other users might have experienced and solved similar issues.
+
+When contacting support, please include:
+- Your account email
+- Device and browser/app version
+- Steps to reproduce the issue
+- What you expected to happen
+- What actually happened
+- Any error messages you received
+- Screenshots if possible
+
+This helps us resolve your issue much faster! 
+
+
+
+

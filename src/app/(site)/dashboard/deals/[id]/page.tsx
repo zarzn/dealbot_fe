@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { DealDetail } from '@/components/Deals/DealDetail';
@@ -11,17 +11,22 @@ import { Button } from '@/components/ui/button';
 import { dealsService } from '@/services/deals';
 import { toast } from 'sonner';
 import { DealResponse } from '@/types/deals';
-import { useEffect as useWindowEffect } from 'react';
 
 export default function DealDetailsPage() {
   const router = useRouter();
   const params = useParams();
-  const id = params?.id as string;
+  const searchParams = useSearchParams();
+  
+  // Get ID from either path parameter or query parameter
+  const pathId = params?.id as string;
+  const queryId = searchParams.get('id');
+  const id = queryId || pathId;
+  
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deal, setDeal] = useState<DealResponse | null>(null);
   
-  useWindowEffect(() => {
+  useEffect(() => {
     const fixAccordionClicks = () => {
       document.querySelectorAll('[data-state="closed"] button, [data-state="open"] button').forEach(trigger => {
         if (!trigger.hasAttribute('data-fixed')) {

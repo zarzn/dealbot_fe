@@ -161,7 +161,7 @@ export const CreateEditDealForm: React.FC<CreateEditDealFormProps> = ({
       if (onSuccess) {
         onSuccess(response);
       } else {
-        router.push(`/deals/${response.id}`);
+        router.push(`/dashboard/deals?id=${response.id}`);
       }
     } catch (err) {
       console.error('Error saving deal:', err);

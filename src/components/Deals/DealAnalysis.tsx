@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, AlertTriangle, CheckCircle, Brain, Star, DollarSign, Clock, TrendingUp, RefreshCw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import TokenCostModal from './TokenCostModal';
+import { useUserStore } from '@/stores/userStore';
+import { walletService } from '@/services/wallet';
 
 interface DealAnalysisProps {
   dealId: string;
@@ -91,14 +93,27 @@ export const DealAnalysisRequestView: React.FC<{
   isFirstAnalysis?: boolean;
 }> = ({ dealId, onRequestAnalysis, isFirstAnalysis = false }) => {
   const [showTokenModal, setShowTokenModal] = useState(false);
+  const [isFetchingBalance, setIsFetchingBalance] = useState(false);
+  const userStore = useUserStore();
   
-  const handleRequestAnalysis = () => {
+  const handleRequestAnalysis = async () => {
     if (isFirstAnalysis) {
       // If it's the first analysis, proceed directly without showing modal
       onRequestAnalysis();
     } else {
-      // Otherwise show the token cost modal
-      setShowTokenModal(true);
+      // Fetch latest balance before showing the token modal
+      setIsFetchingBalance(true);
+      try {
+        await walletService.refreshBalanceAndUpdateStore();
+        console.log(`[DealAnalysis] Updated user balance before showing token cost modal`);
+      } catch (error) {
+        console.error('[DealAnalysis] Failed to update balance before showing token cost modal:', error);
+        // Continue anyway - the modal will use whatever balance is in the store
+      } finally {
+        setIsFetchingBalance(false);
+        // Show the token cost modal
+        setShowTokenModal(true);
+      }
     }
   };
   
@@ -113,49 +128,23 @@ export const DealAnalysisRequestView: React.FC<{
           Get detailed insights and recommendations for this deal
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="text-center p-4">
-          <Brain className="h-16 w-16 mx-auto mb-6 text-white" />
-          
-          <h3 className="text-lg font-medium mb-2">
-            {isFirstAnalysis ? "Your First Analysis is Free!" : "Premium Feature"}
-          </h3>
-          
-          <p className="text-white mb-6">
-            {isFirstAnalysis 
-              ? "Try out our AI deal analysis for free! Get detailed insights about price fairness, market comparison, and personalized recommendations."
-              : "Unlock deep insights with our AI analysis. Understand if this is truly a good deal with data-driven recommendations."}
-          </p>
-          
-          <div className="flex flex-wrap gap-3 justify-center mb-6">
-            <Badge variant="outline" className="text-xs py-2 px-3 preserve-color">
-              <DollarSign className="h-3 w-3 mr-1" />
-              Price Analysis
-            </Badge>
-            <Badge variant="outline" className="text-xs py-2 px-3 preserve-color">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              Market Comparison
-            </Badge>
-            <Badge variant="outline" className="text-xs py-2 px-3 preserve-color">
-              <Star className="h-3 w-3 mr-1" />
-              Deal Score
-            </Badge>
-            <Badge variant="outline" className="text-xs py-2 px-3 preserve-color">
-              <Clock className="h-3 w-3 mr-1" />
-              Timing Advice
-            </Badge>
-          </div>
-          
+      
+      <CardContent className="flex justify-center items-center pb-6">
+        <div className="text-center">
           <Button 
             onClick={handleRequestAnalysis} 
             size="lg"
             className="relative overflow-hidden group"
+            disabled={isFetchingBalance}
           >
             <span className="relative z-10">
               {isFirstAnalysis ? "Get Your Free Analysis" : "Analyze This Deal"}
             </span>
             {isFirstAnalysis && (
               <span className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-blue-500/20 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
+            )}
+            {isFetchingBalance && (
+              <Loader2 className="ml-2 h-4 w-4 animate-spin" />
             )}
           </Button>
           
@@ -742,11 +731,14 @@ export const DealAnalysisResult: React.FC<{
   );
 };
 
-const DealAnalysis: React.FC<DealAnalysisProps> = ({ dealId }) => {
+export function useAnalysis(dealId: string) {
   const [analysis, setAnalysis] = useState<ExtendedAIAnalysis | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState<boolean>(
+    typeof window !== 'undefined' && localStorage.getItem('has_used_analysis_feature') !== 'true'
+  );
+  const userStore = useUserStore();
   
   // Load the analysis data when the component mounts
   useEffect(() => {
@@ -821,6 +813,14 @@ const DealAnalysis: React.FC<DealAnalysisProps> = ({ dealId }) => {
       
       // Poll for the completed analysis
       startPolling();
+      
+      // Update the token balance after successful analysis request
+      try {
+        await walletService.refreshBalanceAndUpdateStore();
+        console.log('[DealAnalysis] Updated token balance after analysis request');
+      } catch (balanceError) {
+        console.error('[DealAnalysis] Failed to update balance after analysis request:', balanceError);
+      }
     } catch (error: any) {
       console.error('Error requesting deal analysis:', error);
       setError(error.message || 'Failed to request analysis');
@@ -848,6 +848,183 @@ const DealAnalysis: React.FC<DealAnalysisProps> = ({ dealId }) => {
           
           if (data.status === 'completed') {
             toast.success('Deal analysis completed!');
+            
+            // Update the token balance when analysis is completed
+            try {
+              await walletService.refreshBalanceAndUpdateStore();
+              console.log('[DealAnalysis] Updated token balance after analysis completed');
+            } catch (balanceError) {
+              console.error('[DealAnalysis] Failed to update balance after analysis:', balanceError);
+            }
+          } else if (data.status === 'error') {
+            toast.error('Analysis failed. Please try again.');
+          }
+        }
+      } catch (error) {
+        console.error('Error polling analysis status:', error);
+        clearInterval(pollInterval);
+        setLoading(false);
+      }
+    }, 5000); // Poll every 5 seconds
+    
+    // Clean up the interval when the component unmounts
+    return () => clearInterval(pollInterval);
+  };
+  
+  // Render the appropriate view based on the analysis status
+  if (loading) {
+    return <DealAnalysisLoading />;
+  }
+  
+  if (error) {
+    return <DealAnalysisError error={error} onRetry={fetchAnalysis} />;
+  }
+  
+  // If no analysis exists or status is not_found, show the request view
+  if (!analysis || analysis.status === 'not_found') {
+    return (
+      <DealAnalysisRequestView 
+        dealId={dealId} 
+        onRequestAnalysis={requestAnalysis}
+        isFirstAnalysis={isFirstTimeUser}
+      />
+    );
+  }
+  
+  // If analysis is pending, show the pending view
+  if (analysis.status === 'pending') {
+    return <DealAnalysisPending />;
+  }
+  
+  // Otherwise, show the analysis results
+  return <DealAnalysisResult analysis={analysis} onRefresh={requestAnalysis} />;
+}
+
+const DealAnalysis: React.FC<DealAnalysisProps> = ({ dealId }) => {
+  const [analysis, setAnalysis] = useState<ExtendedAIAnalysis | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState<boolean>(
+    localStorage.getItem('has_used_analysis_feature') !== 'true'
+  );
+  const userStore = useUserStore();
+  
+  // Load the analysis data when the component mounts
+  useEffect(() => {
+    fetchAnalysis();
+    
+    // Check if user has used the analysis feature before
+    // This would typically come from the user profile or a specific API endpoint
+    // For now, we'll just set a flag based on localStorage
+    const hasUsedAnalysisFeature = localStorage.getItem('has_used_analysis_feature');
+    setIsFirstTimeUser(!hasUsedAnalysisFeature);
+  }, [dealId]);
+  
+  const fetchAnalysis = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // First check if there's a cached analysis
+      const cachedAnalysis = dealsService.getCachedAnalysis(dealId);
+      if (cachedAnalysis && cachedAnalysis.status === 'completed') {
+        console.log("Using cached analysis from dealsService:", cachedAnalysis);
+        setAnalysis(cachedAnalysis as ExtendedAIAnalysis);
+        setLoading(false);
+        
+        // Update first-time user status
+        if (cachedAnalysis.status === 'completed') {
+          localStorage.setItem('has_used_analysis_feature', 'true');
+          setIsFirstTimeUser(false);
+        }
+        return;
+      }
+      
+      // If no cache hit, fetch from API
+      const data = await dealsService.getDealAnalysis(dealId);
+      setAnalysis(data as ExtendedAIAnalysis);
+      
+      // Update first-time user status if this is a valid analysis
+      if (data && data.status === 'completed') {
+        localStorage.setItem('has_used_analysis_feature', 'true');
+        setIsFirstTimeUser(false);
+      }
+    } catch (error: any) {
+      console.error('Error fetching deal analysis:', error);
+      
+      // If no analysis exists, this is expected - we'll show the request view
+      if (error.response?.status === 404) {
+        setAnalysis(null);
+        setError(null);
+      } else {
+        setError(error.message || 'Failed to load analysis data');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const requestAnalysis = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await dealsService.analyzeDeal(dealId);
+      setAnalysis(response as ExtendedAIAnalysis);
+      
+      toast.success('Analysis requested successfully!');
+      
+      // If this was a first-time user, update the status
+      if (isFirstTimeUser) {
+        localStorage.setItem('has_used_analysis_feature', 'true');
+        setIsFirstTimeUser(false);
+      }
+      
+      // Poll for the completed analysis
+      startPolling();
+      
+      // Update the token balance after successful analysis request
+      try {
+        await walletService.refreshBalanceAndUpdateStore();
+        console.log('[DealAnalysis] Updated token balance after analysis request');
+      } catch (balanceError) {
+        console.error('[DealAnalysis] Failed to update balance after analysis request:', balanceError);
+      }
+    } catch (error: any) {
+      console.error('Error requesting deal analysis:', error);
+      setError(error.message || 'Failed to request analysis');
+      setLoading(false);
+      
+      if (error.response?.status === 402) {
+        toast.error('Insufficient tokens. Please purchase more tokens to use this feature.');
+      } else {
+        toast.error('Failed to request analysis. Please try again.');
+      }
+    }
+  };
+  
+  // Poll for the analysis status until it's completed
+  const startPolling = () => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const data = await dealsService.getDealAnalysis(dealId);
+        setAnalysis(data as ExtendedAIAnalysis);
+        
+        // If the analysis is completed or failed, stop polling
+        if (data.status !== 'pending') {
+          clearInterval(pollInterval);
+          setLoading(false);
+          
+          if (data.status === 'completed') {
+            toast.success('Deal analysis completed!');
+            
+            // Update the token balance when analysis is completed
+            try {
+              await walletService.refreshBalanceAndUpdateStore();
+              console.log('[DealAnalysis] Updated token balance after analysis completed');
+            } catch (balanceError) {
+              console.error('[DealAnalysis] Failed to update balance after analysis:', balanceError);
+            }
           } else if (data.status === 'error') {
             toast.error('Analysis failed. Please try again.');
           }

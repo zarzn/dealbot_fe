@@ -139,7 +139,6 @@ export const ShareModal: React.FC<ShareModalProps> = ({
         await apiClient.get('/api/v1/auth/verify-token', {
           headers: {
             'Authorization': `Bearer ${token}`,
-            'X-No-Auth-Redirect': 'true'
           }
         });
         console.log('[AUTH DEBUG] Token verification successful');
@@ -203,12 +202,36 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       const response = await createShareableContent(request);
       console.log('[SHARE DEBUG] Share request successful:', response);
       
+      // Always use the production domain for share links
+      let sharableUrl = response.shareable_link;
+      
+      if (typeof window !== 'undefined' && sharableUrl) {
+        // Get the production URL from environment variables
+        const productionDomain = process.env.NEXT_PUBLIC_APP_URL || 'https://rebaton.ai';
+        
+        if (!sharableUrl.startsWith('http')) {
+          // If it's a relative URL, prepend the production domain
+          sharableUrl = `${productionDomain}${sharableUrl.startsWith('/') ? '' : '/'}${sharableUrl}`;
+          console.log('[SHARE DEBUG] Converted relative URL to absolute using production domain:', sharableUrl);
+        } else {
+          try {
+            // For any absolute URL, replace the domain part with the production domain
+            const urlObj = new URL(sharableUrl);
+            sharableUrl = sharableUrl.replace(`${urlObj.protocol}//${urlObj.host}`, productionDomain);
+            console.log('[SHARE DEBUG] Replaced domain with production domain:', sharableUrl);
+          } catch (urlError) {
+            console.error('[SHARE DEBUG] Error parsing URL:', urlError);
+            // If URL parsing fails, keep the original URL
+          }
+        }
+      }
+      
       // Store share URL in state and local storage for resilience
-      setShareUrl(response.shareable_link);
+      setShareUrl(sharableUrl);
       
       // Store in localStorage to prevent loss during redirects
-      if (typeof window !== 'undefined' && response.shareable_link) {
-        localStorage.setItem('last_share_url', response.shareable_link);
+      if (typeof window !== 'undefined' && sharableUrl) {
+        localStorage.setItem('last_share_url', sharableUrl);
         localStorage.setItem('last_share_title', title);
         console.log('[SHARE DEBUG] Stored share URL in localStorage');
       }
@@ -276,37 +299,23 @@ export const ShareModal: React.FC<ShareModalProps> = ({
 
   const shareOnTwitter = () => {
     if (shareUrl) {
-      // First verify authentication is still valid
-      verifyAuthentication().then(isAuthenticated => {
-        if (isAuthenticated) {
-          const text = encodeURIComponent(`${title} ${description ? `- ${description}` : ''}`);
-          const url = encodeURIComponent(shareUrl);
-          safeOpenWindow(`https://twitter.com/intent/tweet?text=${text}&url=${url}`);
-        } else {
-          toast.error('Authentication required to share on social media');
-        }
-      });
+      const text = encodeURIComponent(title);
+      const url = encodeURIComponent(shareUrl);
+      safeOpenWindow(`https://twitter.com/intent/tweet?text=${text}&url=${url}`);
     }
   };
 
   const shareOnFacebook = () => {
     if (shareUrl) {
-      // First verify authentication is still valid
-      verifyAuthentication().then(isAuthenticated => {
-        if (isAuthenticated) {
-          const url = encodeURIComponent(shareUrl);
-          safeOpenWindow(`https://www.facebook.com/sharer/sharer.php?u=${url}`);
-        } else {
-          toast.error('Authentication required to share on social media');
-        }
-      });
+      const url = encodeURIComponent(shareUrl);
+      safeOpenWindow(`https://www.facebook.com/sharer/sharer.php?u=${url}`);
     }
   };
 
   const shareByEmail = () => {
     if (shareUrl) {
       const subject = encodeURIComponent(title);
-      const body = encodeURIComponent(`${description ? `${description}\n\n` : ''}${shareUrl}`);
+      const body = encodeURIComponent(`${description}\n\n${shareUrl}`);
       safeOpenWindow(`mailto:?subject=${subject}&body=${body}`);
     }
   };
@@ -536,7 +545,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                     </div>
 
                     <div className="mt-6 flex justify-end space-x-3">
-                      <Button onClick={onClose} className="bg-primary hover:bg-primary/90 text-white">
+                      <Button onClick={onClose} variant="default" className="text-white">
                         Close
                       </Button>
                     </div>

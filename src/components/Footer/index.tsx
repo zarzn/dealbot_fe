@@ -20,7 +20,7 @@ const Logo = ({ linkWrapper = false }) => {
     >
       <Image 
         src="/images/logo/logo.png" 
-        alt="Agentic Deals Logo" 
+        alt="RebatOn Logo" 
         width={168} 
         height={48} 
         className="h-12 w-auto"
@@ -47,7 +47,7 @@ const Footer = () => {
               </Link>
 
               <p className="mb-12 xl:w-4/5 text-white/70">
-                Agentic Deals leverages advanced AI to help you find the best deals across multiple marketplaces like Amazon, Walmart, eBay, and Google Shopping. Our system monitors prices, predicts trends, and sends personalized alerts when deals match your criteria, saving you time and money.
+                RebatOn leverages advanced AI to help you find the best deals across multiple marketplaces like Amazon, Walmart, eBay, and Google Shopping. Our system monitors prices, predicts trends, and sends personalized alerts when deals match your criteria, saving you time and money.
               </p>
 
               <div className="flex items-center gap-5">
@@ -119,7 +119,7 @@ const Footer = () => {
               </div>
 
               <p className="mt-5 text-sm text-white/50">
-                © 2024 Agentic Deals. All rights reserved.
+                © 2024 RebatOn. All rights reserved.
               </p>
             </div>
 

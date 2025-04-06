@@ -39,6 +39,8 @@ import ShareButton from './ShareButton';
 import { BiEdit } from 'react-icons/bi';
 import { FiMoreVertical } from 'react-icons/fi';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useUserStore } from '@/stores/userStore';
+import { walletService } from '@/services/wallet';
 
 // Define a divider component as a fallback if the separator is not available yet
 const Divider: React.FC<{className?: string}> = ({className}) => (
@@ -213,6 +215,7 @@ export const DealDetail: React.FC<DealDetailProps> = ({
     localStorage.getItem('has_used_analysis_feature') !== 'true'
   );
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const userStore = useUserStore();
 
   useEffect(() => {
     // Check if mobile
@@ -290,7 +293,7 @@ export const DealDetail: React.FC<DealDetailProps> = ({
       if (onDelete) {
         onDelete();
       } else {
-        // Using the correct navigation method for the App Router
+        // Using the correct navigation method for the App Router with query params
         router.push('/dashboard/deals');
       }
     } catch (err) {
@@ -327,6 +330,10 @@ export const DealDetail: React.FC<DealDetailProps> = ({
       console.error("Error tracking deal:", err);
       toast.error("Failed to update tracking");
     }
+  };
+
+  const handleEdit = () => {
+    router.push(`/dashboard/deals/edit?id=${dealId}`);
   };
 
   const formatDate = (dateString?: string) => {
@@ -400,6 +407,14 @@ export const DealDetail: React.FC<DealDetailProps> = ({
       
       // Start polling for updates
       startPolling();
+      
+      // Update the token balance after successful analysis request
+      try {
+        await walletService.refreshBalanceAndUpdateStore();
+        console.log('[DealDetail] Updated token balance after analysis request');
+      } catch (balanceError) {
+        console.error('[DealDetail] Failed to update balance after analysis request:', balanceError);
+      }
     } catch (error: any) {
       console.error('Error requesting deal analysis:', error);
       setError(error.message || 'Failed to request analysis');

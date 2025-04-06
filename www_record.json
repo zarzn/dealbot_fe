@@ -1,1 +1,0 @@
-{"Comment":"Creating CNAME record for www subdomain","Changes":[{"Action":"CREATE","ResourceRecordSet":{"Name":"www.rebaton.ai","Type":"CNAME","TTL":300,"ResourceRecords":[{"Value":"d3irpl0o2ddv9y.cloudfront.net"}]}}]}

@@ -3,8 +3,12 @@
 import { Providers } from '@/components/providers';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { useStaticRoutingFix } from '@/lib/routing';
 
 export function ClientProviders({ children }: { children: React.ReactNode }) {
+  // Apply the routing fix for static export
+  useStaticRoutingFix();
+  
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {

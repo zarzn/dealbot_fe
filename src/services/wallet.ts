@@ -1,6 +1,7 @@
 import { apiClient } from '@/lib/api-client';
 import type { TokenTransaction, WalletInfo, TokenStats, TokenPrice } from '@/types/wallet';
 import { toast } from 'react-hot-toast';
+import { useUserStore } from '@/stores/userStore';
 
 interface PurchaseTransactionResponse {
   transaction: any; // Solana transaction object
@@ -11,6 +12,9 @@ interface PurchaseRequest {
   amount: number;
   priceInSOL: number;
 }
+
+// Track if there's an in-progress balance refresh to avoid duplicate calls
+let isRefreshingBalance = false;
 
 class WalletService {
   async getBalance(): Promise<number> {
@@ -38,6 +42,48 @@ class WalletService {
         console.error('WalletService: Error message:', error.message);
       }
       throw error;
+    }
+  }
+
+  /**
+   * Refreshes the user's token balance and updates the user store
+   * This is useful after token-consuming operations
+   * @returns {Promise<number>} The updated balance
+   */
+  async refreshBalanceAndUpdateStore(): Promise<number> {
+    // Prevent multiple simultaneous refresh calls
+    if (isRefreshingBalance) {
+      console.log('WalletService: Balance refresh already in progress, skipping');
+      return -1;
+    }
+
+    try {
+      isRefreshingBalance = true;
+      console.log('WalletService: Refreshing token balance and updating store');
+      
+      const latestBalance = await this.getBalance();
+      
+      // Get the userStore and update the balance
+      const userStore = useUserStore.getState();
+      userStore.setTokenBalance(latestBalance);
+      
+      console.log(`WalletService: Updated token balance in store: ${latestBalance}`);
+      
+      // Dispatch a custom event to notify components about the balance update
+      if (typeof window !== 'undefined') {
+        const event = new CustomEvent('token-balance-updated', { 
+          detail: { balance: latestBalance, timestamp: Date.now() }
+        });
+        window.dispatchEvent(event);
+        console.log('WalletService: Dispatched token-balance-updated event');
+      }
+      
+      return latestBalance;
+    } catch (error) {
+      console.error('WalletService: Failed to refresh balance:', error);
+      throw error;
+    } finally {
+      isRefreshingBalance = false;
     }
   }
 

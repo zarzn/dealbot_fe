@@ -21,9 +21,9 @@ const menuData: Menu[] = [
   },
   {
     id: 3,
-    title: "Docs",
+    title: "How to Use",
     newTab: false,
-    path: "/docs",
+    path: "/how-to-use",
   },
   /* Commented out Pages menu item
   {
@@ -63,9 +63,9 @@ const menuData: Menu[] = [
       },
       {
         id: 35,
-        title: "Docs",
+        title: "How to Use",
         newTab: false,
-        path: "/docs",
+        path: "/how-to-use",
       },
       {
         id: 36,

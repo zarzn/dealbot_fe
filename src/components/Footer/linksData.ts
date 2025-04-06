@@ -37,13 +37,13 @@ export const companiesLink: FooterLink[] = [
   {
     id: 12,
     title: "Privacy Policy",
-    href: "#",
+    href: "/privacy-policy",
     newTab: false,
   },
   {
     id: 13,
     title: "Terms of Service",
-    href: "#",
+    href: "/terms-of-service",
     newTab: false,
   },
 ];
@@ -52,25 +52,19 @@ export const supportsLink: FooterLink[] = [
   {
     id: 21,
     title: "User Guide",
-    href: "#",
-    newTab: false,
-  },
-  {
-    id: 22,
-    title: "Marketplace APIs",
-    href: "#",
+    href: "/how-to-use",
     newTab: false,
   },
   {
     id: 23,
     title: "Contact Support",
-    href: "#",
+    href: "/contact-support",
     newTab: false,
   },
   {
     id: 24,
     title: "FAQ",
-    href: "#",
+    href: "/how-to-use/faq",
     newTab: false,
   },
 ];

@@ -16,7 +16,6 @@ const BASE_PATH = '/api/v1';
 const createNoRedirectRequestConfig = (token?: string): AxiosRequestConfig => {
   const config: AxiosRequestConfig = {
     headers: {
-      'X-No-Auth-Redirect': 'true'
     }
   };
   

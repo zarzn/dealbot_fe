@@ -57,8 +57,26 @@ const nextConfig = {
   pageExtensions: ['tsx', 'ts', 'jsx', 'js', 'md', 'mdx'],
 };
 
-// Only add rewrites in development mode (and explicitly check for output option)
-if (process.env.NODE_ENV !== 'production' && nextConfig.output !== 'export') {
+// Only add redirects in non-production mode
+if (process.env.NODE_ENV !== 'production') {
+  nextConfig.redirects = async () => {
+    return [
+      {
+        source: '/docs',
+        destination: '/how-to-use',
+        permanent: true,
+      },
+      {
+        source: '/docs/:slug*',
+        destination: '/how-to-use/:slug*',
+        permanent: true,
+      }
+    ];
+  };
+}
+
+// Only add rewrites in development mode
+if (process.env.NODE_ENV !== 'production') {
   nextConfig.rewrites = async () => {
     return [
       {

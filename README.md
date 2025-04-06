@@ -1,6 +1,6 @@
-# AI Agentic Deals System - Frontend
+# RebatOn - Frontend
 
-This repository contains the frontend application for the AI Agentic Deals System, built with Next.js.
+This repository contains the frontend application for the RebatOn platform, built with Next.js.
 
 ## Table of Contents
 
@@ -26,8 +26,8 @@ Before working with the frontend, ensure you have:
 
 1. Clone the repository (if you haven't already):
    ```bash
-   git clone https://github.com/your-repository/ai-agentic-deals-system.git
-   cd ai-agentic-deals-system
+   git clone https://github.com/your-repository/rebaton.git
+   cd rebaton
    ```
 
 2. Navigate to the frontend directory:

@@ -6,6 +6,13 @@
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 /**
+ * Site Base URL
+ * - Uses environment variable in production
+ * - Falls back to localhost in development
+ */
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+/**
  * WebSocket URL for real-time updates
  * - Uses environment variable in production
  * - Falls back to localhost in development

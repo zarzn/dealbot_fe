@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Coins } from 'lucide-react';
+import { Coins, RefreshCcw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { analyticsService } from '@/services/analytics';
 import { toast } from 'sonner';
@@ -12,11 +12,13 @@ const TokenBalance = () => {
   const { 
     data: dashboardMetrics, 
     isLoading, 
-    error 
+    error,
+    refetch
   } = useQuery({
     queryKey: ['dashboardMetrics'],
     queryFn: () => analyticsService.getDashboardMetrics(),
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds
+    refetchInterval: 30 * 1000, // Also refetch every 30 seconds
     retry: 1,
   });
   
@@ -28,6 +30,17 @@ const TokenBalance = () => {
     }
   }, [error]);
 
+  // Listen for balance update events
+  useEffect(() => {
+    const handleBalanceUpdate = () => {
+      console.log('[TokenBalance] Received balance update event, refetching...');
+      refetch();
+    };
+
+    window.addEventListener('token-balance-updated', handleBalanceUpdate);
+    return () => window.removeEventListener('token-balance-updated', handleBalanceUpdate);
+  }, [refetch]);
+
   // Get token balance from dashboard metrics
   const balance = dashboardMetrics?.tokens.balance ?? null;
 
@@ -35,9 +48,18 @@ const TokenBalance = () => {
     <div>
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-lg font-semibold">Token Balance</h3>
-        <Link href="/dashboard/wallet" className="hover:bg-white/[0.05] p-1 rounded-lg transition">
-          <Coins className="w-5 h-5 text-purple" />
-        </Link>
+        <div className="flex gap-1">
+          <button 
+            onClick={() => refetch()} 
+            className="hover:bg-white/[0.05] p-1 rounded-lg transition" 
+            title="Refresh token balance"
+          >
+            <RefreshCcw className="w-4 h-4 text-white/50" />
+          </button>
+          <Link href="/dashboard/wallet" className="hover:bg-white/[0.05] p-1 rounded-lg transition">
+            <Coins className="w-5 h-5 text-purple" />
+          </Link>
+        </div>
       </div>
       
       {isLoading || balance === null ? (

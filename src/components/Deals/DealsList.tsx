@@ -59,6 +59,12 @@ interface DealsListProps {
   selectedDealId?: string | null;
   isLoading?: boolean;
   deals?: DealResponse[];
+  onSelectTag?: (tag: string) => void;
+  onDeleteDeal?: (dealId: string) => void;
+  showTrackedToggle?: boolean;
+  defaultSortBy?: SortOption;
+  hideIfEmpty?: boolean;
+  allowFiltering?: boolean;
 }
 
 // Extended Deal interface with additional properties needed for our cards
@@ -84,6 +90,12 @@ export const DealsList: React.FC<DealsListProps> = ({
   selectedDealId,
   isLoading: externalLoading = false,
   deals: externalDeals,
+  onSelectTag,
+  onDeleteDeal,
+  showTrackedToggle = true,
+  defaultSortBy = 'newest',
+  hideIfEmpty = false,
+  allowFiltering = true
 }): JSX.Element => {
   const router = useRouter();
   const isMounted = useRef(false);
@@ -96,7 +108,7 @@ export const DealsList: React.FC<DealsListProps> = ({
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(1000);
   const [priceFilterEnabled, setPriceFilterEnabled] = useState(false);
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [sortBy, setSortBy] = useState<SortOption>(defaultSortBy);
   const [isLoading, setIsLoading] = useState(!initialDeals.length && !externalDeals);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState<number>(1);
@@ -114,6 +126,7 @@ export const DealsList: React.FC<DealsListProps> = ({
     sortBy
   });
   const [filtersChanged, setFiltersChanged] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   
   // Replace the isMounted state with useRef initialization
   useEffect(() => {
@@ -619,32 +632,55 @@ export const DealsList: React.FC<DealsListProps> = ({
         <div className="flex flex-col gap-4 mb-6 bg-white/[0.03] rounded-xl p-4 backdrop-blur-sm border border-white/10">
           {/* Search row with all controls */}
           <div className="flex flex-col md:flex-row gap-4">
-            {/* Search Form */}
+            {/* Search Form - Enhanced with more prominent design */}
             <form 
               onSubmit={handleSearchSubmit} 
-              className="relative w-full md:w-1/2 lg:w-2/5 flex items-center"
+              className="relative w-full md:w-2/3 lg:w-3/5"
             >
-              <input
-                type="text"
-                placeholder="Search deals..."
-                value={pendingSearchQuery}
-                onChange={handleSearchInputChange}
-                onKeyDown={handleKeyDown}
-                className="w-full h-10 px-4 pr-10 rounded-md bg-white/[0.05] border border-white/10 text-white focus:ring-1 focus:ring-purple focus:border-purple"
-              />
-              <Button 
-                type="submit"
-                variant="ghost" 
-                size="icon" 
-                className="absolute right-0 h-10 w-10 text-white/70"
-                disabled={isLoading}
-              >
-                {isLoading ? <Loader size="sm" /> : <Search className="h-4 w-4" />}
-              </Button>
+              <div className="relative group">
+                <input
+                  type="text"
+                  placeholder="Search deals or find real-time marketplace matches..."
+                  value={pendingSearchQuery}
+                  onChange={handleSearchInputChange}
+                  onKeyDown={handleKeyDown}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setIsSearchFocused(false)}
+                  className="w-full h-12 px-5 pl-12 pr-12 rounded-xl bg-white/[0.07] border border-white/10 text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple focus:border-purple/50 backdrop-blur-sm"
+                />
+                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/50" />
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple/5 to-blue-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                <div className="absolute -top-3 right-3 bg-gradient-to-r from-purple to-blue-400 px-2 py-0.5 rounded-full text-xs text-white font-medium shadow-lg animate-pulse">
+                  Real-time Search
+                </div>
+                <Button 
+                  type="submit"
+                  variant="ghost" 
+                  size="icon" 
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-white/70 hover:text-white hover:bg-transparent"
+                  disabled={isLoading}
+                >
+                  {isLoading ? <Loader size="sm" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
+              <div className="mt-1 ml-2">
+                <p className="text-xs text-white/50">Search across inventory and get real-time marketplace data</p>
+                {isSearchFocused && (
+                  <div className="mt-2 p-3 bg-white/[0.07] backdrop-blur-sm border border-white/10 rounded-lg text-xs text-white/80 animate-fadeIn">
+                    <p className="mb-1 font-medium text-purple">Power Search Tips:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Enter specific product names for precise matches</li>
+                      <li>Include brands or model numbers for better results</li>
+                      <li>Our AI will scrape marketplaces in real-time if needed</li>
+                      <li>Add price ranges like &ldquo;under $500&rdquo; in your query</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
             </form>
 
             {/* Filter Controls - organized into a consistent row */}
-            <div className="flex items-center justify-between md:justify-end w-full gap-2 flex-wrap">
+            <div className="flex items-center justify-between md:justify-end w-full md:w-1/3 lg:w-2/5 gap-2 flex-wrap">
               {/* Share Results Button */}
               {deals.length > 0 && (
                 <ShareButton

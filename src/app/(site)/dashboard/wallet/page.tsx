@@ -7,6 +7,7 @@ import { walletService } from '@/services/wallet';
 import type { TokenTransaction } from '@/types/wallet';
 import TokenUsageChart from '@/components/Wallet/TokenUsageChart';
 import ConnectWalletButton from '@/components/Wallet/ConnectWalletButton';
+import ConnectStripeButton from '@/components/Wallet/ConnectStripeButton';
 import PurchaseTokensModal from '@/components/Wallet/PurchaseTokensModal';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -41,6 +42,17 @@ export default function WalletPage() {
   const fetchWalletData = async () => {
     try {
       setIsLoading(true);
+      
+      // First check wallet connection status
+      try {
+        const walletInfo = await walletService.getWalletInfo();
+        setIsWalletConnected(!!walletInfo && !!walletInfo.isConnected);
+        console.log('Wallet connection status:', walletInfo?.isConnected);
+      } catch (walletError) {
+        console.error('Failed to fetch wallet connection status:', walletError);
+        setIsWalletConnected(false);
+      }
+      
       const balanceData = await walletService.getBalance();
       setBalance(balanceData);
       
@@ -70,6 +82,10 @@ export default function WalletPage() {
 
   const handlePurchaseSuccess = () => {
     fetchWalletData();
+  };
+
+  const openPurchaseModal = () => {
+    setIsPurchaseModalOpen(true);
   };
 
   if (isLoading) {
@@ -107,10 +123,13 @@ export default function WalletPage() {
                 <Wallet className="w-5 h-5" />
                 <h2 className="text-lg font-semibold">Token Balance</h2>
               </div>
-              <ConnectWalletButton
-                isConnected={isWalletConnected}
-                onConnectionChange={handleWalletConnection}
-              />
+              <div className="flex items-center gap-2">
+                <ConnectStripeButton onClicked={openPurchaseModal} />
+                <ConnectWalletButton
+                  isConnected={isWalletConnected}
+                  onConnectionChange={handleWalletConnection}
+                />
+              </div>
             </div>
             <div className="text-3xl font-bold mb-2">{typeof balance === 'number' ? balance.toFixed(2) : '0.00'} AIDL</div>
             <p className="text-white/70">≈ ${typeof balance === 'number' ? (balance * 0.1).toFixed(2) : '0.00'} USD</p>

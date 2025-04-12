@@ -149,9 +149,14 @@ export function CreateGoalForm({ onSuccess }: CreateGoalFormProps) {
         try {
           const balance = await walletService.getBalance();
           console.log('Retrieved balance:', balance);
-          setBalance(balance);
+          
+          // Ensure balance is a number and not NaN
+          const safeBalance = typeof balance === 'number' && !isNaN(balance) ? balance : 0;
+          setBalance(safeBalance);
         } catch (balanceError) {
           console.error('Error fetching balance:', balanceError);
+          // Set a default of 0 for safety
+          setBalance(0);
         }
 
         // Get goal cost from backend
@@ -159,9 +164,10 @@ export function CreateGoalForm({ onSuccess }: CreateGoalFormProps) {
           const costData = await goalsService.getGoalCost();
           console.log('Retrieved goal cost data:', costData);
           
-          if (typeof costData.tokenCost === 'number') {
+          if (typeof costData.tokenCost === 'number' && !isNaN(costData.tokenCost)) {
             setBaseCost(costData.tokenCost);
           } else {
+            console.warn('Invalid token cost received, using default');
             setBaseCost(5); // Default fallback
           }
           
@@ -222,6 +228,17 @@ export function CreateGoalForm({ onSuccess }: CreateGoalFormProps) {
     setAdjustedCost(calculated);
   }, [currentPriority, baseCost]);
 
+  // Update insufficient balance alert when balance or cost changes
+  useEffect(() => {
+    // Update the alert visibility based on balance and cost
+    setShowInsufficientBalanceAlert(balance < adjustedCost);
+    console.log('Checking balance status:', { 
+      balance, 
+      adjustedCost, 
+      insufficient: balance < adjustedCost 
+    });
+  }, [balance, adjustedCost]);
+
   // Form submission handler
   const onSubmit = async (data: CreateGoalInput) => {
     console.log("Form submission triggered:", { data });
@@ -236,12 +253,15 @@ export function CreateGoalForm({ onSuccess }: CreateGoalFormProps) {
       // Get current balance
       const currentBalance = await walletService.getBalance();
       console.log("Current balance:", currentBalance, "Required:", adjustedCost);
-      setBalance(currentBalance);
+      
+      // Ensure currentBalance is a number and not NaN
+      const safeBalance = typeof currentBalance === 'number' && !isNaN(currentBalance) ? currentBalance : 0;
+      setBalance(safeBalance);
       
       // Show appropriate toast based on balance
-      if (currentBalance < adjustedCost) {
-        console.log("Insufficient balance:", currentBalance, "< cost:", adjustedCost);
-        toast.error(`Insufficient balance: ${currentBalance.toFixed(1)} tokens (need ${adjustedCost.toFixed(1)})`, {
+      if (safeBalance < adjustedCost) {
+        console.log("Insufficient balance:", safeBalance, "< cost:", adjustedCost);
+        toast.error(`Insufficient balance: ${safeBalance.toFixed(1)} tokens (need ${adjustedCost.toFixed(1)})`, {
           id: toastId
         });
         
@@ -251,9 +271,12 @@ export function CreateGoalForm({ onSuccess }: CreateGoalFormProps) {
         toast.success(`Creating goal will cost ${adjustedCost.toFixed(1)} tokens`, {
           id: toastId
         });
+        
+        // Hide the alert banner if it was previously shown
+        setShowInsufficientBalanceAlert(false);
       }
       
-      // Show cost modal
+      // Show cost modal regardless of balance
       console.log("Showing cost modal");
       setShowCostModal(true);
       
@@ -276,7 +299,10 @@ export function CreateGoalForm({ onSuccess }: CreateGoalFormProps) {
       const finalBalance = await walletService.getBalance();
       console.log("Final balance check:", finalBalance, "Cost:", adjustedCost);
       
-      if (finalBalance < adjustedCost) {
+      // Ensure finalBalance is a number and not NaN
+      const safeFinalBalance = typeof finalBalance === 'number' && !isNaN(finalBalance) ? finalBalance : 0;
+      
+      if (safeFinalBalance < adjustedCost) {
         console.error("Insufficient balance in final check");
         toast.error(`Insufficient balance for goal creation.`);
         return;
@@ -852,10 +878,30 @@ export function CreateGoalForm({ onSuccess }: CreateGoalFormProps) {
             "Real-time deal alerts",
             "Priority matching with new deals"
           ]}
-          balance={balance || 0}
+          balance={balance}
           onConfirm={() => {
             console.log("Cost modal confirm triggered");
-            handleConfirmCreate();
+            // Perform a final balance check right before confirming
+            walletService.getBalance().then(finalBalance => {
+              // Ensure finalBalance is a number and not NaN
+              const safeFinalBalance = typeof finalBalance === 'number' && !isNaN(finalBalance) ? finalBalance : 0;
+              
+              if (safeFinalBalance < adjustedCost) {
+                // Show insufficient balance toast and don't proceed
+                toast.error(`Insufficient balance: ${safeFinalBalance.toFixed(1)} tokens (need ${adjustedCost.toFixed(1)})`);
+                // Update the balance state
+                setBalance(safeFinalBalance);
+                return;
+              }
+              
+              // If we have sufficient balance, proceed with goal creation
+              handleConfirmCreate();
+            }).catch(error => {
+              console.error("Error in final balance check:", error);
+              // Continue with creation attempt since we can't verify balance
+              toast.error("Could not verify final balance, attempting to create goal anyway");
+              handleConfirmCreate();
+            });
           }}
         />
       )}
@@ -868,7 +914,7 @@ export function CreateGoalForm({ onSuccess }: CreateGoalFormProps) {
           message={
             balance >= adjustedCost
               ? `Creating this goal will cost ${adjustedCost.toFixed(1)} tokens. Your current balance is ${balance.toFixed(1)} tokens.`
-              : `You need ${(adjustedCost - balance).toFixed(1)} more tokens to create this goal. Your current balance is ${balance.toFixed(1)} tokens.`
+              : `You need ${Math.max(0, (adjustedCost - balance)).toFixed(1)} more tokens to create this goal. Your current balance is ${balance.toFixed(1)} tokens.`
           }
           onCancel={() => setShowFallbackModal(false)}
           onConfirm={balance >= adjustedCost ? handleConfirmCreate : () => {}}

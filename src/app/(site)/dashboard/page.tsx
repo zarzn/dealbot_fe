@@ -140,10 +140,10 @@ export default function DashboardPage() {
               transition={{ delay: 0.3 }}
               className="bg-white/[0.05] rounded-xl p-6 backdrop-blur-lg"
             >
-              <h3 className="text-sm text-white/70">Total Savings</h3>
-              <div className="text-2xl font-bold mt-2">${metrics?.deals.totalSavings.toFixed(2)}</div>
+              <h3 className="text-sm text-white/70">Deal Value Score</h3>
+              <div className="text-2xl font-bold mt-2">{metrics?.deals.dealValueScore.toFixed(1)}/100</div>
               <div className="text-sm text-white/50 mt-1">
-                {metrics?.deals.averageDiscount.toFixed(0)}% avg. discount
+                Based on tracked deals
               </div>
             </motion.div>
           </>

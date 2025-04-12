@@ -55,7 +55,19 @@ const nextConfig = {
   
   // Include favicon.ico in the page extensions for proper handling
   pageExtensions: ['tsx', 'ts', 'jsx', 'js', 'md', 'mdx'],
+
+  env: {
+    // Other environment variables
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
+    // Add debugging output during build
+    STRIPE_KEY_SET: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ? 'true' : 'false',
+  }
 };
+
+// Console log during build time to help debug
+if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+  console.warn('Warning: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set in the environment');
+}
 
 // Only add redirects in non-production mode
 if (process.env.NODE_ENV !== 'production') {

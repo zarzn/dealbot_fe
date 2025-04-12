@@ -64,22 +64,32 @@ const SimpleModal: React.FC<SimpleModalProps> = ({
       {/* Modal Box */}
       <div 
         style={{
-          backgroundColor: "white",
+          backgroundColor: "#121212",
           padding: "1.5rem",
           borderRadius: "0.5rem",
           maxWidth: "500px",
           width: "90%",
-          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          backdropFilter: "blur(10px)",
         }}
         onClick={handleModalClick}
       >
         {/* Modal Title */}
-        <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1rem" }}>
+        <h2 style={{ 
+          fontSize: "1.5rem", 
+          fontWeight: "bold", 
+          marginBottom: "1rem",
+          color: "white"
+        }}>
           {title}
         </h2>
         
         {/* Modal Content */}
-        <p style={{ marginBottom: "1.5rem" }}>
+        <p style={{ 
+          marginBottom: "1.5rem",
+          color: "rgba(255, 255, 255, 0.8)"
+        }}>
           {message}
         </p>
         
@@ -89,9 +99,11 @@ const SimpleModal: React.FC<SimpleModalProps> = ({
             style={{
               padding: "0.5rem 1rem",
               borderRadius: "0.25rem",
-              backgroundColor: "#e5e7eb",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              color: "white",
               cursor: "pointer",
-              border: "none",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              transition: "background-color 0.2s",
             }}
             onClick={onCancel}
           >
@@ -102,10 +114,11 @@ const SimpleModal: React.FC<SimpleModalProps> = ({
             style={{
               padding: "0.5rem 1rem",
               borderRadius: "0.25rem",
-              backgroundColor: canConfirm ? "#6366f1" : "#10b981",
+              backgroundColor: canConfirm ? "#3b82f6" : "#10b981",
               color: "white",
               cursor: "pointer",
               border: "none",
+              transition: "background-color 0.2s",
             }}
             onClick={handleButtonClick}
           >

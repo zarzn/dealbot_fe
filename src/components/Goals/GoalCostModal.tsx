@@ -34,7 +34,9 @@ export function GoalCostModal({
   ],
   balance = 0,
 }: GoalCostModalProps) {
-  const hasEnoughTokens = balance >= tokenCost;
+  // Ensure balance is a number and not NaN
+  const safeBalance = typeof balance === 'number' && !isNaN(balance) ? balance : 0;
+  const hasEnoughTokens = safeBalance >= tokenCost;
 
   const handleConfirm = () => {
     if (!hasEnoughTokens) {
@@ -80,7 +82,7 @@ export function GoalCostModal({
                     Insufficient Balance
                   </p>
                   <p className="text-white/70 text-sm mt-1">
-                    You need {(tokenCost - balance).toFixed(1)} more tokens. Your current balance is {balance.toFixed(1)} tokens.
+                    You need {(tokenCost - safeBalance).toFixed(1)} more tokens. Your current balance is {safeBalance.toFixed(1)} tokens.
                   </p>
                 </div>
               </div>
@@ -96,7 +98,7 @@ export function GoalCostModal({
                     Sufficient Balance
                   </p>
                   <p className="text-white/70 text-sm mt-1">
-                    Your balance of {balance.toFixed(1)} tokens is enough to create this goal.
+                    Your balance of {safeBalance.toFixed(1)} tokens is enough to create this goal.
                   </p>
                 </div>
               </div>

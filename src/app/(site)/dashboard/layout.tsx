@@ -269,17 +269,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
           <div className="text-xl font-semibold text-white/80">Dashboard</div>
-          {/* Mobile notification center removed to fix duplicate bell icon */}
+          <NotificationCenter />
         </div>
 
         {/* Main content */}
         <div className="flex flex-1 flex-col lg:pl-60">
-          {/* Desktop top bar with notifications */}
-          <div className="sticky top-0 z-30 hidden lg:flex justify-end items-center px-8 py-4">
-            <NotificationCenter />
-          </div>
-          
-          <main className="dashboard-content flex-1 py-6 px-4 sm:px-6 lg:px-8 mt-[100px] lg:mt-[60px]">
+          <main className="dashboard-content flex-1 py-6 px-4 sm:px-6 lg:px-8 mt-[130px] lg:mt-[90px]">
             <Suspense fallback={<DashboardSkeleton />}>
               <PageTransition>
                 {children}

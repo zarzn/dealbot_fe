@@ -8,7 +8,7 @@ export interface DashboardMetrics {
     saved: number;
     successRate: number;
     averageDiscount: number;
-    totalSavings: number;
+    dealValueScore: number;
   };
   goals: {
     total: number;

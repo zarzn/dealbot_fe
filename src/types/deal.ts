@@ -72,6 +72,7 @@ export interface Deal extends BaseDeal {
   features?: string[];
   ai_analysis?: AIAnalysis;
   market_id?: string;
+  market_name?: string;
   goal_id?: string;
   user_id?: string;
   shipping_info?: ShippingInfo;
@@ -90,6 +91,7 @@ export interface DealResponse extends BaseDeal {
   is_favorite?: boolean;
   ai_analysis?: AIAnalysis;
   market_id?: string;
+  market_name?: string;
   goal_id?: string;
   user_id?: string;
   shipping_info?: {

@@ -31,7 +31,8 @@ import {
   TrendingUp,
   ChartLine,
   Info,
-  Shield
+  Shield,
+  TrendingDown
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import DealAnalysis from './DealAnalysis';
@@ -591,6 +592,45 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                         </Badge>
                       )}
                       
+                      {(deal as any)?.best_seller && (
+                        <Badge className="bg-amber-500/20 text-amber-400 flex items-center gap-1">
+                          <Star className="w-3 h-3 mr-1" />
+                          Best Seller
+                        </Badge>
+                      )}
+                      
+                      {(deal as any)?.is_amazons_choice && (
+                        <Badge className="bg-blue-600/20 text-blue-400 flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Amazon&apos;s Choice
+                        </Badge>
+                      )}
+                      
+                      {deal?.original_price && Number(deal.original_price) > Number(deal.price) && (
+                        <Badge className="bg-green-500/20 text-green-400 flex items-center gap-1">
+                          <TrendingDown className="w-3 h-3 mr-1" />
+                          {Math.round(100 - ((typeof deal.price === 'number' ? deal.price : parseFloat(deal.price || '0')) / 
+                            (typeof deal.original_price === 'number' ? deal.original_price : parseFloat(deal.original_price || '0'))) * 100)}% OFF
+                        </Badge>
+                      )}
+                      
+                      {/* Availability indicator */}
+                      {deal.availability && (
+                        <div className="mt-1">
+                          {deal.availability.in_stock ? (
+                            <span className="text-sm text-green-400 flex items-center">
+                              <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
+                              {deal.availability.quantity ? `${deal.availability.quantity} in stock` : 'In Stock'}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-red-400 flex items-center">
+                              <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
+                              Out of Stock
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      
                       {deal.created_at && (
                         <span className="text-sm text-white/60 flex items-center">
                           <Clock className="w-3 h-3 mr-1 inline" />
@@ -680,6 +720,45 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                       </CardContent>
                     </Card>
                   )}
+                  
+                  {/* Product Features and Tags */}
+                  {(((deal as any).features && (deal as any).features.length > 0) || (deal.tags && deal.tags.length > 0)) && (
+                    <Card className="w-full bg-white/[0.05] backdrop-blur-sm border border-white/10">
+                      <CardHeader>
+                        <CardTitle className="flex items-center">
+                          <Tag className="h-5 w-5 mr-2" />
+                          Product Details
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {/* Features */}
+                        {(deal as any).features && (deal as any).features.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="font-medium text-white">Features</h4>
+                            <ul className="list-disc list-inside space-y-1 text-white/80">
+                              {(deal as any).features.map((feature: string, index: number) => (
+                                <li key={index}>{feature}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        {/* Tags */}
+                        {deal.tags && deal.tags.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="font-medium text-white">Tags</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {deal.tags.map((tag) => (
+                                <Badge key={tag} variant="outline" className="bg-white/[0.05] text-white/70 border-white/10">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
 
                   {/* Shipping Information */}
                   {deal.shipping_info && (
@@ -762,6 +841,66 @@ export const DealDetail: React.FC<DealDetailProps> = ({
 
                   {/* Deal Analysis - Single instance */}
                   <DealAnalysis dealId={dealId} />
+                  
+                  {/* Additional Metadata */}
+                  {((deal.deal_metadata && Object.keys(deal.deal_metadata).length > 0) || 
+                    (deal.price_metadata && Object.keys(deal.price_metadata).length > 0)) && (
+                    <Card className="w-full bg-white/[0.05] backdrop-blur-sm border border-white/10">
+                      <CardHeader>
+                        <CardTitle className="flex items-center">
+                          <Info className="h-5 w-5 mr-2" />
+                          Additional Details
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {/* Deal Metadata */}
+                        {deal.deal_metadata && Object.keys(deal.deal_metadata).length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="font-medium text-white">Deal Information</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {Object.entries(deal.deal_metadata)
+                                .filter(([key, value]) => value !== null && value !== undefined && key !== 'scraped_at' && key !== 'source')
+                                .map(([key, value]) => (
+                                  <div key={key} className="flex items-center justify-between">
+                                    <span className="text-sm text-white/70">{key.replace(/_/g, ' ')}</span>
+                                    <span className="text-sm font-medium text-white">
+                                      {typeof value === 'boolean' 
+                                        ? value ? 'Yes' : 'No'
+                                        : typeof value === 'object'
+                                          ? JSON.stringify(value)
+                                          : String(value)}
+                                    </span>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Price Metadata */}
+                        {deal.price_metadata && Object.keys(deal.price_metadata).length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="font-medium text-white">Price Information</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {Object.entries(deal.price_metadata)
+                                .filter(([key, value]) => value !== null && value !== undefined)
+                                .map(([key, value]) => (
+                                  <div key={key} className="flex items-center justify-between">
+                                    <span className="text-sm text-white/70">{key.replace(/_/g, ' ')}</span>
+                                    <span className="text-sm font-medium text-white">
+                                      {typeof value === 'boolean' 
+                                        ? value ? 'Yes' : 'No'
+                                        : typeof value === 'object'
+                                          ? JSON.stringify(value)
+                                          : String(value)}
+                                    </span>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -815,8 +954,10 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                 {/* Price Info */}
                 <div className="space-y-2">
                   <div className="text-sm font-medium text-white/70">Current Price</div>
-                  <div className="text-2xl font-bold text-white flex items-baseline gap-2">
-                    ${typeof deal?.price === 'number' ? deal.price.toFixed(2) : parseFloat(deal?.price || '0').toFixed(2)}
+                  <div className="text-2xl font-bold flex items-baseline gap-2">
+                    <span className={`${deal?.original_price && Number(deal.original_price) > Number(deal.price) ? 'text-green-400' : 'text-white'}`}>
+                      ${typeof deal?.price === 'number' ? deal.price.toFixed(2) : parseFloat(deal?.price || '0').toFixed(2)}
+                    </span>
                     {deal?.original_price && (
                       <span className="text-sm line-through text-white/50">
                         ${typeof deal.original_price === 'number' 
@@ -825,13 +966,7 @@ export const DealDetail: React.FC<DealDetailProps> = ({
                                   </span>
                                 )}
                               </div>
-                  {deal?.original_price && (
-                    <Badge className="bg-green-500/20 text-green-400">
-                      {Math.round(100 - ((typeof deal.price === 'number' ? deal.price : parseFloat(deal.price || '0')) / 
-                        (typeof deal.original_price === 'number' ? deal.original_price : parseFloat(deal.original_price || '0'))) * 100)}% OFF
-                    </Badge>
-                  )}
-                            </div>
+                </div>
                 
                 <Divider />
                 

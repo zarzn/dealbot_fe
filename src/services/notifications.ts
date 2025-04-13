@@ -231,8 +231,16 @@ class NotificationApiService {
       let token;
       try {
         // First try to get the token from the API
-        const tokenResponse = await apiClient.get(`${NotificationApiService.BASE_URL}/websocket-token`);
-        token = tokenResponse.data.token;
+        try {
+          // Try the normal endpoint
+          const tokenResponse = await apiClient.get(`${NotificationApiService.BASE_URL}/websocket-token`);
+          token = tokenResponse.data.token;
+        } catch (normalEndpointError) {
+          console.warn('Failed to get WebSocket token from normal API endpoint, trying alternative endpoint', normalEndpointError);
+          // Try the alternative endpoint
+          const tokenResponse = await apiClient.get(API_CONFIG.WEBSOCKET_TOKEN_ALT);
+          token = tokenResponse.data.token;
+        }
       } catch (error) {
         console.warn('Failed to get WebSocket token from API, using test token');
         // Fallback to test token for development/testing

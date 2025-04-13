@@ -117,6 +117,7 @@ export const API_ENDPOINTS = {
   NOTIFICATIONS_COUNT: '/api/v1/notifications/count',
   NOTIFICATION_SETTINGS: '/api/v1/notifications/settings',
   WEBSOCKET_TOKEN: '/api/v1/notifications/websocket-token',
+  WEBSOCKET_TOKEN_ALT: '/api/v1/ws-token',
   
   // Analytics
   DASHBOARD_ANALYTICS: '/api/v1/analytics/dashboard',

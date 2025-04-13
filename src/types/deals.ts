@@ -40,6 +40,9 @@ export interface Deal {
   verified?: boolean;
   featured?: boolean;
   ai_analysis?: AIAnalysis;
+  best_seller?: boolean;
+  is_amazons_choice?: boolean;
+  metadata?: Record<string, any>;
 }
 
 export interface DealSuggestion {

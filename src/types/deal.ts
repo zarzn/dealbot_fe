@@ -20,6 +20,8 @@ export interface BaseDeal {
   tags?: string[];
   rating?: number;
   review_count?: number;
+  best_seller?: boolean;
+  is_amazons_choice?: boolean;
   metadata?: Record<string, any>;
 }
 

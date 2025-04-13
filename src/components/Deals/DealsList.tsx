@@ -278,7 +278,8 @@ export const DealsList: React.FC<DealsListProps> = ({
     const searchParams: DealSearch = {
       query: searchQuery.trim(),
       page,
-      page_size: 12,
+      // For search queries, use a larger page size to show all results
+      page_size: searchQuery.trim() ? 100 : 12,
       filters: Object.keys(filters).length > 0 ? filters : undefined,
       sort_by,
       sort_order
@@ -347,7 +348,7 @@ export const DealsList: React.FC<DealsListProps> = ({
       console.log('[DealsList] Search response received:', {
         totalDeals: response.deals?.length,
         totalCount: response.total,
-        currentPage: searchParams.page,
+        currentPage: response.page || searchParams.page,
         sortBy: response.sort_by,  // Check if sort_by is returned by the backend
         sortOrder: response.sort_order,  // Check if sort_order is returned by the backend
         sampledDeal: response.deals?.length > 0 ? {
@@ -369,7 +370,29 @@ export const DealsList: React.FC<DealsListProps> = ({
         const total = response.total || 0;
         setTotalItems(total);
         const pageSize = searchParams.page_size || 12;
-        setTotalPages(Math.ceil(total / pageSize));
+        const calculatedTotalPages = Math.ceil(total / pageSize);
+        setTotalPages(calculatedTotalPages);
+        
+        // Enhanced pagination state handling
+        // Make sure we convert response.page to a number for proper comparison
+        const responsePageNumber = response.page ? Number(response.page) : Number(searchParams.page);
+        
+        console.log(`[DealsList] Pagination state check - API page: ${responsePageNumber}, current state page: ${page}, total pages: ${calculatedTotalPages}`);
+        
+        if (calculatedTotalPages > 0) {
+          // If the requested page exceeds total pages, adjust to page 1
+          if (responsePageNumber > calculatedTotalPages) {
+            console.log(`[DealsList] Page number from response (${responsePageNumber}) exceeds total pages (${calculatedTotalPages}), adjusting to page 1`);
+            setPage(1);
+          } 
+          // If page from API differs from our current state, sync it
+          else if (responsePageNumber !== page) {
+            console.log(`[DealsList] Synchronizing page state: current=${page}, server=${responsePageNumber}`);
+            setPage(responsePageNumber);
+          } else {
+            console.log(`[DealsList] Page state is already in sync with API: ${page}`);
+          }
+        }
         
         console.log('[DealsList] Updated deals state with', response.deals?.length, 'deals');
       }, 50);
@@ -382,24 +405,39 @@ export const DealsList: React.FC<DealsListProps> = ({
       setIsLoading(false);
       isLoadingRef.current = false;
     }
-  }, [createSearchQuery]);
+  }, [createSearchQuery, page]);
 
-  // When filters change, reset to page 1
+  // When search query changes, reset to page 1 and clear existing results
   useEffect(() => {
     if (!isMounted.current) return;
+    console.log('[DealsList] Search query changed - resetting to page 1');
+    
+    // Clear current deals to indicate new search is in progress
+    if (searchQuery.trim()) {
+      setDeals([]);
+    }
+    
     setPage(1);
-  }, [searchQuery]); // Only search query triggers immediate update
+  }, [searchQuery]);
 
   // Use a separate useEffect for loading deals that depends on the page and search query
   useEffect(() => {
     if (!isMounted.current) return;
-    console.log('[DealsList] Effect triggered to load deals - page or searchQuery changed');
+    if (isLoadingRef.current) {
+      console.log('[DealsList] Skipping load effect because another load is in progress');
+      return;
+    }
+    console.log('[DealsList] Effect triggered to load deals - page or searchQuery changed. Current page:', page);
     loadDeals();
   }, [page, searchQuery, loadDeals]);
 
   // Add a new effect to react to filter and sort changes
   useEffect(() => {
     if (!isMounted.current) return;
+    if (isLoadingRef.current) {
+      console.log('[DealsList] Skipping filter effect because a load is in progress');
+      return;
+    }
     console.log('[DealsList] Filter state changed:', {
       filterCategory,
       filterStatus,
@@ -408,25 +446,46 @@ export const DealsList: React.FC<DealsListProps> = ({
       maxPrice,
       sortBy
     });
+    console.log('[DealsList] Resetting to page 1 due to filter changes');
     setPage(1);
-    loadDeals();
-  }, [filterCategory, filterStatus, priceFilterEnabled, minPrice, maxPrice, sortBy, loadDeals]);
+    // We don't need to call loadDeals() here as the page change will trigger the other effect
+  }, [filterCategory, filterStatus, priceFilterEnabled, minPrice, maxPrice, sortBy]);
 
   // Handle page change
   const handlePageChange = useCallback((newPage: number) => {
     if (!isLoading && isMounted.current && newPage >= 1 && newPage <= totalPages) {
+      console.log(`[DealsList] Changing page from ${page} to ${newPage}`);
+      
+      // Force immediate feedback by clearing deals list
+      setDeals([]);
+      
+      // Update the page state
       setPage(newPage);
+      
+      // Scroll to top of the page for better UX
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    } else {
+      console.log(`[DealsList] Cannot change to page ${newPage} - isLoading: ${isLoading}, isMounted: ${isMounted.current}, validPage: ${newPage >= 1 && newPage <= totalPages}`);
     }
-  }, [isLoading, totalPages]);
+  }, [isLoading, totalPages, page]);
 
   // Generate an array of page numbers to display
   const getPageNumbers = useCallback(() => {
+    // Ensure we're working with valid values
+    const currentPage = Math.max(1, Math.min(page, totalPages || 1));
+    const validTotalPages = Math.max(1, totalPages || 1);
+    
+    console.log(`[DealsList] Generating page numbers. Current page: ${currentPage}, Total pages: ${validTotalPages}`);
+    
     const pageNumbers: (number | string)[] = [];
     const maxVisiblePages = isMobile ? 3 : 5; // Show fewer page numbers on mobile
     
-    if (totalPages <= maxVisiblePages) {
+    if (validTotalPages <= maxVisiblePages) {
       // Show all pages if total number of pages is small
-      for (let i = 1; i <= totalPages; i++) {
+      for (let i = 1; i <= validTotalPages; i++) {
         pageNumbers.push(i);
       }
     } else {
@@ -434,17 +493,17 @@ export const DealsList: React.FC<DealsListProps> = ({
       pageNumbers.push(1);
       
       // Calculate range to show around current page
-      let startPage = Math.max(2, page - 1);
-      let endPage = Math.min(totalPages - 1, page + 1);
+      let startPage = Math.max(2, currentPage - 1);
+      let endPage = Math.min(validTotalPages - 1, currentPage + 1);
       
       // Adjust if current page is near the start
-      if (page <= 3) {
-        endPage = Math.min(totalPages - 1, isMobile ? 2 : 4);
+      if (currentPage <= 3) {
+        endPage = Math.min(validTotalPages - 1, isMobile ? 2 : 4);
       }
       
       // Adjust if current page is near the end
-      if (page >= totalPages - 2) {
-        startPage = Math.max(2, totalPages - (isMobile ? 1 : 3));
+      if (currentPage >= validTotalPages - 2) {
+        startPage = Math.max(2, validTotalPages - (isMobile ? 1 : 3));
       }
       
       // Add ellipsis if needed at the beginning
@@ -458,12 +517,14 @@ export const DealsList: React.FC<DealsListProps> = ({
       }
       
       // Add ellipsis if needed at the end
-      if (endPage < totalPages - 1) {
+      if (endPage < validTotalPages - 1) {
         pageNumbers.push('...');
       }
       
       // Always show last page
-      pageNumbers.push(totalPages);
+      if (validTotalPages > 1) {
+        pageNumbers.push(validTotalPages);
+      }
     }
     
     return pageNumbers;
@@ -960,8 +1021,8 @@ export const DealsList: React.FC<DealsListProps> = ({
           </div>
         )}
 
-        {/* Pagination controls */}
-        {!isLoading && !error && deals.length > 0 && totalPages > 1 && (
+        {/* Pagination controls - hide when search is active */}
+        {!isLoading && !error && deals.length > 0 && totalPages > 1 && !searchQuery.trim() && (
           <div className="flex justify-center mt-8">
             <div className="flex flex-wrap items-center justify-center gap-2">
               {/* Previous page button */}
@@ -975,24 +1036,30 @@ export const DealsList: React.FC<DealsListProps> = ({
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               
-              {/* Page numbers */}
-              <div className="flex flex-wrap items-center justify-center gap-2">
+              {/* Page numbers - key by current page to force re-render on page change */}
+              <div className="flex flex-wrap items-center justify-center gap-2" key={`pagination-${page}`}>
                 {getPageNumbers().map((pageNum, index) => (
                   typeof pageNum === 'number' ? (
                     <Button
-                      key={index}
+                      key={`page-${pageNum}`}
                       onClick={() => handlePageChange(pageNum)}
                       variant={pageNum === page ? "default" : "outline"}
                       size="sm"
                       className={`${pageNum === page 
-                        ? "bg-purple hover:bg-purple-600 text-white" 
+                        ? "bg-purple hover:bg-purple-600 text-white font-medium" 
                         : "border-white/10 hover:bg-white/5"} min-w-[2.5rem] h-10`}
                       disabled={isLoading}
+                      aria-current={pageNum === page ? "page" : undefined}
+                      data-active={pageNum === page ? "true" : "false"}
+                      data-testid={pageNum === page ? "active-page-button" : `page-button-${pageNum}`}
                     >
                       {pageNum}
+                      {pageNum === page && (
+                        <span className="sr-only">(current)</span>
+                      )}
                     </Button>
                   ) : (
-                    <span key={index} className="text-white/50 px-1">
+                    <span key={`ellipsis-${index}`} className="text-white/50 px-1">
                       {pageNum}
                     </span>
                   )
@@ -1013,10 +1080,14 @@ export const DealsList: React.FC<DealsListProps> = ({
           </div>
         )}
         
-        {/* Show total results information */}
+        {/* Show total results information with current page highlighted - adjust text for search results */}
         {!isLoading && !error && deals.length > 0 && (
           <div className="text-center text-white/50 text-sm mt-4">
-            Showing {deals.length} of {totalItems} results • Page {page} of {totalPages}
+            {searchQuery.trim() ? (
+              <>Showing {deals.length} results for <span className="text-purple font-medium">&ldquo;{searchQuery}&rdquo;</span></>
+            ) : (
+              <>Showing {deals.length} of {totalItems} results • Page <span className="text-purple font-medium">{page}</span> of {totalPages}</>
+            )}
           </div>
         )}
       </div>

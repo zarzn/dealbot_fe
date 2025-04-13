@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Star, Tag, Clock, Truck, ShoppingBag, ThumbsUp, BarChart2, Package, Shield, FileCheck, Share, ChevronDown, ChevronUp, Brain, RefreshCw, RotateCw, TrendingUp, DollarSign } from 'lucide-react';
+import { Star, Tag, Clock, Truck, ShoppingBag, ThumbsUp, BarChart2, Package, Shield, FileCheck, Share, ChevronDown, ChevronUp, Brain, RefreshCw, RotateCw, TrendingUp, DollarSign, Award, CheckCircle } from 'lucide-react';
 import { FiHeart, FiEye, FiStar, FiCheckCircle, FiShare2, FiAlertTriangle } from 'react-icons/fi';
 import { Deal, DealSuggestion, AIAnalysis } from '@/types/deals';
 import { calculateDiscount } from '@/lib/utils';
@@ -13,7 +13,7 @@ import ShareButton from './ShareButton';
 import { dealsService } from '@/services/deals';
 import { toast } from 'sonner';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Loader2, AlertTriangle, CheckCircle as CheckCircleIcon } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 
 interface DealCardProps {
   deal: Deal;
@@ -516,7 +516,7 @@ export function DealCard({
                       data-no-navigation="true"
                     >
                       <span className="flex items-center interactive-element" data-no-navigation="true">
-                        <CheckCircleIcon className="h-4 w-4 mr-2" />
+                        <CheckCircle className="h-4 w-4 mr-2" />
                         Recommendations
                       </span>
                     </AccordionTrigger>
@@ -540,7 +540,7 @@ export function DealCard({
                   data-no-navigation="true"
                 >
                   <div className="flex items-center">
-                    <CheckCircleIcon className="h-3 w-3 mr-1 opacity-50" />
+                    <CheckCircle className="h-3 w-3 mr-1 opacity-50" />
                     <span>Recommendations not available</span>
                   </div>
                 </div>
@@ -641,6 +641,20 @@ export function DealCard({
                 {deal.status.charAt(0).toUpperCase() + deal.status.slice(1)}
               </Badge>
             )}
+            {/* Best Seller Badge */}
+            {(deal.best_seller || deal.metadata?.best_seller) && (
+              <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 backdrop-blur-sm flex items-center gap-1 hover:bg-orange-500/20 hover:text-orange-400">
+                <Award className="h-3 w-3" />
+                Best Seller
+              </Badge>
+            )}
+            {/* Amazon's Choice Badge */}
+            {(deal.is_amazons_choice || deal.metadata?.is_amazons_choice) && (
+              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 backdrop-blur-sm flex items-center gap-1 hover:bg-blue-500/20 hover:text-blue-400">
+                <CheckCircle className="h-3 w-3" />
+                Amazon&apos;s Choice
+              </Badge>
+            )}
             {deal.verified && (
               <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 backdrop-blur-sm flex items-center gap-1 hover:bg-blue-500/20 hover:text-blue-400">
                 <Shield className="h-3 w-3" />
@@ -726,18 +740,22 @@ export function DealCard({
                   <span className="text-xs text-white/50">•</span>
                   <span className="text-xs text-white/50 flex items-center">
                     <TrendingUp className="h-2.5 w-2.5 mr-1" />
-                    {(deal as any).market_name || 'Marketplace'}
+                    {deal.source || (deal as any).market_name || 'Marketplace'}
+                    {deal.seller_info?.name && ` • ${deal.seller_info.name}`}
                   </span>
                 </>
               )}
             </div>
             
-            {deal.seller_info && typeof deal.seller_info.rating === 'number' && (
+            {/* Always show rating when available in seller_info */}
+            {deal.seller_info && deal.seller_info.rating !== undefined && (
               <div className="flex items-center gap-1">
                 <Star className="w-3 h-3 text-yellow-500" />
                 <span className="text-xs text-white">
-                  {deal.seller_info.rating.toFixed(1)}
-                  {deal.seller_info.reviews && (
+                  {typeof deal.seller_info.rating === 'number' 
+                    ? deal.seller_info.rating.toFixed(1) 
+                    : deal.seller_info.rating}
+                  {deal.seller_info.reviews !== undefined && (
                     <span className="text-white/50"> ({deal.seller_info.reviews})</span>
                   )}
                 </span>
@@ -751,7 +769,8 @@ export function DealCard({
           {/* Price section */}
           <div className="mt-3 flex items-center gap-4">
             <div>
-              <span className="text-xl font-bold text-white">
+              {/* Apply green color to price when there's a discount */}
+              <span className={`text-xl font-bold ${deal.original_price && Number(deal.original_price) > Number(deal.price) ? 'text-green-400' : 'text-white'}`}>
                 ${typeof deal.price === 'number' ? deal.price.toFixed(2) : parseFloat(deal.price || '0').toFixed(2)}
               </span>
               {deal.original_price && (
@@ -793,7 +812,7 @@ export function DealCard({
             
             {deal.availability?.in_stock && (
               <div className="flex items-center gap-1">
-                <CheckCircleIcon className="h-3 w-3 text-green-500" />
+                <CheckCircle className="h-3 w-3 text-green-500" />
                 In Stock
               </div>
             )}

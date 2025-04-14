@@ -1095,14 +1095,6 @@ export default function DealFinder() {
                 Describe what you&apos;re looking for and let AI find the best deals
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-dark-7 px-4 py-2">
-                <span className="text-sm text-dark-3">Tokens: </span>
-                <span className="font-medium text-purple">
-                  {remainingTokens}
-                </span>
-              </div>
-            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="relative">
